@@ -8,6 +8,8 @@ include install.json
 include ts*.json
 include yarn.lock
 
+exclude lint-staged.config.js
+
 graft jupyterlab_chat/labextension
 
 # Javascript files
@@ -17,7 +19,6 @@ prune **/node_modules
 prune lib
 prune binder
 prune .husky
-prune lint-staged.config.js
 
 # Patterns to exclude from any directory
 global-exclude *~
