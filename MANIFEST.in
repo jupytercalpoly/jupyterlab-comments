@@ -16,6 +16,8 @@ graft style
 prune **/node_modules
 prune lib
 prune binder
+prune .husky
+prune lint-staged.config.js
 
 # Patterns to exclude from any directory
 global-exclude *~
