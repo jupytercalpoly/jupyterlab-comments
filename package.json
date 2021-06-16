@@ -48,6 +48,7 @@
   },
   "dependencies": {
     "@jupyterlab/application": "^3.0.0",
+    "eslint-plugin-jest": "^24.3.6",
     "eslint-plugin-react": "^7.24.0"
   },
   "devDependencies": {
