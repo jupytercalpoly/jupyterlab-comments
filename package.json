@@ -47,7 +47,8 @@
     "watch:labextension": "jupyter labextension watch ."
   },
   "dependencies": {
-    "@jupyterlab/application": "^3.0.0"
+    "@jupyterlab/application": "^3.0.0",
+    "eslint-plugin-react": "^7.24.0"
   },
   "devDependencies": {
     "@jupyterlab/builder": "^3.0.0",
