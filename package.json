@@ -47,7 +47,12 @@
     "watch:labextension": "jupyter labextension watch ."
   },
   "dependencies": {
-    "@jupyterlab/application": "^3.0.0"
+    "@jupyterlab/application": "^3.1.0-alpha.13",
+    "@jupyterlab/cells": "^3.1.0-alpha.13",
+    "@jupyterlab/codeeditor": "3.1.0-alpha.13",
+    "@jupyterlab/notebook": "^3.0.11",
+    "@jupyterlab/shared-models": "^3.1.0-alpha.13",
+    "yjs": "^13.5.10"
   },
   "devDependencies": {
     "@jupyterlab/builder": "^3.0.0",
