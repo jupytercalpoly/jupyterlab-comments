@@ -1,0 +1,12 @@
+.test
+{
+    background-color: white;
+    outline: 2px solid darkorange;
+    color: darkorange;
+}
+
+.subclass
+{
+    background-color: gray;
+    color: black;
+}
