@@ -116,7 +116,7 @@ function panelRender(panels: Widgets.Panel, tracker: INotebookTracker)
   
   const cell = tracker.currentWidget?.content.activeCell;
   const comment: any = cell?.model.metadata.get('comment') as string;
-  var i = 0;
+  let i = 0;
   while(i < comment.length)
   {
     let newWidget = new Widgets.Panel();
