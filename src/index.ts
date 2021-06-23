@@ -7,6 +7,8 @@ import { InputDialog } from '@jupyterlab/apputils';
 import * as Widgets from '@lumino/widgets';
 import * as Icons from '@jupyterlab/ui-components';
 import { INotebookTracker } from '@jupyterlab/notebook';
+import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
+import { InputArea } from '@jupyterlab/cells';
 
 namespace CommandIDs {
   export const addComment = 'jl-chat:add-comment';
@@ -28,10 +30,26 @@ const plugin: JupyterFrontEndPlugin<void> = {
     app.shell.add(panel, 'right', {rank:500});
     panel.addClass('test');
 
+    let codeEditor = new CodeEditorWrapper(
+      {
+        factory: InputArea.defaultContentFactory.editorFactory,
+        model: new CodeEditor.Model()
+      }
+    );
+    
+    codeEditor.addClass('subclass-editor');
+    panel.addWidget(codeEditor);
+
+    document.addEventListener('keydown', function(event){
+      if(event.key == 'Enter' && codeEditor.editor.hasFocus())
+      {
+        commentInput(panel, nbTracker, codeEditor);
+      }
+    });
+
     nbTracker.activeCellChanged.connect(
       (_, cells) => {
         panelRender(panel, nbTracker);
-        //panel.node.textContent = cells?.model.metadata.get('comment')?.toString() as string;
         const comment: any = cells?.model.metadata.get('comment');
         console.log(comment.length);
       }
@@ -89,6 +107,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
     });
 
+    Text
     app.contextMenu.addItem({
       command: CommandIDs.addComment,
       selector: '.jp-Notebook .jp-Cell',
@@ -104,12 +123,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
   }
 };
 
-export default plugin;
-
 function panelRender(panels: Widgets.Panel, tracker: INotebookTracker)
 {
   
-  while(panels.widgets.length > 0)
+  while(panels.widgets.length > 1)
   {
     panels.widgets[panels.widgets.length-1].dispose();
   }
@@ -127,3 +144,20 @@ function panelRender(panels: Widgets.Panel, tracker: INotebookTracker)
   }
   return;
 }
+
+function commentInput(panels: Widgets.Panel, tracker: INotebookTracker, wrapper: CodeEditorWrapper)
+{
+  const cell = tracker.currentWidget?.content.activeCell;
+  const cellArr : any = cell?.model.metadata.get('comment');
+  const comment : any  = wrapper.model.value.text;
+  console.log(comment);
+  if(cellArr == null){
+    cell?.model.metadata.set('comment', [comment])
+  }else{
+    cell?.model.metadata.set('comment', [...cellArr, comment]);
+  }
+  panelRender(panels, tracker);
+  wrapper.model.value.text = "";
+}
+
+export default plugin;

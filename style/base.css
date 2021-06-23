@@ -9,4 +9,16 @@
 {
     background-color: gray;
     color: black;
+    border: 1px solid white;
+    border-radius: 2px;
+    padding: 5px;
+}
+
+.subclass-editor
+{
+    background-color: lightgray;
+    color: black;
+    border: 1px solid orange;
+    border-radius: 2px;
+    padding: 5px;
 }
