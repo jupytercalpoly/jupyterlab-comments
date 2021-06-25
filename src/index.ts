@@ -29,7 +29,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     panel.title.icon = Icons.listIcon;
     app.shell.add(panel, 'right', {rank:500});
     panel.addClass('test');
-
+    
     let insertion = new CodeEditorWrapper(
       {
         factory: InputArea.defaultContentFactory.editorFactory,
@@ -231,3 +231,25 @@ function commentInput(panels: Widgets.Panel, tracker: INotebookTracker, wrapper:
 }
 
 export default plugin;
+
+function panelRender(panels: Widgets.Panel, tracker: INotebookTracker)
+{
+  
+  while(panels.widgets.length > 0)
+  {
+    panels.widgets[panels.widgets.length-1].dispose();
+  }
+  
+  const cell = tracker.currentWidget?.content.activeCell;
+  const comment: any = cell?.model.metadata.get('comment') as string;
+  let i = 0;
+  while(i < comment.length)
+  {
+    let newWidget = new Widgets.Panel();
+    newWidget.addClass('subclass');
+    newWidget.node.textContent = comment[i];
+    panels.addWidget(newWidget);
+    i++;
+  }
+  return;
+}
