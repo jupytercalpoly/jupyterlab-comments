@@ -30,20 +30,17 @@ const plugin: JupyterFrontEndPlugin<void> = {
     app.shell.add(panel, 'right', {rank:500});
     panel.addClass('test');
 
-    let codeEditor = new CodeEditorWrapper(
+    let insertion = new CodeEditorWrapper(
       {
         factory: InputArea.defaultContentFactory.editorFactory,
         model: new CodeEditor.Model()
       }
     );
-    
-    codeEditor.addClass('subclass-editor');
-    panel.addWidget(codeEditor);
-
-    document.addEventListener('keydown', function(event){
-      if(event.key == 'Enter' && codeEditor.editor.hasFocus())
-      {
-        commentInput(panel, nbTracker, codeEditor);
+    insertion.addClass('subclass-editor');
+    panel.addWidget(insertion);
+    insertion.node.addEventListener('keydown', (e) => {
+      if(e.key == 'Enter'){
+        commentInput(panel, nbTracker, insertion);
       }
     });
 
@@ -125,21 +122,95 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
 function panelRender(panels: Widgets.Panel, tracker: INotebookTracker)
 {
-  
   while(panels.widgets.length > 1)
   {
     panels.widgets[panels.widgets.length-1].dispose();
   }
   
   const cell = tracker.currentWidget?.content.activeCell;
-  const comment: any = cell?.model.metadata.get('comment') as string;
+  const comment: any = cell?.model.metadata.get('comment');
   let i = 0;
   while(i < comment.length)
   {
     let newWidget = new Widgets.Panel();
     newWidget.addClass('subclass');
     newWidget.node.textContent = comment[i];
-    panels.addWidget(newWidget);
+
+    let addButton = new Widgets.Panel();
+    addButton.addClass('button-below');
+    addButton.node.textContent = "Reply";
+    addButton.node.onclick = () => {
+      let wrapper = new CodeEditorWrapper(
+        {
+          factory: InputArea.defaultContentFactory.editorFactory,
+          model: new CodeEditor.Model()
+        }
+      );
+      wrapper.addClass('subclass-editor');
+      // not best practice atm (like with all eventListener callbacks) but will change in a bit
+      wrapper.node.addEventListener('keydown', (e) => {
+        if(e.key == 'Enter')
+        {
+          // NOTE: you can click the "add" button more than once but that'll mess stuff up
+          // this is also quite convoluted (prolly can just use a "splice" tbh) so I'll switch over
+          // to a better practice with the new schema
+          let toAdd = wrapper.model.value.text;
+          let newArr = [];
+          let j = 0;
+          let addFlag = 0;
+          while(j < comment.length)
+          {
+            if(j == panels.widgets.indexOf(newWidget) && addFlag == 0)
+            {
+              newArr.push(toAdd.substring(0, toAdd.length-1));
+              addFlag = 1;
+            }
+            else
+            {
+              newArr.push(comment[j]);
+              //condition for last index
+              if(j == comment.length-1 && addFlag == 0)
+              {
+                newArr.push(toAdd.substring(0, toAdd.length-1));
+                addFlag = 1;
+              }
+              j++;
+            }
+            console.log(newArr);
+          }
+          cell?.model.metadata.set('comment', newArr);
+          wrapper.dispose();
+          panelRender(panels, tracker);
+        }
+      });
+      panels.insertWidget(panels.widgets.indexOf(newWidget)+1, wrapper);
+    };
+
+    let deleteButton = new Widgets.Panel();
+    deleteButton.addClass('button-below');
+    deleteButton.node.textContent = "Delete";
+    deleteButton.node.onclick = () => {
+      let j = 0;
+      let newArr = [];
+      while(j < comment.length)
+      {
+        if(j != panels.widgets.indexOf(newWidget)-1)
+        {
+          newArr.push(comment[j]);
+        }
+        j++;
+      }
+      cell?.model.metadata.set('comment', newArr);
+      panelRender(panels, tracker);
+    }
+
+    newWidget.addWidget(addButton);
+    newWidget.addWidget(deleteButton);
+    if(newWidget.node.textContent != null && newWidget.node.textContent?.length != 0)
+    {
+      console.log(newWidget.node.textContent?.length);
+      panels.addWidget(newWidget);
+    }
     i++;
   }
   return;
@@ -149,12 +220,11 @@ function commentInput(panels: Widgets.Panel, tracker: INotebookTracker, wrapper:
 {
   const cell = tracker.currentWidget?.content.activeCell;
   const cellArr : any = cell?.model.metadata.get('comment');
-  const comment : any  = wrapper.model.value.text;
-  console.log(comment);
+  const comment : string  = wrapper.model.value.text;
   if(cellArr == null){
-    cell?.model.metadata.set('comment', [comment])
+    cell?.model.metadata.set('comment', [comment.substring(0, comment.length-1)])
   }else{
-    cell?.model.metadata.set('comment', [...cellArr, comment]);
+    cell?.model.metadata.set('comment', [...cellArr, comment.substring(0, comment.length-1)]);
   }
   panelRender(panels, tracker);
   wrapper.model.value.text = "";

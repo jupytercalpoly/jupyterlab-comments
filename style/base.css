@@ -22,3 +22,17 @@
     border-radius: 2px;
     padding: 5px;
 }
+
+.button-below
+{
+    background-color:lightgray;
+    color:black;
+    text-align:center;
+    border-radius: 5px;
+    max-width: 50px;
+}
+
+.button-below:hover
+{
+    background-color: white;
+}
