@@ -1,35 +1,22 @@
 # jupyterlab_chat
 
-![Github Actions Status](https://github.com/jupytercalpoly/jupyterlab-chat/workflows/Build/badge.svg)[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupytercalpoly/jupyterlab-chat/main?urlpath=lab)
+![Github Actions Status](https://github.com/jupytercalpoly/jupyterlab-chat/workflows/Build/badge.svg)
 
-Chat and comment in JupyterLab
+Chat and comment in JupyterLab.
 
-
+Extension is currently pre-alpha status.
 
 ## Requirements
 
-* JupyterLab >= 3.0
-
-## Install
-
-To install the extension, execute:
-
-```bash
-pip install jupyterlab_chat
-```
-
-## Uninstall
-
-To remove the extension, execute:
-
-```bash
-pip uninstall jupyterlab_chat
-```
-
+- JupyterLab >= 3.1.0b0
 
 ## Contributing
 
-### Development install
+- Suggestions, bug reports, and code reviews are all welcome. Feel free to make an issue!
+
+### Install
+
+Currently, jupyterlab-chat has no official release, so the extension has to be installed from source.
 
 Note: You will need NodeJS to build the extension package.
 
@@ -65,7 +52,7 @@ By default, the `jlpm run build` command generates the source maps for this exte
 jupyter lab build --minimize=False
 ```
 
-### Development uninstall
+### Uninstall
 
 ```bash
 pip uninstall jupyterlab_chat

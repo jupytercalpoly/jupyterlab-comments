@@ -1,5 +1,5 @@
-import { Cell } from '@jupyterlab/cells';
-import { every, find } from '@lumino/algorithm';
+import { every } from '@lumino/algorithm';
+import { IObservableJSON } from '@jupyterlab/observables';
 import * as comments from './commentformat';
 
 export function verifyComments(comments: Record<string, unknown>): boolean {
@@ -16,8 +16,10 @@ export function verifyComment(comment: Record<string, unknown>): boolean {
   );
 }
 
-export function getCellComments(cell: Cell): comments.IComment[] | undefined {
-  const comments = cell.model.metadata.get('comments');
+export function getComments(
+  metadata: IObservableJSON
+): comments.IComment[] | undefined {
+  const comments = metadata.get('comments');
   if (comments == null || !verifyComments(comments as any)) {
     return undefined;
   }
@@ -25,17 +27,44 @@ export function getCellComments(cell: Cell): comments.IComment[] | undefined {
 }
 
 export function getCommentByID(
-  comments: comments.IComment[],
+  metadata: IObservableJSON,
   id: string
 ): comments.IComment | undefined {
-  return find(comments, comment => comment.id === id);
+  const comments = getComments(metadata);
+  if (comments == null) {
+    return undefined;
+  }
+
+  return comments.find(comment => comment.id === id);
 }
 
-export function addCellComment(cell: Cell, comment: comments.IComment): void {
-  const comments = getCellComments(cell);
+export function addComment(
+  metadata: IObservableJSON,
+  comment: comments.IComment
+): void {
+  const comments = getComments(metadata);
   if (comments == null) {
-    cell.model.metadata.set('comments', [comment as any]);
+    metadata.set('comments', [comment as any]);
   } else {
-    cell.model.metadata.set('comments', [...(comments as any), comment as any]);
+    metadata.set('comments', [...(comments as any), comment as any]);
   }
+}
+
+export function addReply(
+  metadata: IObservableJSON,
+  reply: comments.IComment,
+  id: string
+): void {
+  const comments = getComments(metadata);
+  if (comments == null) {
+    return;
+  }
+
+  const commentIndex = comments.findIndex(comment => comment.id === id);
+  if (commentIndex === -1) {
+    return;
+  }
+
+  comments[commentIndex].replies.push(reply);
+  metadata.set('comments', comments);
 }

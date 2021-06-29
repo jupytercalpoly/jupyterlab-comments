@@ -23,6 +23,7 @@ module.exports = {
     project: 'tsconfig.json'
   },
   plugins: ['@typescript-eslint', 'jest'],
+  ignorePatterns: ['.eslintrc.js'],
   rules: {
     '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
     '@typescript-eslint/naming-convention': [
@@ -60,7 +61,7 @@ module.exports = {
     'no-case-declarations': 'warn',
     'no-useless-escape': 'off',
     'prefer-const': 'off',
-    'react/prop-types': 'warn',
+    'react/prop-types': [0, { ignore: true }],
     'sort-imports': [
       'error',
       {
@@ -78,4 +79,3 @@ module.exports = {
     }
   }
 };
-
