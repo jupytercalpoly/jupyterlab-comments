@@ -14,6 +14,9 @@ import { UUID } from '@lumino/coreutils';
 import { IComment } from './commentformat';
 import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
+import { YNotebook } from '@jupyterlab/shared-models';
+import { Awareness } from 'y-protocols/awareness';
+import { getIdentity } from './utils';
 
 namespace CommandIDs {
   export const addComment = 'jl-chat:add-comment';
@@ -28,6 +31,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
   autoStart: true,
   requires: [INotebookTracker],
   activate: (app: JupyterFrontEnd, nbTracker: INotebookTracker) => {
+    const getAwareness = (): Awareness | undefined => {
+      return (nbTracker.currentWidget?.model?.sharedModel as YNotebook)
+        .awareness;
+    };
+
     let panel = new Widgets.Panel();
     panel.id = 'Comments';
     panel.title.icon = Icons.listIcon;
@@ -65,7 +73,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
             const comment: IComment = {
               id: UUID.uuid4(),
               type: 'cell',
-              author: 'Bob',
+              identity: getIdentity(getAwareness()!),
               replies: [],
               text: value.value
             };
@@ -112,21 +120,32 @@ function panelRender(panels: Widgets.Panel, tracker: INotebookTracker) {
     panels.widgets[1].dispose();
   }
 
-  const cell = tracker.currentWidget?.content.activeCell;
+  const cell = tracker.activeCell;
   if (cell == null) {
+    console.log('no active cell; aborting panel render');
     return;
   }
 
   const comments = getComments(cell.model.metadata);
   if (comments == null) {
+    console.log('no comments; aborting panel render');
     return;
   }
 
   console.log('comments', comments);
 
+  const awareness = (tracker.currentWidget?.model?.sharedModel as YNotebook)
+    .awareness;
+  if (awareness == null) {
+    console.warn(
+      'no Awareness found while rendering comment panel; aborting panel render'
+    );
+    return;
+  }
+
   for (let comment of comments) {
     const widget = new CommentWidget<Cell>({
-      identity: comment.author,
+      awareness,
       id: comment.id,
       target: cell,
       metadata: cell.model.metadata
@@ -151,11 +170,18 @@ function commentInput(
     return;
   }
 
+  const awareness = (tracker.currentWidget?.model?.sharedModel as YNotebook)
+    .awareness;
+  if (awareness == null) {
+    console.warn('no Awareness found while adding cell comment');
+    return;
+  }
+
   const newCommentText: string = wrapper.model.value.text;
   addComment(metadata, {
     id: UUID.uuid4(),
     type: 'cell',
-    author: 'Bob',
+    identity: getIdentity(awareness),
     replies: [],
     text: newCommentText
   });

@@ -10,7 +10,9 @@ export function verifyComment(comment: Record<string, unknown>): boolean {
   return (
     'id' in comment &&
     'type' in comment &&
-    'author' in comment &&
+    'identity' in comment &&
+    'id' in (comment['identity'] as comments.IIdentity) &&
+    'name' in (comment['identity'] as comments.IIdentity) &&
     'text' in comment &&
     'replies' in comment
   );
@@ -66,5 +68,5 @@ export function addReply(
   }
 
   comments[commentIndex].replies.push(reply);
-  metadata.set('comments', comments);
+  metadata.set('comments', comments as any);
 }

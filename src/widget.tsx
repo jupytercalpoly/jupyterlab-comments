@@ -1,10 +1,12 @@
 import { ReactWidget } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { closeIcon } from '@jupyterlab/ui-components';
-import { CommentType, IComment } from './commentformat';
+import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
 import { addReply } from './comments';
+import { Awareness } from 'y-protocols/awareness';
+import { getIdentity } from './utils';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -29,7 +31,7 @@ function JCComment(props: CommentProps): JSX.Element {
 
   return (
     <div className={className || ''} id={comment.id}>
-      <p className="jc-Nametag">{comment.author}</p>
+      <p className="jc-Nametag">{comment.identity.name}</p>
       <p className="jc-Body" onClick={onBodyClick}>
         {comment.text}
       </p>
@@ -47,8 +49,8 @@ export class CommentWidget<T> extends ReactWidget {
   constructor(options: CommentWidget.IOptions<T>) {
     super();
 
-    const { identity, id, target, metadata } = options;
-    this._identity = identity;
+    const { awareness, id, target, metadata } = options;
+    this._awareness = awareness;
     this._commentID = id;
     this._target = target;
     this._metadata = metadata;
@@ -75,7 +77,7 @@ export class CommentWidget<T> extends ReactWidget {
         const reply: IComment = {
           id: UUID.uuid4(),
           type: 'cell',
-          author: 'Alice',
+          identity: getIdentity(this._awareness),
           replies: [],
           text: target.value
         };
@@ -154,7 +156,7 @@ export class CommentWidget<T> extends ReactWidget {
     if (target.id === comment.id) {
       // deleting main comment
       commentList.splice(commentIndex, 1);
-      this._metadata.set('comments', commentList);
+      this._metadata.set('comments', commentList as any);
       this.dispose();
     } else {
       // deleting reply
@@ -166,7 +168,7 @@ export class CommentWidget<T> extends ReactWidget {
 
       comment.replies.splice(replyIndex, 1);
       commentList[commentIndex] = comment;
-      this._metadata.set('comments', commentList);
+      this._metadata.set('comments', commentList as any);
     }
   }
 
@@ -188,8 +190,8 @@ export class CommentWidget<T> extends ReactWidget {
     return this._target;
   }
 
-  get identity(): string {
-    return this._identity;
+  get identity(): IIdentity | undefined {
+    return this.comment?.identity;
   }
 
   get type(): CommentType | undefined {
@@ -208,7 +210,7 @@ export class CommentWidget<T> extends ReactWidget {
     return this._commentID;
   }
 
-  private _identity: string;
+  private _awareness: Awareness;
   private _commentID: string;
   private _target: T;
   private _metadata: IObservableJSON;
@@ -216,7 +218,7 @@ export class CommentWidget<T> extends ReactWidget {
 
 export namespace CommentWidget {
   export interface IOptions<T> {
-    identity: string;
+    awareness: Awareness;
 
     id: string;
 
