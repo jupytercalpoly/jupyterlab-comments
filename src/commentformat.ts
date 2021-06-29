@@ -27,6 +27,6 @@ export type IComment = {
   id: string;
   type: CommentType;
   author: string;
-  replies: Comment[];
+  replies: IComment[];
   text: string;
 };
