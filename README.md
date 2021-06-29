@@ -8,7 +8,7 @@ Extension is currently pre-alpha status.
 
 ## Requirements
 
-- JupyterLab >= 3.1.0a13
+- JupyterLab >= 3.1.0b0
 
 ## Contributing
 
