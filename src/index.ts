@@ -5,7 +5,6 @@ import {
 
 import { InputDialog } from '@jupyterlab/apputils';
 import * as Widgets from '@lumino/widgets';
-import * as Icons from '@jupyterlab/ui-components';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
 import { InputArea } from '@jupyterlab/cells';
@@ -17,6 +16,7 @@ import { Cell } from '@jupyterlab/cells';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
 import { getIdentity } from './utils';
+import { CommentPanel } from './panel';
 
 namespace CommandIDs {
   export const addComment = 'jl-chat:add-comment';
@@ -36,11 +36,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
         .awareness;
     };
 
-    let panel = new Widgets.Panel();
-    panel.id = 'Comments';
-    panel.title.icon = Icons.listIcon;
+    const panel = new CommentPanel();
     app.shell.add(panel, 'right', { rank: 500 });
-    panel.addClass('test');
 
     let insertion = new CodeEditorWrapper({
       factory: InputArea.defaultContentFactory.editorFactory,
