@@ -23,10 +23,15 @@ export type CommentTarget =
 
 export type CommentType = 'null' | 'cell' | 'text';
 
+export interface IIdentity {
+  id: number;
+  name: string;
+}
+
 export type IComment = {
   id: string;
   type: CommentType;
-  author: string;
+  identity: IIdentity;
   replies: IComment[];
   text: string;
 };
