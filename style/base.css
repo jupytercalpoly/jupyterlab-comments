@@ -1,38 +1,35 @@
-.test
-{
-    background-color: white;
-    outline: 2px solid darkorange;
-    color: darkorange;
+.test {
+  background-color: white;
 }
 
-.subclass
-{
-    background-color: gray;
-    color: black;
-    border: 1px solid white;
-    border-radius: 2px;
-    padding: 5px;
+.subclass {
+  background-color: gray;
+  color: black;
 }
 
-.subclass-editor
-{
-    background-color: lightgray;
-    color: black;
-    border: 1px solid orange;
-    border-radius: 2px;
-    padding: 5px;
+.jc-Comment {
+  background-color: lightblue;
+  width: 100%;
+  margin: 4px 8px 4px 8px;
 }
 
-.button-below
-{
-    background-color:lightgray;
-    color:black;
-    text-align:center;
-    border-radius: 5px;
-    max-width: 50px;
+.jc-Nametag {
+  width: 30%;
+  display: inline-block;
+  top: 0px;
 }
 
-.button-below:hover
-{
-    background-color: white;
+.jc-Body {
+  width: 70%;
+  display: inline-block;
+  top: 0px;
+}
+
+.jc-DeleteButton {
+  bottom: 0px;
+  right: 0px;
+}
+
+.jc-Reply {
+  margin-left: 30px;
 }
