@@ -184,6 +184,11 @@ function panelRender(panels: Widgets.Panel, tracker: INotebookTracker)
         }
       });
       panels.insertWidget(panels.widgets.indexOf(newWidget)+1, wrapper);
+      console.log(panels.widgets[panels.widgets.indexOf(wrapper)+1] instanceof CodeEditorWrapper);
+      if(panels.widgets[panels.widgets.indexOf(wrapper)+1] instanceof CodeEditorWrapper)
+      {
+        panels.widgets[panels.widgets.indexOf(wrapper)].dispose();
+      }
     };
 
     let deleteButton = new Widgets.Panel();
@@ -204,8 +209,17 @@ function panelRender(panels: Widgets.Panel, tracker: INotebookTracker)
       panelRender(panels, tracker);
     }
 
-    newWidget.addWidget(addButton);
-    newWidget.addWidget(deleteButton);
+    let layout = new Widgets.BoxPanel(
+      {
+        direction: 'left-to-right',
+        alignment: 'start'
+      }
+    );
+    
+    layout.node.textContent = "e";
+    layout.addWidget(addButton);
+    layout.addWidget(deleteButton);
+    newWidget.addWidget(layout);
     if(newWidget.node.textContent != null && newWidget.node.textContent?.length != 0)
     {
       console.log(newWidget.node.textContent?.length);
