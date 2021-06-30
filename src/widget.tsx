@@ -140,58 +140,6 @@ export class CommentWidget<T> extends ReactWidget {
     return <_CommentWrapper comment={this.comment!} />;
   }
 
-  // protected _deleteReply(rcomment: IComment): void {
-  //   const comments = this._metadata.get('comments');
-  //   const commentList = comments as any as IComment[];
-  //   const commentIndex = commentList.findIndex(c => c.id === this.commentID);
-  //   const comment = commentList[commentIndex];
-  //   const replyIndex = comment.replies.findIndex(r => r.id === rcomment.id);
-  //   if (replyIndex === -1) {
-  //     console.warn('comment does not have reply with id', rcomment.id);
-  //     return;
-  //   }
-  //   comment.replies.splice(replyIndex, 1);
-  //   commentList[commentIndex] = comment;
-  //   this._metadata.set('comments', commentList as any);
-  // }
-
-  // protected _deleteComment(e: React.MouseEvent): void {
-  //   const comments = this._metadata.get('comments');
-
-  //   if (comments == null) {
-  //     console.warn('comment source has no comments');
-  //     this.dispose();
-  //     return;
-  //   }
-
-  //   const target = (e.target as HTMLElement).closest('.jc-Comment');
-  //   if (target == null) {
-  //     console.warn("event target isn't descended from .jc-Comment element");
-  //     return;
-  //   }
-
-  //   const commentList = comments as any as IComment[];
-  //   const commentIndex = commentList.findIndex(c => c.id === this.commentID);
-
-  //   if (commentIndex === -1) {
-  //     console.warn(
-  //       'comment source does not have comment with id',
-  //       this.commentID
-  //     );
-  //     this.dispose();
-  //     return;
-  //   }
-
-  //   const comment = commentList[commentIndex];
-
-  //   if (target.id === comment.id) {
-  //     // deleting main comment
-  //     commentList.splice(commentIndex, 1);
-  //     this._metadata.set('comments', commentList as any);
-  //     this.dispose();
-  //   } 
-  // }
-
   get comment(): IComment | undefined {
     console.log('getting comment with id', this.commentID);
     const comments = this._metadata.get('comments');

@@ -85,7 +85,6 @@ export function deleteReply(
   const comment = comments[commentIndex];
   const replyIndex = comment.replies.findIndex(r => r.id === reply_id);
   if (replyIndex === -1) {
-    console.warn('comment does not have reply with id', reply_id);
     return;
   }
   comment.replies.splice(replyIndex, 1);
@@ -100,7 +99,6 @@ export function deleteComment(
 ): void {
   const comments = getComments(metadata);
   if (comments == null) {
-    console.warn('comment source has no comments');
     return;
   }
   const commentIndex = comments.findIndex(c=> c.id === id);
