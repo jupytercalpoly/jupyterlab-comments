@@ -1,4 +1,4 @@
-.test {
+.jc-CommentPanel {
   background-color: white;
 }
 
@@ -32,4 +32,10 @@
 
 .jc-Reply {
   margin-left: 30px;
+}
+
+.jc-CommentInput {
+  width: 100%;
+  min-height: 44px;
+  padding: 5px 4px;
 }
