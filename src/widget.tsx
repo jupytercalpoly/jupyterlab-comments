@@ -135,16 +135,14 @@ export class CommentWidget<T> extends ReactWidget {
     const commentList = comments as any as IComment[];
     const commentIndex = commentList.findIndex(c => c.id === this.commentID);
     const comment = commentList[commentIndex];
-    if (rcomment != null) {
-      const replyIndex = comment.replies.findIndex(r => r.id === rcomment.id);
-      if (replyIndex === -1) {
-        console.warn('comment does not have reply with id', rcomment.id);
-        return;
-      }
-      comment.replies.splice(replyIndex, 1);
-      commentList[commentIndex] = comment;
-      this._metadata.set('comments', commentList as any);
+    const replyIndex = comment.replies.findIndex(r => r.id === rcomment.id);
+    if (replyIndex === -1) {
+      console.warn('comment does not have reply with id', rcomment.id);
+      return;
     }
+    comment.replies.splice(replyIndex, 1);
+    commentList[commentIndex] = comment;
+    this._metadata.set('comments', commentList as any);
   }
 
   protected _deleteComment(e: React.MouseEvent): void {
