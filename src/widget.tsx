@@ -56,7 +56,6 @@ export class CommentWidget<T> extends ReactWidget {
     this._metadata = metadata;
   }
 
-
   render(): ReactRenderElement {
     const metadata = this._metadata;
     const commentID = this.commentID;
@@ -68,10 +67,10 @@ export class CommentWidget<T> extends ReactWidget {
       const onBodyClick = (): void => setIsHidden(!isHidden);
       const onDeleteClick = this._deleteComment.bind(this);
       const onDeleteReplyClick = (item: IComment): void => {
-        const data = replies.filter(r => r.id !== item.id)
-        this._deleteReply(item)
+        const data = replies.filter(r => r.id !== item.id);
+        this._deleteReply(item);
         setReplies(data);
-      }
+      };
 
       const onInputKeydown = (e: React.KeyboardEvent): void => {
         if (e.key != 'Enter') {
@@ -106,7 +105,7 @@ export class CommentWidget<T> extends ReactWidget {
             onDeleteClick={onDeleteClick}
           />
           <div className="jc-Replies">
-            {replies.map((reply)  => (
+            {replies.map(reply => (
               <JCComment
                 comment={reply}
                 className="jc-Comment jc-Reply"
@@ -131,22 +130,21 @@ export class CommentWidget<T> extends ReactWidget {
     return <CommentWrapper comment={this.comment!} />;
   }
 
-  protected _deleteReply(rcomment: IComment): void{
+  protected _deleteReply(rcomment: IComment): void {
     const comments = this._metadata.get('comments');
     const commentList = comments as any as IComment[];
     const commentIndex = commentList.findIndex(c => c.id === this.commentID);
     const comment = commentList[commentIndex];
     if (rcomment != null) {
       const replyIndex = comment.replies.findIndex(r => r.id === rcomment.id);
-    if (replyIndex === -1) {
-      console.warn('comment does not have reply with id', rcomment.id);
-      return;
+      if (replyIndex === -1) {
+        console.warn('comment does not have reply with id', rcomment.id);
+        return;
+      }
+      comment.replies.splice(replyIndex, 1);
+      commentList[commentIndex] = comment;
+      this._metadata.set('comments', commentList as any);
     }
-    comment.replies.splice(replyIndex, 1);
-    commentList[commentIndex] = comment;
-    this._metadata.set('comments', commentList as any);        
-    }
-
   }
 
   protected _deleteComment(e: React.MouseEvent): void {
@@ -183,7 +181,7 @@ export class CommentWidget<T> extends ReactWidget {
       commentList.splice(commentIndex, 1);
       this._metadata.set('comments', commentList as any);
       this.dispose();
-    } 
+    }
   }
 
   get comment(): IComment | undefined {
