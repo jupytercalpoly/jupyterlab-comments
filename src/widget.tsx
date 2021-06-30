@@ -20,6 +20,7 @@ type CommentProps = {
   className: string;
   onBodyClick: React.MouseEventHandler;
   onDeleteClick: React.MouseEventHandler;
+  onEditClick: React.MouseEventHandler;
 };
 
 type CommentWrapperProps = {
@@ -27,7 +28,7 @@ type CommentWrapperProps = {
 };
 
 function JCComment(props: CommentProps): JSX.Element {
-  const { comment, className, onBodyClick, onDeleteClick } = props;
+  const { comment, className, onBodyClick, onEditClick, onDeleteClick } = props;
 
   return (
     <div className={className || ''} id={comment.id}>
@@ -52,7 +53,10 @@ function JCComment(props: CommentProps): JSX.Element {
       >
         <closeIcon.react />
       </button>
-      <button className="jc-DeleteButton jp-Button bp3-button bp3-minimal">
+      <button 
+        className="jc-DeleteButton jp-Button bp3-button bp3-minimal"
+        onClick={onEditClick}
+      >
         <editIcon.react />
       </button>
     </div>
@@ -78,7 +82,9 @@ export class CommentWidget<T> extends ReactWidget {
       const { comment } = props;
       const [replies, setReplies] = React.useState(comment.replies);
       const [isHidden, setIsHidden] = React.useState(true);
+      const [isEditable, setIsEditable] = React.useState(true);
       const onBodyClick = (): void => setIsHidden(!isHidden);
+      const onEditClick = (): void =>setIsEditable(!isEditable);
       const onDeleteClick = (): void => {
         deleteComment(metadata, commentID);
         this.dispose();
@@ -122,6 +128,7 @@ export class CommentWidget<T> extends ReactWidget {
             comment={comment}
             className="jc-Comment"
             onBodyClick={onBodyClick}
+            onEditClick={onEditClick}
             onDeleteClick={onDeleteClick.bind(this)}
           />
           <div className="jc-Replies">
@@ -130,6 +137,7 @@ export class CommentWidget<T> extends ReactWidget {
                 comment={reply}
                 className="jc-Comment jc-Reply"
                 onBodyClick={onBodyClick}
+                onEditClick={onEditClick}
                 onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
                 key={reply.id}
               />
