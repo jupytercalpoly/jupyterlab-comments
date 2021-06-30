@@ -20,4 +20,5 @@ export type IComment = {
   identity: IIdentity;
   replies: IComment[];
   text: string;
+  time: string;
 };

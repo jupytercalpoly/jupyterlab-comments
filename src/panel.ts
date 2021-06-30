@@ -74,7 +74,8 @@ export class CommentPanel extends Panel {
       type: 'cell',
       identity: getIdentity(awareness),
       replies: [],
-      text: this._inputWidget.node.textContent!
+      text: this._inputWidget.node.textContent!,
+      time: new Date(new Date().getTime()).toLocaleString()
     });
 
     this._inputWidget.node.textContent = '';
