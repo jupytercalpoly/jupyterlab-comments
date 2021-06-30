@@ -114,7 +114,7 @@ export class CommentWidget<T> extends ReactWidget {
             comment={comment}
             className="jc-Comment"
             onBodyClick={onBodyClick}
-            onDeleteClick={onDeleteClick.bind(this, comment)}
+            onDeleteClick={onDeleteClick.bind(this)}
           />
           <div className="jc-Replies">
             {replies.map(reply => (
