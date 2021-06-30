@@ -125,6 +125,7 @@ export class CommentWidget<T> extends ReactWidget {
       );
     };
 
+    // This should be able to work without the bind?
     const CommentWrapper = _CommentWrapper.bind(this);
 
     return <CommentWrapper comment={this.comment!} />;
