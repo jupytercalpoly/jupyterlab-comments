@@ -74,7 +74,7 @@ export function addReply(
 
 export function deleteReply(
   metadata: IObservableJSON,
-  reply: comments.IComment,
+  reply_id: string,
   parent_id: string
 ): void {
   const comments = getComments(metadata);
@@ -83,9 +83,9 @@ export function deleteReply(
   }
   const commentIndex = comments.findIndex(c => c.id === parent_id);
   const comment = comments[commentIndex];
-  const replyIndex = comment.replies.findIndex(r => r.id === reply.id);
+  const replyIndex = comment.replies.findIndex(r => r.id === reply_id);
   if (replyIndex === -1) {
-    console.warn('comment does not have reply with id', reply.id);
+    console.warn('comment does not have reply with id', reply_id);
     return;
   }
   comment.replies.splice(replyIndex, 1);
@@ -96,7 +96,6 @@ export function deleteReply(
 
 export function deleteComment(
   metadata: IObservableJSON,
-  comment: comments.IComment,
   id: string
 ): void {
   const comments = getComments(metadata);

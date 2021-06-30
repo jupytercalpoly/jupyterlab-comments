@@ -73,16 +73,13 @@ export class CommentWidget<T> extends ReactWidget {
       const [replies, setReplies] = React.useState(comment.replies);
       const [isHidden, setIsHidden] = React.useState(true);
       const onBodyClick = (): void => setIsHidden(!isHidden);
-      // const onDeleteClick = this._deleteComment.bind(this);
-      const onDeleteClick = (item: IComment): void => {
-        deleteComment(this._metadata, item, this._commentID)
+      const onDeleteClick = (): void => {
+        deleteComment(metadata, commentID)
         this.dispose();
-        // this._deleteComment.bind(this);
       } 
-      const onDeleteReplyClick = (item: IComment): void => {
-        const data = replies.filter(r => r.id !== item.id);
-        deleteReply(this._metadata, item, this._commentID)
-        // this._deleteReply(item);
+      const onDeleteReplyClick = (item_id: IComment["id"]): void => {
+        const data = replies.filter(r => r.id !== item_id);
+        deleteReply(metadata, item_id, commentID)
         setReplies(data);
       };
 
@@ -125,7 +122,7 @@ export class CommentWidget<T> extends ReactWidget {
                 comment={reply}
                 className="jc-Comment jc-Reply"
                 onBodyClick={onBodyClick}
-                onDeleteClick={onDeleteReplyClick.bind(this, reply)}
+                onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
                 key={reply.id}
               />
             ))}
