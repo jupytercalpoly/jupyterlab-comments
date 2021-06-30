@@ -149,7 +149,7 @@ export class CommentWidget<T> extends ReactWidget {
 
   }
 
-  public _deleteComment(e: React.MouseEvent): void {
+  protected _deleteComment(e: React.MouseEvent): void {
     const comments = this._metadata.get('comments');
 
     if (comments == null) {
