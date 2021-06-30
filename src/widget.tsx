@@ -70,10 +70,15 @@ export class CommentWidget<T> extends ReactWidget {
 
     const _CommentWrapper = (props: CommentWrapperProps): JSX.Element => {
       const { comment } = props;
-
+      const [replies, setReplies] = React.useState(comment.replies);
       const [isHidden, setIsHidden] = React.useState(true);
       const onBodyClick = (): void => setIsHidden(!isHidden);
       const onDeleteClick = this._deleteComment.bind(this);
+      const onDeleteReplyClick = (item: IComment): void => {
+        const data = replies.filter(r => r.id !== item.id);
+        this._deleteReply(item);
+        setReplies(data);
+      };
 
       const onInputKeydown = (e: React.KeyboardEvent): void => {
         if (e.key != 'Enter') {
@@ -109,12 +114,12 @@ export class CommentWidget<T> extends ReactWidget {
             onDeleteClick={onDeleteClick}
           />
           <div className="jc-Replies">
-            {comment.replies.map(reply => (
+            {replies.map(reply => (
               <JCComment
                 comment={reply}
                 className="jc-Comment jc-Reply"
                 onBodyClick={onBodyClick}
-                onDeleteClick={onDeleteClick}
+                onDeleteClick={onDeleteReplyClick.bind(this, reply)}
                 key={reply.id}
               />
             ))}
@@ -128,9 +133,23 @@ export class CommentWidget<T> extends ReactWidget {
       );
     };
 
-    const CommentWrapper = _CommentWrapper.bind(this);
 
-    return <CommentWrapper comment={this.comment!} />;
+    return <_CommentWrapper comment={this.comment!} />;
+  }
+
+  protected _deleteReply(rcomment: IComment): void {
+    const comments = this._metadata.get('comments');
+    const commentList = comments as any as IComment[];
+    const commentIndex = commentList.findIndex(c => c.id === this.commentID);
+    const comment = commentList[commentIndex];
+    const replyIndex = comment.replies.findIndex(r => r.id === rcomment.id);
+    if (replyIndex === -1) {
+      console.warn('comment does not have reply with id', rcomment.id);
+      return;
+    }
+    comment.replies.splice(replyIndex, 1);
+    commentList[commentIndex] = comment;
+    this._metadata.set('comments', commentList as any);
   }
 
   protected _deleteComment(e: React.MouseEvent): void {
@@ -167,19 +186,7 @@ export class CommentWidget<T> extends ReactWidget {
       commentList.splice(commentIndex, 1);
       this._metadata.set('comments', commentList as any);
       this.dispose();
-    } else {
-      // deleting reply
-      const replyIndex = comment.replies.findIndex(r => r.id === target.id);
-      if (replyIndex === -1) {
-        console.warn('comment does not have reply with id', target.id);
-        return;
-      }
-
-      comment.replies.splice(replyIndex, 1);
-      commentList[commentIndex] = comment;
-      console.log('xxx');
-      this._metadata.set('comments', commentList as any);
-    }
+    } 
   }
 
   get comment(): IComment | undefined {
