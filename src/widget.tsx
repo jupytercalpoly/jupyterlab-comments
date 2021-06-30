@@ -63,50 +63,15 @@ export class CommentWidget<T> extends ReactWidget {
 
     const _CommentWrapper = (props: CommentWrapperProps): JSX.Element => {
       const { comment } = props;
-    
-      // const [replies, setReplies] = React.useState(comment.replies)
-
-      // const [objectDelete, setObjectDelete] = React.useState({})
-      const [counter , setCounter] = React.useState(0)
-      const [commentState, setCommentState] = React.useState(comment.replies);
+      const [replies, setReplies] = React.useState(comment.replies);
       const [isHidden, setIsHidden] = React.useState(true);
       const onBodyClick = (): void => setIsHidden(!isHidden);
       const onDeleteClick = this._deleteComment.bind(this);
       const onDeleteReplyClick = (item: IComment): void => {
-        const data = commentState.filter(r => r.id !== item.id)
+        const data = replies.filter(r => r.id !== item.id)
         this._deleteReply(item)
-        setCommentState(data);
+        setReplies(data);
       }
-      // function onDeleteReplyClick(item: IComment) {
-      //   const data = commentState.filter(r => r.id !== item.id)
-      //   this._deleteReply(data)
-
-      //   setCommentState(data);
-      // }
-      // const onDeleteReplyClick = (para: React.MouseEvent): void => {
-      //   this._deleteReply(para,  comment)
-      //   // this._deleteComment.bind(para)
-      //   console.log("hi")
-
-      //   console.log(commentState);
-      //   setCommentState(comment);
-      //   console.log(commentState);
-      // };
-
-      
-      // const onDeleteReplyClick = (this): any => {
-      //   this.onDeleteClick
-      //   console.log("bitchass")
-      //   console.log(comment)
-      //   // this.dispose()
-
-      // }
-
-      // React.useEffect(() => {
-      //   console.log("hihihi");
-      //   setCommentState(commentState)
-      // }, [commentState])
-      // const onDeleteClick = React.useEffect(this);
 
       const onInputKeydown = (e: React.KeyboardEvent): void => {
         if (e.key != 'Enter') {
@@ -141,18 +106,13 @@ export class CommentWidget<T> extends ReactWidget {
             onDeleteClick={onDeleteClick}
           />
           <div className="jc-Replies">
-            {commentState.map((reply)  => (
+            {replies.map((reply)  => (
               <JCComment
                 comment={reply}
                 className="jc-Comment jc-Reply"
                 onBodyClick={onBodyClick}
-                // onDeleteClick={(e) => setObjectDelete(this)}
-                // onDeleteClick={onDeleteReplyClick.bind(this)}
-                // onDeleteClick={(e: React.MouseEvent) => onDeleteReplyClick(e)}
-                // onDeleteClick={(e: React.MouseEvent) => onDeleteClick(e)}
                 onDeleteClick={onDeleteReplyClick.bind(this, reply )}
-                // onDeleteClick={onDeleteClick}
-                key={reply.toString()}
+                key={reply.id}
               />
             ))}
           </div>
@@ -161,18 +121,13 @@ export class CommentWidget<T> extends ReactWidget {
             hidden={isHidden}
             onKeyDown={onInputKeydown}
           />
-          <button onClick={(): void => {
-            setCounter(counter+1)
-          }}
-          >increment {counter}</button>
         </div>
       );
     };
 
-    // const CommentWrapper = _CommentWrapper.bind(this);
+    const CommentWrapper = _CommentWrapper.bind(this);
 
-    return <_CommentWrapper comment={this.comment!} />;
-    // return <CommentWrapper comment={this.comment!} />;
+    return <CommentWrapper comment={this.comment!} />;
   }
 
   protected _deleteReply(rcomment: IComment): void{
@@ -180,7 +135,6 @@ export class CommentWidget<T> extends ReactWidget {
     const commentList = comments as any as IComment[];
     const commentIndex = commentList.findIndex(c => c.id === this.commentID);
     const comment = commentList[commentIndex];
-    // const target = (e.target as HTMLElement).closest('.jc-Comment');
     if (rcomment != null) {
       const replyIndex = comment.replies.findIndex(r => r.id === rcomment.id);
     if (replyIndex === -1) {
