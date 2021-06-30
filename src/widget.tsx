@@ -1,6 +1,6 @@
 import { ReactWidget } from '@jupyterlab/apputils';
 import * as React from 'react';
-import { closeIcon } from '@jupyterlab/ui-components';
+import { closeIcon, editIcon} from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
@@ -32,14 +32,22 @@ function JCComment(props: CommentProps): JSX.Element {
   return (
     <div className={className || ''} id={comment.id}>
       <p className="jc-Nametag">{comment.identity.name}</p>
+      <br />
+      <p className="jc-Time">{comment.time}</p>
       <p className="jc-Body" onClick={onBodyClick}>
         {comment.text}
       </p>
+      <br />
       <button
         className="jc-DeleteButton jp-Button bp3-button bp3-minimal"
         onClick={onDeleteClick}
       >
         <closeIcon.react />
+      </button>
+      <button 
+        className="jc-DeleteButton jp-Button bp3-button bp3-minimal"
+      >
+        <editIcon.react />
       </button>
     </div>
   );
@@ -79,7 +87,8 @@ export class CommentWidget<T> extends ReactWidget {
           type: 'cell',
           identity: getIdentity(this._awareness),
           replies: [],
-          text: target.value
+          text: target.value,
+          time: new Date(new Date().getTime()).toLocaleString()
         };
 
         addReply(metadata, reply, commentID);
@@ -168,6 +177,7 @@ export class CommentWidget<T> extends ReactWidget {
 
       comment.replies.splice(replyIndex, 1);
       commentList[commentIndex] = comment;
+      console.log('xxx');
       this._metadata.set('comments', commentList as any);
     }
   }

@@ -69,7 +69,8 @@ function addCommands(
             type: 'cell',
             identity: getIdentity(getAwareness()!),
             replies: [],
-            text: value.value
+            text: value.value,
+            time: new Date(new Date().getTime()).toLocaleString()
           };
 
           addComment(cell.model.metadata, comment);

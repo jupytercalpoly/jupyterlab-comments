@@ -19,6 +19,13 @@
   top: 0px;
 }
 
+.jc-Time {
+  width: 70%;
+  display: inline-block;
+  top: 0px;
+  font-size: x-small;
+}
+
 .jc-Body {
   width: 70%;
   display: inline-block;
