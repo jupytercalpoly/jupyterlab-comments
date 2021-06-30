@@ -71,3 +71,25 @@ export function addReply(
   comments[commentIndex].replies.push(reply);
   metadata.set('comments', comments as any);
 }
+
+export function deleteReply(
+  metadata: IObservableJSON,
+  reply: comments.IComment,
+  parent_id: string
+): void {
+  const comments = getComments(metadata);
+  if (comments == null) {
+    return;
+  }
+  const commentIndex = comments.findIndex(c => c.id === parent_id);
+  const comment = comments[commentIndex];
+  const replyIndex = comment.replies.findIndex(r => r.id === reply.id);
+  if (replyIndex === -1) {
+    console.warn('comment does not have reply with id', reply.id);
+    return;
+  }
+  comment.replies.splice(replyIndex, 1);
+  comments[commentIndex] = comment;
+  metadata.set('comments', comments as any);
+  
+}

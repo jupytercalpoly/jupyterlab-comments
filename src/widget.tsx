@@ -4,7 +4,7 @@ import { closeIcon, editIcon} from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
-import { addReply } from './comments';
+import { addReply, deleteReply } from './comments';
 import { Awareness } from 'y-protocols/awareness';
 import { getIdentity } from './utils';
 
@@ -76,7 +76,8 @@ export class CommentWidget<T> extends ReactWidget {
       const onDeleteClick = this._deleteComment.bind(this);
       const onDeleteReplyClick = (item: IComment): void => {
         const data = replies.filter(r => r.id !== item.id);
-        this._deleteReply(item);
+        deleteReply(this._metadata, item, this._commentID)
+        // this._deleteReply(item);
         setReplies(data);
       };
 
@@ -137,20 +138,20 @@ export class CommentWidget<T> extends ReactWidget {
     return <_CommentWrapper comment={this.comment!} />;
   }
 
-  protected _deleteReply(rcomment: IComment): void {
-    const comments = this._metadata.get('comments');
-    const commentList = comments as any as IComment[];
-    const commentIndex = commentList.findIndex(c => c.id === this.commentID);
-    const comment = commentList[commentIndex];
-    const replyIndex = comment.replies.findIndex(r => r.id === rcomment.id);
-    if (replyIndex === -1) {
-      console.warn('comment does not have reply with id', rcomment.id);
-      return;
-    }
-    comment.replies.splice(replyIndex, 1);
-    commentList[commentIndex] = comment;
-    this._metadata.set('comments', commentList as any);
-  }
+  // protected _deleteReply(rcomment: IComment): void {
+  //   const comments = this._metadata.get('comments');
+  //   const commentList = comments as any as IComment[];
+  //   const commentIndex = commentList.findIndex(c => c.id === this.commentID);
+  //   const comment = commentList[commentIndex];
+  //   const replyIndex = comment.replies.findIndex(r => r.id === rcomment.id);
+  //   if (replyIndex === -1) {
+  //     console.warn('comment does not have reply with id', rcomment.id);
+  //     return;
+  //   }
+  //   comment.replies.splice(replyIndex, 1);
+  //   commentList[commentIndex] = comment;
+  //   this._metadata.set('comments', commentList as any);
+  // }
 
   protected _deleteComment(e: React.MouseEvent): void {
     const comments = this._metadata.get('comments');
