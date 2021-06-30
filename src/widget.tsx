@@ -111,7 +111,7 @@ export class CommentWidget<T> extends ReactWidget {
                 comment={reply}
                 className="jc-Comment jc-Reply"
                 onBodyClick={onBodyClick}
-                onDeleteClick={onDeleteReplyClick.bind(this, reply )}
+                onDeleteClick={onDeleteReplyClick.bind(this, reply)}
                 key={reply.id}
               />
             ))}
@@ -183,17 +183,7 @@ export class CommentWidget<T> extends ReactWidget {
       commentList.splice(commentIndex, 1);
       this._metadata.set('comments', commentList as any);
       this.dispose();
-    } else {
-      // deleting reply
-      const replyIndex = comment.replies.findIndex(r => r.id === target.id);
-      if (replyIndex === -1) {
-        console.warn('comment does not have reply with id', target.id);
-        return;
-      }
-      comment.replies.splice(replyIndex, 1);
-      commentList[commentIndex] = comment;
-      this._metadata.set('comments', commentList as any);
-    }
+    } 
   }
 
   get comment(): IComment | undefined {
