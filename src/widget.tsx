@@ -4,7 +4,7 @@ import { closeIcon, editIcon} from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
-import { addReply, deleteReply } from './comments';
+import { addReply, deleteComment, deleteReply } from './comments';
 import { Awareness } from 'y-protocols/awareness';
 import { getIdentity } from './utils';
 
@@ -73,7 +73,12 @@ export class CommentWidget<T> extends ReactWidget {
       const [replies, setReplies] = React.useState(comment.replies);
       const [isHidden, setIsHidden] = React.useState(true);
       const onBodyClick = (): void => setIsHidden(!isHidden);
-      const onDeleteClick = this._deleteComment.bind(this);
+      // const onDeleteClick = this._deleteComment.bind(this);
+      const onDeleteClick = (item: IComment): void => {
+        deleteComment(this._metadata, item, this._commentID)
+        this.dispose();
+        // this._deleteComment.bind(this);
+      } 
       const onDeleteReplyClick = (item: IComment): void => {
         const data = replies.filter(r => r.id !== item.id);
         deleteReply(this._metadata, item, this._commentID)
@@ -112,7 +117,7 @@ export class CommentWidget<T> extends ReactWidget {
             comment={comment}
             className="jc-Comment"
             onBodyClick={onBodyClick}
-            onDeleteClick={onDeleteClick}
+            onDeleteClick={onDeleteClick.bind(this, comment)}
           />
           <div className="jc-Replies">
             {replies.map(reply => (
@@ -153,42 +158,42 @@ export class CommentWidget<T> extends ReactWidget {
   //   this._metadata.set('comments', commentList as any);
   // }
 
-  protected _deleteComment(e: React.MouseEvent): void {
-    const comments = this._metadata.get('comments');
+  // protected _deleteComment(e: React.MouseEvent): void {
+  //   const comments = this._metadata.get('comments');
 
-    if (comments == null) {
-      console.warn('comment source has no comments');
-      this.dispose();
-      return;
-    }
+  //   if (comments == null) {
+  //     console.warn('comment source has no comments');
+  //     this.dispose();
+  //     return;
+  //   }
 
-    const target = (e.target as HTMLElement).closest('.jc-Comment');
-    if (target == null) {
-      console.warn("event target isn't descended from .jc-Comment element");
-      return;
-    }
+  //   const target = (e.target as HTMLElement).closest('.jc-Comment');
+  //   if (target == null) {
+  //     console.warn("event target isn't descended from .jc-Comment element");
+  //     return;
+  //   }
 
-    const commentList = comments as any as IComment[];
-    const commentIndex = commentList.findIndex(c => c.id === this.commentID);
+  //   const commentList = comments as any as IComment[];
+  //   const commentIndex = commentList.findIndex(c => c.id === this.commentID);
 
-    if (commentIndex === -1) {
-      console.warn(
-        'comment source does not have comment with id',
-        this.commentID
-      );
-      this.dispose();
-      return;
-    }
+  //   if (commentIndex === -1) {
+  //     console.warn(
+  //       'comment source does not have comment with id',
+  //       this.commentID
+  //     );
+  //     this.dispose();
+  //     return;
+  //   }
 
-    const comment = commentList[commentIndex];
+  //   const comment = commentList[commentIndex];
 
-    if (target.id === comment.id) {
-      // deleting main comment
-      commentList.splice(commentIndex, 1);
-      this._metadata.set('comments', commentList as any);
-      this.dispose();
-    } 
-  }
+  //   if (target.id === comment.id) {
+  //     // deleting main comment
+  //     commentList.splice(commentIndex, 1);
+  //     this._metadata.set('comments', commentList as any);
+  //     this.dispose();
+  //   } 
+  // }
 
   get comment(): IComment | undefined {
     console.log('getting comment with id', this.commentID);

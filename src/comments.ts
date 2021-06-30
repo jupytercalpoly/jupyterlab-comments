@@ -91,5 +91,21 @@ export function deleteReply(
   comment.replies.splice(replyIndex, 1);
   comments[commentIndex] = comment;
   metadata.set('comments', comments as any);
-  
+
+}
+
+export function deleteComment(
+  metadata: IObservableJSON,
+  comment: comments.IComment,
+  id: string
+): void {
+  const comments = getComments(metadata);
+  if (comments == null) {
+    console.warn('comment source has no comments');
+    return;
+  }
+  const commentIndex = comments.findIndex(c=> c.id === id);
+  comments.splice(commentIndex, 1);
+  metadata.set('comments', comments as any);
+
 }
