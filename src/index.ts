@@ -10,7 +10,7 @@ import { UUID } from '@lumino/coreutils';
 import { IComment } from './commentformat';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
-import { getIdentity } from './utils';
+import { getCommentTimeString, getIdentity } from './utils';
 import { CommentPanel } from './panel';
 
 namespace CommandIDs {
@@ -70,7 +70,7 @@ function addCommands(
             identity: getIdentity(getAwareness()!),
             replies: [],
             text: value.value,
-            time: new Date(new Date().getTime()).toLocaleString()
+            time: getCommentTimeString()
           };
 
           addComment(cell.model.metadata, comment);

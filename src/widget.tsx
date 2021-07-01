@@ -6,7 +6,7 @@ import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
 import { addReply, deleteComment, deleteReply } from './comments';
 import { Awareness } from 'y-protocols/awareness';
-import { getIdentity } from './utils';
+import { getCommentTimeString, getIdentity } from './utils';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -80,12 +80,12 @@ export class CommentWidget<T> extends ReactWidget {
       const [isHidden, setIsHidden] = React.useState(true);
       const onBodyClick = (): void => setIsHidden(!isHidden);
       const onDeleteClick = (): void => {
-        deleteComment(metadata, commentID)
+        deleteComment(metadata, commentID);
         this.dispose();
-      } 
-      const onDeleteReplyClick = (item_id: IComment["id"]): void => {
+      };
+      const onDeleteReplyClick = (item_id: IComment['id']): void => {
         const data = replies.filter(r => r.id !== item_id);
-        deleteReply(metadata, item_id, commentID)
+        deleteReply(metadata, item_id, commentID);
         setReplies(data);
       };
 
@@ -104,7 +104,7 @@ export class CommentWidget<T> extends ReactWidget {
           identity: getIdentity(this._awareness),
           replies: [],
           text: target.textContent!,
-          time: new Date(new Date().getTime()).toLocaleString()
+          time: getCommentTimeString()
         };
 
         addReply(metadata, reply, commentID);

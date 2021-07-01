@@ -16,9 +16,10 @@
 }
 
 .jc-Time {
-  font-size: x-small;
+  font-size: smaller;
   vertical-align: top;
   margin-left: 10px;
+  color: var(--jp-ui-font-color2);
 }
 
 .jc-Body {
@@ -45,13 +46,13 @@
   border-radius: 50%;
   top: 0;
   left: 0;
-  height: 30px;
-  width: 30px;
+  height: 35px;
+  width: 35px;
 }
 
 .jc-ProfilePicContainer {
   float: left;
-  width: 30px;
+  width: 35px;
 }
 
 .jc-CommentWithReplies {
