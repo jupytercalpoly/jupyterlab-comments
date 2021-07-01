@@ -28,7 +28,29 @@ type CommentWrapperProps = {
 };
 
 function JCComment(props: CommentProps): JSX.Element {
-  const { comment, className, onBodyClick, onEditClick, onDeleteClick } = props;
+  const { comment, className, onBodyClick, onEditClick, onDeleteClick, Editable } = props;
+
+  // const [isEditable, setIsEditable] = React.useState(true);
+      // const onInputKeydown = (e: React.KeyboardEvent): void => {
+      //   if (e.key != 'Enter') {
+      //     return;
+      //   }
+
+      //   const target = e.target as HTMLTextAreaElement;
+
+      //   const reply: IComment = {
+      //     id: UUID.uuid4(),
+      //     type: 'cell',
+      //     identity: getIdentity(this._awareness),
+      //     replies: [],
+      //     text: target.value,
+      //     time: new Date(new Date().getTime()).toLocaleString()
+      //   };
+
+      //   addReply(metadata, reply, commentID);
+      //   target.value = '';
+      //   setIsEditable(true);
+      // };
 
   return (
     <div className={className || ''} id={comment.id}>
@@ -44,8 +66,14 @@ function JCComment(props: CommentProps): JSX.Element {
       <br />
       <br />
       <p className="jc-Body" onClick={onBodyClick}>
-        {comment.text}
+        {comment.text && !Editable}
+
       </p>
+      <textarea
+        className="jc-InputArea"
+        // hidden={isEditable}
+        // onKeyDown={onInputKeydown}
+          />
       <br />
       <button
         className="jc-DeleteButton jp-Button bp3-button bp3-minimal"
@@ -54,7 +82,7 @@ function JCComment(props: CommentProps): JSX.Element {
         <closeIcon.react />
       </button>
       <button 
-        className="jc-DeleteButton jp-Button bp3-button bp3-minimal"
+        className="jc-EditButton jp-Button bp3-button bp3-minimal"
         onClick={onEditClick}
       >
         <editIcon.react />
@@ -130,6 +158,7 @@ export class CommentWidget<T> extends ReactWidget {
             onBodyClick={onBodyClick}
             onEditClick={onEditClick}
             onDeleteClick={onDeleteClick.bind(this)}
+            Editable={isEditable}
           />
           <div className="jc-Replies">
             {replies.map(reply => (
