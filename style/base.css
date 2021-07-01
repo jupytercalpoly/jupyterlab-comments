@@ -46,3 +46,17 @@
   min-height: 44px;
   padding: 5px 4px;
 }
+
+.jc-Indicator {
+  width: 10px;
+  height: 10px;
+  background-color: orangered;
+  float: right;
+  position: relative;
+  border-radius: 5px;
+  padding: 5px;
+}
+
+.jc-Indicator:hover {
+  background-color: orange;
+}

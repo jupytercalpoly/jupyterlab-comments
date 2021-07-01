@@ -29,8 +29,44 @@ const plugin: JupyterFrontEndPlugin<void> = {
     const panel = new CommentPanel({ tracker: nbTracker });
     app.shell.add(panel, 'right', { rank: 500 });
 
+    let awarenessTracker = false;
+    let onHover = false;
+
     nbTracker.activeCellChanged.connect((_, cells) => {
       panel.update();
+      if(awarenessTracker == false)
+      {
+        (nbTracker.currentWidget?.model?.sharedModel as YNotebook).awareness.on('change', () => {
+          if(window.getSelection()!.toString().length > 0)
+          {
+            if(document.getElementsByClassName('jc-Indicator').length == 0)
+            {
+              let indicator = document.createElement('div');
+              indicator.className = 'jc-Indicator';
+              indicator.onclick = () => {
+                console.log('click');
+              };
+              indicator.onmouseover = () => {
+                onHover = true;
+              };
+              indicator.onmouseout = () => {
+                onHover = false;
+              }
+              nbTracker.activeCell?.node.childNodes[1].childNodes[1].
+              childNodes[1].firstChild?.appendChild(indicator);
+            }
+          }
+          else
+          {
+            if(document.getElementsByClassName('jc-Indicator').length != 0 && onHover == false)
+            {
+              let elem = document.getElementsByClassName('jc-Indicator')[0];
+              elem.parentNode?.removeChild(elem);
+            }
+          }
+        });
+        awarenessTracker = true; 
+      }
     });
 
     addCommands(app, nbTracker, panel);
