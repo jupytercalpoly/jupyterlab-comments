@@ -65,3 +65,13 @@
   padding: 5px 4px;
   min-height: 44px;
 }
+
+.jc-Ellipses {
+  float: right;
+  width: 25px;
+  height: 25px;
+}
+
+.jc-Ellipses > svg {
+  width: 25px;
+}

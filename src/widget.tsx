@@ -1,6 +1,6 @@
 import { ReactWidget } from '@jupyterlab/apputils';
 import * as React from 'react';
-import { closeIcon, editIcon } from '@jupyterlab/ui-components';
+import { closeIcon, editIcon, ellipsesIcon } from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
@@ -20,6 +20,7 @@ type CommentProps = {
   className: string;
   onBodyClick: React.MouseEventHandler;
   onDeleteClick: React.MouseEventHandler;
+  onDropdownClick: React.MouseEventHandler;
 };
 
 type CommentWrapperProps = {
@@ -27,7 +28,8 @@ type CommentWrapperProps = {
 };
 
 function JCComment(props: CommentProps): JSX.Element {
-  const { comment, className, onBodyClick, onDeleteClick } = props;
+  const { comment, className, onBodyClick, onDeleteClick, onDropdownClick } =
+    props;
 
   return (
     <div className={className || ''} id={comment.id}>
@@ -38,6 +40,9 @@ function JCComment(props: CommentProps): JSX.Element {
         />
       </div>
       <span className="jc-Nametag">{comment.identity.name}</span>
+      <span onClick={onDropdownClick}>
+        <ellipsesIcon.react className="jc-Ellipses" tag="span" />
+      </span>
       <br />
       <span className="jc-Time">{comment.time}</span>
       <br />
@@ -112,6 +117,8 @@ export class CommentWidget<T> extends ReactWidget {
         setIsHidden(true);
       };
 
+      const onDropdownClick = (): void => console.log('dropdown click');
+
       if (comment == null) {
         return <div className="jc-MissingComment" />;
       }
@@ -123,6 +130,7 @@ export class CommentWidget<T> extends ReactWidget {
             className="jc-Comment"
             onBodyClick={onBodyClick}
             onDeleteClick={onDeleteClick.bind(this)}
+            onDropdownClick={onDropdownClick}
           />
           <div className="jc-Replies">
             {replies.map(reply => (
@@ -131,6 +139,7 @@ export class CommentWidget<T> extends ReactWidget {
                 className="jc-Comment jc-Reply"
                 onBodyClick={onBodyClick}
                 onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
+                onDropdownClick={onDropdownClick}
                 key={reply.id}
               />
             ))}
