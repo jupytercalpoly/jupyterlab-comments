@@ -24,3 +24,17 @@ export function getIdentity(awareness: Awareness): IIdentity {
 
   return emptyIdentity;
 }
+
+export function getCommentTimeString(): string {
+  const d = new Date();
+  const time = d.toLocaleString('default', {
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true
+  });
+  const date = d.toLocaleString('default', {
+    month: 'short',
+    day: 'numeric'
+  });
+  return time + ' ' + date;
+}

@@ -7,7 +7,7 @@ import { CommentWidget } from './widget';
 import { addComment, getComments } from './comments';
 import { Cell } from '@jupyterlab/cells';
 import { YBaseCell } from '@jupyterlab/shared-models';
-import { getIdentity } from './utils';
+import { getCommentTimeString, getIdentity } from './utils';
 
 export class CommentPanel extends Panel {
   constructor(options: CommentPanel.IOptions) {
@@ -75,7 +75,7 @@ export class CommentPanel extends Panel {
       identity: getIdentity(awareness),
       replies: [],
       text: this._inputWidget.node.textContent!,
-      time: new Date(new Date().getTime()).toLocaleString()
+      time: getCommentTimeString()
     });
 
     this._inputWidget.node.textContent = '';
