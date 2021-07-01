@@ -4,7 +4,7 @@ import { closeIcon, editIcon } from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
-import { addReply, deleteComment, deleteReply, editComment } from './comments';
+import { addReply, deleteComment, deleteReply, edit} from './comments';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
 
@@ -85,6 +85,7 @@ export class CommentWidget<T> extends ReactWidget {
   render(): ReactRenderElement {
     const metadata = this._metadata;
     const commentID = this.commentID;
+    let replyID: IComment['id'] | null;
 
     const _CommentWrapper = (props: CommentWrapperProps): JSX.Element => {
       const { comment } = props;
@@ -93,6 +94,11 @@ export class CommentWidget<T> extends ReactWidget {
       const [isEditable, setIsEditable] = React.useState(false);
       const onBodyClick = (): void => setIsHidden(!isHidden);
       const onEditClick = (): void => setIsEditable(!isEditable);
+      const onEditReplyClick = (item_id: IComment['id']): void => {
+        setIsEditable(!isEditable);
+        replyID = item_id;
+
+      }
       const onDeleteClick = (): void => {
         deleteComment(metadata, commentID);
         this.dispose();
@@ -129,8 +135,9 @@ export class CommentWidget<T> extends ReactWidget {
           console.log('hihih')
         }
         else {
-          editComment(metadata, commentID, target.textContent!)
+          edit(metadata, commentID, replyID,  target.textContent!)
           target.textContent! = '';
+          replyID = null;
           setIsEditable(!isEditable);
           console.log(target.textContent)
         }
@@ -178,7 +185,7 @@ export class CommentWidget<T> extends ReactWidget {
                 comment={reply}
                 content={getContent(reply)}
                 className="jc-Comment jc-Reply"
-                onEditClick={onEditClick}
+                onEditClick={onEditReplyClick.bind(this, reply.id)}
                 onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
                 key={reply.id}
               />
