@@ -1,35 +1,28 @@
 .jc-CommentPanel {
-  background-color: white;
-}
-
-.subclass {
-  background-color: gray;
-  color: black;
+  background-color: var(--jp-layout-color0);
+  overflow: auto;
 }
 
 .jc-Comment {
-  background-color: lightblue;
-  width: 100%;
-  margin: 4px 8px 4px 8px;
+  background-color: var(--jp-layout-color1);
+  padding: 15px;
+  border: 1px solid #c5c5c5;
+  color: var(--jp-ui-font-color0);
 }
 
 .jc-Nametag {
-  width: 30%;
-  display: inline-block;
-  top: 0px;
+  font-weight: bold;
+  margin-left: 10px;
 }
 
 .jc-Time {
-  width: 70%;
-  display: inline-block;
-  top: 0px;
   font-size: x-small;
+  vertical-align: top;
+  margin-left: 10px;
 }
 
 .jc-Body {
-  width: 70%;
   display: inline-block;
-  top: 0px;
 }
 
 .jc-DeleteButton {
@@ -38,11 +31,36 @@
 }
 
 .jc-Reply {
-  margin-left: 30px;
+  border-top: none;
 }
 
 .jc-CommentInput {
   width: 100%;
   min-height: 44px;
   padding: 5px 4px;
+}
+
+.jc-ProfilePic {
+  display: inline-block;
+  border-radius: 50%;
+  top: 0;
+  left: 0;
+  height: 30px;
+  width: 30px;
+}
+
+.jc-ProfilePicContainer {
+  float: left;
+  width: 30px;
+}
+
+.jc-CommentWithReplies {
+  margin: 0 8px 12px 8px;
+}
+
+.jc-InputArea {
+  border: 1px solid #c5c5c5;
+  border-top: none;
+  padding: 5px 4px;
+  min-height: 44px;
 }

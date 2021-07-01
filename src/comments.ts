@@ -13,6 +13,7 @@ export function verifyComment(comment: Record<string, unknown>): boolean {
     'identity' in comment &&
     'id' in (comment['identity'] as comments.IIdentity) &&
     'name' in (comment['identity'] as comments.IIdentity) &&
+    'color' in (comment['identity'] as comments.IIdentity) &&
     'text' in comment &&
     'replies' in comment &&
     'time' in comment
