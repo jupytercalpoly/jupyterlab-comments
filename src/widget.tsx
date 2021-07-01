@@ -1,6 +1,6 @@
 import { ReactWidget } from '@jupyterlab/apputils';
 import * as React from 'react';
-import { closeIcon, editIcon} from '@jupyterlab/ui-components';
+import { closeIcon, editIcon } from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
@@ -31,9 +31,17 @@ function JCComment(props: CommentProps): JSX.Element {
 
   return (
     <div className={className || ''} id={comment.id}>
-      <p className="jc-Nametag">{comment.identity.name}</p>
+      <div className="jc-ProfilePicContainer">
+        <div
+          className="jc-ProfilePic"
+          style={{ backgroundColor: comment.identity.color }}
+        />
+      </div>
+      <span className="jc-Nametag">{comment.identity.name}</span>
       <br />
-      <p className="jc-Time">{comment.time}</p>
+      <span className="jc-Time">{comment.time}</span>
+      <br />
+      <br />
       <p className="jc-Body" onClick={onBodyClick}>
         {comment.text}
       </p>
@@ -44,9 +52,7 @@ function JCComment(props: CommentProps): JSX.Element {
       >
         <closeIcon.react />
       </button>
-      <button 
-        className="jc-DeleteButton jp-Button bp3-button bp3-minimal"
-      >
+      <button className="jc-DeleteButton jp-Button bp3-button bp3-minimal">
         <editIcon.react />
       </button>
     </div>
@@ -85,19 +91,21 @@ export class CommentWidget<T> extends ReactWidget {
           return;
         }
 
-        const target = e.target as HTMLTextAreaElement;
+        e.preventDefault();
+        e.stopPropagation();
+        const target = e.target as HTMLDivElement;
 
         const reply: IComment = {
           id: UUID.uuid4(),
           type: 'cell',
           identity: getIdentity(this._awareness),
           replies: [],
-          text: target.value,
+          text: target.textContent!,
           time: new Date(new Date().getTime()).toLocaleString()
         };
 
         addReply(metadata, reply, commentID);
-        target.value = '';
+        target.textContent = '';
         setIsHidden(true);
       };
 
@@ -124,15 +132,15 @@ export class CommentWidget<T> extends ReactWidget {
               />
             ))}
           </div>
-          <textarea
+          <div
             className="jc-InputArea"
             hidden={isHidden}
             onKeyDown={onInputKeydown}
+            contentEditable={true}
           />
         </div>
       );
     };
-
 
     return <_CommentWrapper comment={this.comment!} />;
   }
@@ -186,7 +194,7 @@ export class CommentWidget<T> extends ReactWidget {
       commentList.splice(commentIndex, 1);
       this._metadata.set('comments', commentList as any);
       this.dispose();
-    } 
+    }
   }
 
   get comment(): IComment | undefined {
