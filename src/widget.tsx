@@ -21,6 +21,7 @@ type CommentProps = {
   onBodyClick: React.MouseEventHandler;
   onDeleteClick: React.MouseEventHandler;
   onEditClick: React.MouseEventHandler;
+  Editable: boolean;
 };
 
 type CommentWrapperProps = {
@@ -30,7 +31,6 @@ type CommentWrapperProps = {
 function JCComment(props: CommentProps): JSX.Element {
   const { comment, className, onBodyClick, onEditClick, onDeleteClick, Editable } = props;
 
-  // const [isEditable, setIsEditable] = React.useState(true);
       // const onInputKeydown = (e: React.KeyboardEvent): void => {
       //   if (e.key != 'Enter') {
       //     return;
@@ -51,6 +51,13 @@ function JCComment(props: CommentProps): JSX.Element {
       //   target.value = '';
       //   setIsEditable(true);
       // };
+  let b;
+  if (Editable) {
+    b = <p className="jc-Body" onClick={onBodyClick}>{comment.text}</p>
+  }
+  else {
+    b = <p className="jc-Body" onClick={onBodyClick}><textarea value={comment.text}></textarea></p>
+  } 
 
   return (
     <div className={className || ''} id={comment.id}>
@@ -65,15 +72,11 @@ function JCComment(props: CommentProps): JSX.Element {
       <span className="jc-Time">{comment.time}</span>
       <br />
       <br />
-      <p className="jc-Body" onClick={onBodyClick}>
+      <p className="jc-Time">{comment.time}</p>
+      {/* <p className="jc-Body" onClick={onBodyClick}>
         {comment.text && !Editable}
-
-      </p>
-      <textarea
-        className="jc-InputArea"
-        // hidden={isEditable}
-        // onKeyDown={onInputKeydown}
-          />
+      </p> */}
+      {b}
       <br />
       <button
         className="jc-DeleteButton jp-Button bp3-button bp3-minimal"
@@ -168,6 +171,7 @@ export class CommentWidget<T> extends ReactWidget {
                 onBodyClick={onBodyClick}
                 onEditClick={onEditClick}
                 onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
+                Editable={isEditable}
                 key={reply.id}
               />
             ))}
