@@ -54,6 +54,34 @@ export function addComment(
   }
 }
 
+export function edit(
+  metadata: IObservableJSON,
+  id: string,
+  modifiedText: string
+): void {
+  const comment = getCommentByID(metadata, id);
+  if (comment == null) {
+    return;
+  }
+
+}
+
+export function editComment(
+  metadata: IObservableJSON,
+  id: string,
+  modifiedText: string
+): void{
+  const comment = getCommentByID(metadata, id);
+  if (comment == null) {
+    console.warn("Comment does not exist!")
+    return; 
+  }
+  comment.text = modifiedText
+  // Maybe we should inclued an edited flag to render?
+  comment.time = new Date(new Date().getTime()).toLocaleString()
+
+}
+
 export function addReply(
   metadata: IObservableJSON,
   reply: comments.IComment,

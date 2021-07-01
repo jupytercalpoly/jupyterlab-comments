@@ -4,7 +4,7 @@ import { closeIcon, editIcon } from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
-import { addReply, deleteComment, deleteReply } from './comments';
+import { addReply, deleteComment, deleteReply, editComment } from './comments';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
 
@@ -18,10 +18,9 @@ type ReactRenderElement =
 type CommentProps = {
   comment: IComment;
   className: string;
-  onBodyClick: React.MouseEventHandler;
+  content: ReactRenderElement; 
   onDeleteClick: React.MouseEventHandler;
   onEditClick: React.MouseEventHandler;
-  Editable: boolean;
 };
 
 type CommentWrapperProps = {
@@ -29,35 +28,13 @@ type CommentWrapperProps = {
 };
 
 function JCComment(props: CommentProps): JSX.Element {
-  const { comment, className, onBodyClick, onEditClick, onDeleteClick, Editable } = props;
-
-      // const onInputKeydown = (e: React.KeyboardEvent): void => {
-      //   if (e.key != 'Enter') {
-      //     return;
-      //   }
-
-      //   const target = e.target as HTMLTextAreaElement;
-
-      //   const reply: IComment = {
-      //     id: UUID.uuid4(),
-      //     type: 'cell',
-      //     identity: getIdentity(this._awareness),
-      //     replies: [],
-      //     text: target.value,
-      //     time: new Date(new Date().getTime()).toLocaleString()
-      //   };
-
-      //   addReply(metadata, reply, commentID);
-      //   target.value = '';
-      //   setIsEditable(true);
-      // };
-  let b;
-  if (Editable) {
-    b = <p className="jc-Body" onClick={onBodyClick}>{comment.text}</p>
-  }
-  else {
-    b = <p className="jc-Body" onClick={onBodyClick}><textarea value={comment.text}></textarea></p>
-  } 
+  const {
+    comment,
+    className,
+    content,
+    onEditClick,
+    onDeleteClick,
+  } = props;
 
   return (
     <div className={className || ''} id={comment.id}>
@@ -73,10 +50,10 @@ function JCComment(props: CommentProps): JSX.Element {
       <br />
       <br />
       <p className="jc-Time">{comment.time}</p>
-      {/* <p className="jc-Body" onClick={onBodyClick}>
-        {comment.text && !Editable}
-      </p> */}
-      {b}
+
+      {/* the actual content */}
+      {content}
+
       <br />
       <button
         className="jc-DeleteButton jp-Button bp3-button bp3-minimal"
@@ -84,7 +61,7 @@ function JCComment(props: CommentProps): JSX.Element {
       >
         <closeIcon.react />
       </button>
-      <button 
+      <button
         className="jc-EditButton jp-Button bp3-button bp3-minimal"
         onClick={onEditClick}
       >
@@ -113,9 +90,9 @@ export class CommentWidget<T> extends ReactWidget {
       const { comment } = props;
       const [replies, setReplies] = React.useState(comment.replies);
       const [isHidden, setIsHidden] = React.useState(true);
-      const [isEditable, setIsEditable] = React.useState(true);
+      const [isEditable, setIsEditable] = React.useState(false);
       const onBodyClick = (): void => setIsHidden(!isHidden);
-      const onEditClick = (): void =>setIsEditable(!isEditable);
+      const onEditClick = (): void => setIsEditable(!isEditable);
       const onDeleteClick = (): void => {
         deleteComment(metadata, commentID);
         this.dispose();
@@ -135,43 +112,74 @@ export class CommentWidget<T> extends ReactWidget {
         e.stopPropagation();
         const target = e.target as HTMLDivElement;
 
-        const reply: IComment = {
-          id: UUID.uuid4(),
-          type: 'cell',
-          identity: getIdentity(this._awareness),
-          replies: [],
-          text: target.textContent!,
-          time: getCommentTimeString()
-        };
+        if (!isEditable && !isHidden){
+          console.log(target.textContent)
+          const reply: IComment = {
+            id: UUID.uuid4(),
+            type: 'cell',
+            identity: getIdentity(this._awareness),
+            replies: [],
+            text: target.textContent!,
+            time: new Date(new Date().getTime()).toLocaleString()
+          };
 
-        addReply(metadata, reply, commentID);
-        target.textContent = '';
-        setIsHidden(true);
+          addReply(metadata, reply, commentID);
+          target.textContent! = '';
+          setIsHidden(true);
+          console.log('hihih')
+        }
+        else {
+          editComment(metadata, commentID, target.textContent!)
+          target.textContent! = '';
+          setIsEditable(!isEditable);
+          console.log(target.textContent)
+        }
       };
 
       if (comment == null) {
         return <div className="jc-MissingComment" />;
       }
 
+      function getContent(c: IComment): ReactRenderElement{
+        if (!isEditable ) {
+          return  (
+            <p className="jc-Body" onClick={onBodyClick}>
+              {c.text}
+            </p>
+          );
+        } else {
+          return (
+            <p className="jc-Body" onClick={onBodyClick}>
+              <div
+                className="jc-InputArea"
+                onKeyDown={onInputKeydown}
+                contentEditable={true}
+              >
+                {c.text}
+              </div>
+            </p>
+          );
+        }
+
+      }
+
       return (
         <div className="jc-CommentWithReplies">
           <JCComment
             comment={comment}
+            content={getContent(comment)}
             className="jc-Comment"
-            onBodyClick={onBodyClick}
             onEditClick={onEditClick}
             onDeleteClick={onDeleteClick.bind(this)}
-            Editable={isEditable}
           />
           <div className="jc-Replies">
             {replies.map(reply => (
               <JCComment
                 comment={reply}
+                content={getContent(reply)}
                 className="jc-Comment jc-Reply"
-                onBodyClick={onBodyClick}
                 onEditClick={onEditClick}
                 onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
-                Editable={isEditable}
                 key={reply.id}
               />
             ))}
