@@ -73,6 +73,8 @@ export class CommentWidget<T> extends ReactWidget {
     this._commentID = id;
     this._target = target;
     this._metadata = metadata;
+    this.addClass('jc-CommentWidget');
+    this.node.tabIndex = 0;
   }
 
   render(): ReactRenderElement {
@@ -83,6 +85,7 @@ export class CommentWidget<T> extends ReactWidget {
       const { comment } = props;
       const [replies, setReplies] = React.useState(comment.replies);
       const [isHidden, setIsHidden] = React.useState(true);
+
       const onBodyClick = (): void => setIsHidden(!isHidden);
       const onDeleteClick = (): void => {
         deleteComment(metadata, commentID);
@@ -93,6 +96,8 @@ export class CommentWidget<T> extends ReactWidget {
         deleteReply(metadata, item_id, commentID);
         setReplies(data);
       };
+
+      const focusComment = (): void => this.node.focus();
 
       const onInputKeydown = (e: React.KeyboardEvent): void => {
         if (e.key != 'Enter') {
@@ -124,25 +129,27 @@ export class CommentWidget<T> extends ReactWidget {
       }
 
       return (
-        <div className="jc-CommentWithReplies">
-          <JCComment
-            comment={comment}
-            className="jc-Comment"
-            onBodyClick={onBodyClick}
-            onDeleteClick={onDeleteClick.bind(this)}
-            onDropdownClick={onDropdownClick}
-          />
-          <div className="jc-Replies">
-            {replies.map(reply => (
-              <JCComment
-                comment={reply}
-                className="jc-Comment jc-Reply"
-                onBodyClick={onBodyClick}
-                onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
-                onDropdownClick={onDropdownClick}
-                key={reply.id}
-              />
-            ))}
+        <>
+          <div className="jc-CommentWithReplies" onClick={focusComment}>
+            <JCComment
+              comment={comment}
+              className="jc-Comment"
+              onBodyClick={onBodyClick}
+              onDeleteClick={onDeleteClick.bind(this)}
+              onDropdownClick={onDropdownClick}
+            />
+            <div className="jc-Replies">
+              {replies.map(reply => (
+                <JCComment
+                  comment={reply}
+                  className="jc-Comment jc-Reply"
+                  onBodyClick={onBodyClick}
+                  onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
+                  onDropdownClick={onDropdownClick}
+                  key={reply.id}
+                />
+              ))}
+            </div>
           </div>
           <div
             className="jc-InputArea"
@@ -150,7 +157,7 @@ export class CommentWidget<T> extends ReactWidget {
             onKeyDown={onInputKeydown}
             contentEditable={true}
           />
-        </div>
+        </>
       );
     };
 
@@ -158,7 +165,6 @@ export class CommentWidget<T> extends ReactWidget {
   }
 
   get comment(): IComment | undefined {
-    console.log('getting comment with id', this.commentID);
     const comments = this._metadata.get('comments');
     if (comments == null) {
       return undefined;
