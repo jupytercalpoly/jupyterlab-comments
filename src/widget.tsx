@@ -84,11 +84,9 @@ export class CommentWidget<T> extends ReactWidget {
       const [replies, setReplies] = React.useState(comment.replies);
       const [isHidden, setIsHidden] = React.useState(true);
       const [isEditable, setIsEditable] = React.useState(false);
+
       const onBodyClick = (): void => setIsHidden(!isHidden);
-      // const onEditClick = (): void =>{
-      //   setIsEditable(!isEditable);
-      // }
-      const onEditReplyClick = (item_id: IComment['id']): void => {
+      const onEditClick = (item_id: IComment['id']): void => {
         setIsEditable(!isEditable);
         editID = item_id;
       };
@@ -106,7 +104,6 @@ export class CommentWidget<T> extends ReactWidget {
         if (e.key != 'Enter') {
           return;
         }
-
         e.preventDefault();
         e.stopPropagation();
         const target = e.target as HTMLDivElement;
@@ -124,7 +121,6 @@ export class CommentWidget<T> extends ReactWidget {
           addReply(metadata, reply, commentID);
           target.textContent! = '';
           setIsHidden(true);
-          console.log('hihih');
         } else {
           edit(metadata, commentID, editID, target.textContent!);
           target.textContent! = '';
@@ -167,7 +163,7 @@ export class CommentWidget<T> extends ReactWidget {
             comment={comment}
             content={getContent(comment)}
             className="jc-Comment"
-            onEditClick={onEditReplyClick.bind(this, comment.id)}
+            onEditClick={onEditClick.bind(this, comment.id)}
             onDeleteClick={onDeleteClick.bind(this)}
           />
           <div className="jc-Replies">
@@ -176,7 +172,7 @@ export class CommentWidget<T> extends ReactWidget {
                 comment={reply}
                 content={getContent(reply)}
                 className="jc-Comment jc-Reply"
-                onEditClick={onEditReplyClick.bind(this, reply.id)}
+                onEditClick={onEditClick.bind(this, reply.id)}
                 onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
                 key={reply.id}
               />
