@@ -63,14 +63,14 @@ function JCComment(props: CommentProps): JSX.Element {
       </div>
       <span className="jc-Nametag">{comment.identity.name}</span>
       <span onClick={onDropdownClick}>
-        <ellipsesIcon.react className="jc-Ellipses" tag="span" />
+        <ellipsesIcon.react className="jc-Ellipses jc-no-reply" tag="span" />
       </span>
       <br />
       <span className="jc-Time">{comment.time}</span>
       <br />
 
       {/* the actual content */}
-      <div className="jc-ContentContainer" onClick={onEditClick}>
+      <div className="jc-ContentContainer jc-no-reply" onClick={onEditClick}>
         {content}
       </div>
 
@@ -109,7 +109,7 @@ export class CommentWidget<T> extends ReactWidget {
       const [isEditable, setIsEditable] = React.useState(false);
 
       const onEditClick = (item_id: IComment['id']): void => {
-        setIsEditable(!isEditable);
+        setIsEditable(true);
         editID = item_id;
       };
 
@@ -120,12 +120,18 @@ export class CommentWidget<T> extends ReactWidget {
           this._activeID = newID;
         }
 
-        if (target.closest('.jc-Ellipses') == null) {
+        if (target.closest('.jc-no-reply') == null) {
           setIsHidden(!isHidden);
+          setIsEditable(false);
         }
       };
 
-      const focusComment = (): void => this.node.focus();
+      const focusComment = (e: React.MouseEvent): void => {
+        const target = e.target as HTMLElement;
+        if (target.closest('.jc-no-reply') == null) {
+          this.node.focus();
+        }
+      };
 
       const onInputKeydown = (e: React.KeyboardEvent): void => {
         if (e.key != 'Enter') {
@@ -166,20 +172,21 @@ export class CommentWidget<T> extends ReactWidget {
 
       function getContent(c: IComment) {
         let normal = (
-          <p className="jc-Body" onClick={onBodyClick}>
+          <div className="jc-Body" onClick={onBodyClick}>
             {c.text}
-          </p>
+          </div>
         );
         let edit_box = (
-          <p className="jc-Body" onClick={onBodyClick}>
+          <div className="jc-Body" onClick={onBodyClick}>
             <div
               className="jc-InputArea"
               onKeyDown={onInputKeydown}
               contentEditable={true}
+              suppressContentEditableWarning={true}
             >
               {c.text}
             </div>
-          </p>
+          </div>
         );
         if (editID == c.id && isEditable) {
           return edit_box;
