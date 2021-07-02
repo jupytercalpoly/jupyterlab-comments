@@ -1,5 +1,6 @@
 .jc-CommentPanel {
   background-color: var(--jp-layout-color0);
+  color: var(--jp-ui-font-color0);
   overflow: auto;
 }
 
@@ -7,7 +8,6 @@
   background-color: var(--jp-layout-color1);
   padding: 15px;
   border: 1px solid #c5c5c5;
-  color: var(--jp-ui-font-color0);
 }
 
 .jc-Nametag {
