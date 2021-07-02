@@ -1,5 +1,6 @@
 .jc-CommentPanel {
   background-color: var(--jp-layout-color0);
+  color: var(--jp-ui-font-color0);
   overflow: auto;
 }
 
@@ -7,7 +8,6 @@
   background-color: var(--jp-layout-color1);
   padding: 15px;
   border: 1px solid #c5c5c5;
-  color: var(--jp-ui-font-color0);
 }
 
 .jc-Nametag {
@@ -60,8 +60,16 @@
   width: 35px;
 }
 
-.jc-CommentWithReplies {
+.jc-CommentWidget {
   margin: 0 8px 12px 8px;
+}
+
+.jc-CommentWidget:focus-within .jc-Comment {
+  border-color: var(--jp-brand-color1);
+}
+
+.jc-CommentWidget:focus-within .jc-InputArea {
+  border-color: var(--jp-brand-color1);
 }
 
 .jc-InputArea {
@@ -69,4 +77,14 @@
   border-top: none;
   padding: 5px 4px;
   min-height: 44px;
+}
+
+.jc-Ellipses {
+  float: right;
+  width: 25px;
+  height: 25px;
+}
+
+.jc-Ellipses > svg {
+  width: 25px;
 }
