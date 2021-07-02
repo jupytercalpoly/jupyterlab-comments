@@ -4,7 +4,7 @@ import { closeIcon, editIcon } from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
-import { addReply, deleteComment, deleteReply } from './comments';
+import { addReply, deleteComment, deleteReply, edit } from './comments';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
 
@@ -18,8 +18,9 @@ type ReactRenderElement =
 type CommentProps = {
   comment: IComment;
   className: string;
-  onBodyClick: React.MouseEventHandler;
+  content: ReactRenderElement;
   onDeleteClick: React.MouseEventHandler;
+  onEditClick: React.MouseEventHandler;
 };
 
 type CommentWrapperProps = {
@@ -27,7 +28,7 @@ type CommentWrapperProps = {
 };
 
 function JCComment(props: CommentProps): JSX.Element {
-  const { comment, className, onBodyClick, onDeleteClick } = props;
+  const { comment, className, content, onEditClick, onDeleteClick } = props;
 
   return (
     <div className={className || ''} id={comment.id}>
@@ -41,10 +42,10 @@ function JCComment(props: CommentProps): JSX.Element {
       <br />
       <span className="jc-Time">{comment.time}</span>
       <br />
-      <br />
-      <p className="jc-Body" onClick={onBodyClick}>
-        {comment.text}
-      </p>
+
+      {/* the actual content */}
+      {content}
+
       <br />
       <button
         className="jc-DeleteButton jp-Button bp3-button bp3-minimal"
@@ -52,7 +53,10 @@ function JCComment(props: CommentProps): JSX.Element {
       >
         <closeIcon.react />
       </button>
-      <button className="jc-DeleteButton jp-Button bp3-button bp3-minimal">
+      <button
+        className="jc-EditButton jp-Button bp3-button bp3-minimal"
+        onClick={onEditClick}
+      >
         <editIcon.react />
       </button>
     </div>
@@ -73,12 +77,19 @@ export class CommentWidget<T> extends ReactWidget {
   render(): ReactRenderElement {
     const metadata = this._metadata;
     const commentID = this.commentID;
+    let editID: IComment['id'];
 
     const _CommentWrapper = (props: CommentWrapperProps): JSX.Element => {
       const { comment } = props;
       const [replies, setReplies] = React.useState(comment.replies);
       const [isHidden, setIsHidden] = React.useState(true);
+      const [isEditable, setIsEditable] = React.useState(false);
+
       const onBodyClick = (): void => setIsHidden(!isHidden);
+      const onEditClick = (item_id: IComment['id']): void => {
+        setIsEditable(!isEditable);
+        editID = item_id;
+      };
       const onDeleteClick = (): void => {
         deleteComment(metadata, commentID);
         this.dispose();
@@ -93,43 +104,75 @@ export class CommentWidget<T> extends ReactWidget {
         if (e.key != 'Enter') {
           return;
         }
-
         e.preventDefault();
         e.stopPropagation();
         const target = e.target as HTMLDivElement;
 
-        const reply: IComment = {
-          id: UUID.uuid4(),
-          type: 'cell',
-          identity: getIdentity(this._awareness),
-          replies: [],
-          text: target.textContent!,
-          time: getCommentTimeString()
-        };
+        if (!isEditable && !isHidden) {
+          const reply: IComment = {
+            id: UUID.uuid4(),
+            type: 'cell',
+            identity: getIdentity(this._awareness),
+            replies: [],
+            text: target.textContent!,
+            time : getCommentTimeString()
+          };
 
-        addReply(metadata, reply, commentID);
-        target.textContent = '';
-        setIsHidden(true);
+          addReply(metadata, reply, commentID);
+          target.textContent! = '';
+          setIsHidden(true);
+        } else {
+          edit(metadata, commentID, editID, target.textContent!);
+          target.textContent! = '';
+          editID = '';
+          setIsEditable(false);
+        }
       };
 
       if (comment == null) {
         return <div className="jc-MissingComment" />;
       }
 
+      function getContent(c: IComment) {
+        let normal = (
+          <p className="jc-Body" onClick={onBodyClick}>
+            {c.text}
+          </p>
+        );
+        let edit_box = (
+          <p className="jc-Body" onClick={onBodyClick}>
+            <div
+              className="jc-InputArea"
+              onKeyDown={onInputKeydown}
+              contentEditable={true}
+            >
+              {c.text}
+            </div>
+          </p>
+        );
+        if (editID == c.id && isEditable) {
+          return edit_box;
+        } else {
+          return normal;
+        }
+      }
+
       return (
         <div className="jc-CommentWithReplies">
           <JCComment
             comment={comment}
+            content={getContent(comment)}
             className="jc-Comment"
-            onBodyClick={onBodyClick}
+            onEditClick={onEditClick.bind(this, comment.id)}
             onDeleteClick={onDeleteClick.bind(this)}
           />
           <div className="jc-Replies">
             {replies.map(reply => (
               <JCComment
                 comment={reply}
+                content={getContent(reply)}
                 className="jc-Comment jc-Reply"
-                onBodyClick={onBodyClick}
+                onEditClick={onEditClick.bind(this, reply.id)}
                 onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
                 key={reply.id}
               />
