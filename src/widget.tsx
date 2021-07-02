@@ -27,6 +27,20 @@ type CommentWrapperProps = {
   comment: IComment;
 };
 
+/**
+ * A React component that renders a single comment or reply.
+ *
+ * @param comment - the comment object to render. Note: Replies will
+ * not be rendered.
+ *
+ * @param className - a string that will be used as the className of the
+ * container element.
+ *
+ * @param onBodyClick - a function that will be run when the comment is clicked.
+ *
+ * @param onDropdownClick - a function that will be run when the comment's
+ * dropdown (ellipses) menu is clicked.
+ */
 function JCComment(props: CommentProps): JSX.Element {
   const { comment, className, onBodyClick, onDropdownClick } = props;
 
@@ -52,6 +66,9 @@ function JCComment(props: CommentProps): JSX.Element {
   );
 }
 
+/**
+ * A ReactWidget that renders a comment and its replies.
+ */
 export class CommentWidget<T> extends ReactWidget {
   constructor(options: CommentWidget.IOptions<T>) {
     super();
@@ -155,6 +172,9 @@ export class CommentWidget<T> extends ReactWidget {
     return <_CommentWrapper comment={this.comment!} />;
   }
 
+  /**
+   * The comment object being rendered by the widget.
+   */
   get comment(): IComment | undefined {
     const comments = this._metadata.get('comments');
     if (comments == null) {
@@ -168,34 +188,58 @@ export class CommentWidget<T> extends ReactWidget {
     );
   }
 
+  /**
+   * The target of the comment (what is being commented on).
+   */
   get target(): T {
     return this._target;
   }
 
+  /**
+   * Information about the author of the comment.
+   */
   get identity(): IIdentity | undefined {
     return this.comment?.identity;
   }
 
+  /**
+   * The type of the comment.
+   */
   get type(): CommentType | undefined {
     return this.comment?.type;
   }
 
+  /**
+   * The plain body text of the comment.
+   */
   get text(): string | undefined {
     return this.comment?.text;
   }
 
+  /**
+   * An array of replies to the comment.
+   */
   get replies(): IComment[] | undefined {
     return this.comment?.replies;
   }
 
+  /**
+   * The ID of the main comment.
+   */
   get commentID(): string {
     return this._commentID;
   }
 
+  /**
+   * The ID of the last-focused comment or reply.
+   */
   get activeID(): string {
     return this._activeID;
   }
 
+  /**
+   * The metadata object hosting the comment.
+   */
   get metadata(): IObservableJSON {
     return this._metadata;
   }

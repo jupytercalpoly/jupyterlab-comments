@@ -27,26 +27,30 @@ const plugin: JupyterFrontEndPlugin<void> = {
   autoStart: true,
   requires: [INotebookTracker],
   activate: (app: JupyterFrontEnd, nbTracker: INotebookTracker) => {
+    // A widget tracker for comment widgets
     const commentTracker = new WidgetTracker<CommentWidget<any>>({
       namespace: 'comment-widgets'
     });
 
+    // The side panel that will host the comments
     const panel = new CommentPanel({
       tracker: nbTracker,
       commands: app.commands
     });
     app.shell.add(panel, 'right', { rank: 500 });
 
-    panel.commentAdded.connect((_, comment) => {
-      void commentTracker.add(comment);
-    });
+    // Automatically add the comment widgets to the tracker as
+    // they're added to the panel
+    panel.commentAdded.connect(
+      (_, comment) => void commentTracker.add(comment)
+    );
 
-    nbTracker.activeCellChanged.connect((_, cells) => {
-      panel.update();
-    });
+    // Re-render the panel whenever the active cell changes
+    nbTracker.activeCellChanged.connect((_, cells) => panel.update());
 
     addCommands(app, nbTracker, commentTracker, panel);
 
+    // Add an entry to the drop-down menu for comments
     panel.commentMenu.addItem({ command: CommandIDs.deleteComment });
 
     app.contextMenu.addItem({

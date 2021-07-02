@@ -20,6 +20,7 @@ export class CommentPanel extends Panel {
     this.title.icon = listIcon;
     this.addClass('jc-CommentPanel');
 
+    // Create the input element for adding new comments
     const node = document.createElement('div');
     node.setAttribute('contentEditable', 'true');
     node.classList.add('jc-CommentInput');
@@ -86,6 +87,9 @@ export class CommentPanel extends Panel {
     this.update();
   }
 
+  /**
+   * Re-render the comment widgets when an `update` message is recieved.
+   */
   onUpdateRequest(msg: Message): void {
     super.onUpdateRequest(msg);
 
@@ -132,15 +136,24 @@ export class CommentPanel extends Panel {
     }
   }
 
+  /**
+   * Add a comment widget and emit the `commentAdded` signal.
+   */
   addComment(widget: CommentWidget<any>): void {
     this.addWidget(widget);
     this._commentAdded.emit(widget);
   }
 
+  /**
+   * A signal emitted when a comment is added to the panel.
+   */
   get commentAdded(): Signal<this, CommentWidget<any>> {
     return this._commentAdded;
   }
 
+  /**
+   * The dropdown menu for comment widgets.
+   */
   get commentMenu(): Menu {
     return this._commentMenu;
   }
