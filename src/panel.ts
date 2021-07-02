@@ -1,4 +1,4 @@
-import { Panel, Widget } from '@lumino/widgets';
+import { Menu, Panel, Widget } from '@lumino/widgets';
 import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
 import { listIcon } from '@jupyterlab/ui-components';
@@ -8,6 +8,8 @@ import { addComment, getComments } from './comments';
 import { Cell } from '@jupyterlab/cells';
 import { YBaseCell } from '@jupyterlab/shared-models';
 import { getCommentTimeString, getIdentity } from './utils';
+import { Signal } from '@lumino/signaling';
+import { CommandRegistry } from '@lumino/commands';
 
 export class CommentPanel extends Panel {
   constructor(options: CommentPanel.IOptions) {
@@ -23,6 +25,8 @@ export class CommentPanel extends Panel {
     node.classList.add('jc-CommentInput');
     const inputWidget = (this._inputWidget = new Widget({ node }));
     this.addWidget(inputWidget);
+
+    this._commentMenu = new Menu({ commands: options.commands });
   }
 
   onAfterAttach(msg: Message): void {
@@ -113,23 +117,43 @@ export class CommentPanel extends Panel {
     // T is currently always 'Cell' for CommentWidget<T>
     // Will have to be made generic in the future
     // (switch statement on comment.type?)
+    //
+    // TODO: Make this not re-create the comment widget every time.
+    // (Update it instead?)
     for (let comment of comments) {
       const widget = new CommentWidget<Cell>({
         awareness,
         id: comment.id,
         target: cell,
-        metadata: cellModel.metadata
+        metadata: cellModel.metadata,
+        menu: this._commentMenu
       });
-      this.addWidget(widget);
+      this.addComment(widget);
     }
+  }
+
+  addComment(widget: CommentWidget<any>): void {
+    this.addWidget(widget);
+    this._commentAdded.emit(widget);
+  }
+
+  get commentAdded(): Signal<this, CommentWidget<any>> {
+    return this._commentAdded;
+  }
+
+  get commentMenu(): Menu {
+    return this._commentMenu;
   }
 
   private _tracker: INotebookTracker;
   private _inputWidget: Widget;
+  private _commentAdded = new Signal<this, CommentWidget<any>>(this);
+  private _commentMenu: Menu;
 }
 
 export namespace CommentPanel {
   export interface IOptions extends Panel.IOptions {
     tracker: INotebookTracker;
+    commands: CommandRegistry;
   }
 }

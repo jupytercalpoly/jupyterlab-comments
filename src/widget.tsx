@@ -1,12 +1,13 @@
 import { ReactWidget } from '@jupyterlab/apputils';
 import * as React from 'react';
-import { closeIcon, editIcon, ellipsesIcon } from '@jupyterlab/ui-components';
+import { ellipsesIcon } from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
-import { addReply, deleteComment, deleteReply } from './comments';
+import { addReply } from './comments';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
+import { Menu } from '@lumino/widgets';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -19,7 +20,6 @@ type CommentProps = {
   comment: IComment;
   className: string;
   onBodyClick: React.MouseEventHandler;
-  onDeleteClick: React.MouseEventHandler;
   onDropdownClick: React.MouseEventHandler;
 };
 
@@ -28,11 +28,10 @@ type CommentWrapperProps = {
 };
 
 function JCComment(props: CommentProps): JSX.Element {
-  const { comment, className, onBodyClick, onDeleteClick, onDropdownClick } =
-    props;
+  const { comment, className, onBodyClick, onDropdownClick } = props;
 
   return (
-    <div className={className || ''} id={comment.id}>
+    <div className={className || ''} id={comment.id} onClick={onBodyClick}>
       <div className="jc-ProfilePicContainer">
         <div
           className="jc-ProfilePic"
@@ -47,19 +46,8 @@ function JCComment(props: CommentProps): JSX.Element {
       <span className="jc-Time">{comment.time}</span>
       <br />
       <br />
-      <p className="jc-Body" onClick={onBodyClick}>
-        {comment.text}
-      </p>
+      <p className="jc-Body">{comment.text}</p>
       <br />
-      <button
-        className="jc-DeleteButton jp-Button bp3-button bp3-minimal"
-        onClick={onDeleteClick}
-      >
-        <closeIcon.react />
-      </button>
-      <button className="jc-DeleteButton jp-Button bp3-button bp3-minimal">
-        <editIcon.react />
-      </button>
     </div>
   );
 }
@@ -68,11 +56,14 @@ export class CommentWidget<T> extends ReactWidget {
   constructor(options: CommentWidget.IOptions<T>) {
     super();
 
-    const { awareness, id, target, metadata } = options;
+    const { awareness, id, target, metadata, menu } = options;
     this._awareness = awareness;
     this._commentID = id;
+    this._activeID = id;
     this._target = target;
     this._metadata = metadata;
+    this._menu = menu;
+
     this.addClass('jc-CommentWidget');
     this.node.tabIndex = 0;
   }
@@ -83,18 +74,18 @@ export class CommentWidget<T> extends ReactWidget {
 
     const _CommentWrapper = (props: CommentWrapperProps): JSX.Element => {
       const { comment } = props;
-      const [replies, setReplies] = React.useState(comment.replies);
       const [isHidden, setIsHidden] = React.useState(true);
 
-      const onBodyClick = (): void => setIsHidden(!isHidden);
-      const onDeleteClick = (): void => {
-        deleteComment(metadata, commentID);
-        this.dispose();
-      };
-      const onDeleteReplyClick = (item_id: IComment['id']): void => {
-        const data = replies.filter(r => r.id !== item_id);
-        deleteReply(metadata, item_id, commentID);
-        setReplies(data);
+      const onBodyClick = (e: React.MouseEvent): void => {
+        const target = e.target as HTMLElement;
+        const newID = Private.getClickID(target);
+        if (newID != null) {
+          this._activeID = newID;
+        }
+
+        if (target.closest('.jc-Ellipses') == null) {
+          setIsHidden(!isHidden);
+        }
       };
 
       const focusComment = (): void => this.node.focus();
@@ -122,7 +113,9 @@ export class CommentWidget<T> extends ReactWidget {
         setIsHidden(true);
       };
 
-      const onDropdownClick = (): void => console.log('dropdown click');
+      const onDropdownClick = (e: React.MouseEvent): void => {
+        this._menu.open(e.pageX, e.pageY);
+      };
 
       if (comment == null) {
         return <div className="jc-MissingComment" />;
@@ -135,16 +128,14 @@ export class CommentWidget<T> extends ReactWidget {
               comment={comment}
               className="jc-Comment"
               onBodyClick={onBodyClick}
-              onDeleteClick={onDeleteClick.bind(this)}
               onDropdownClick={onDropdownClick}
             />
             <div className="jc-Replies">
-              {replies.map(reply => (
+              {comment.replies.map(reply => (
                 <JCComment
                   comment={reply}
                   className="jc-Comment jc-Reply"
                   onBodyClick={onBodyClick}
-                  onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
                   onDropdownClick={onDropdownClick}
                   key={reply.id}
                 />
@@ -201,10 +192,20 @@ export class CommentWidget<T> extends ReactWidget {
     return this._commentID;
   }
 
+  get activeID(): string {
+    return this._activeID;
+  }
+
+  get metadata(): IObservableJSON {
+    return this._metadata;
+  }
+
   private _awareness: Awareness;
   private _commentID: string;
   private _target: T;
   private _metadata: IObservableJSON;
+  private _activeID: string;
+  private _menu: Menu;
 }
 
 export namespace CommentWidget {
@@ -216,5 +217,20 @@ export namespace CommentWidget {
     metadata: IObservableJSON;
 
     target: T;
+
+    menu: Menu;
+  }
+}
+
+export namespace Private {
+  /**
+   * Get the ID of a comment that a target lies within.
+   */
+  export function getClickID(target: HTMLElement): string | undefined {
+    const comment = target.closest('.jc-Comment');
+    if (comment == null) {
+      return undefined;
+    }
+    return comment.id;
   }
 }

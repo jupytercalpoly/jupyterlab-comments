@@ -3,19 +3,20 @@ import {
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
 
-import { InputDialog } from '@jupyterlab/apputils';
+import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
 import { INotebookTracker } from '@jupyterlab/notebook';
-import { addComment } from './comments';
+import { addComment, deleteComment, deleteReply } from './comments';
 import { UUID } from '@lumino/coreutils';
 import { IComment } from './commentformat';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
 import { CommentPanel } from './panel';
+import { CommentWidget } from './widget';
 
 namespace CommandIDs {
   export const addComment = 'jl-chat:add-comment';
-  export const renderComment = 'jl-chat:render-comment';
+  export const deleteComment = 'jl-chat:delete-comment';
 }
 
 /**
@@ -26,19 +27,38 @@ const plugin: JupyterFrontEndPlugin<void> = {
   autoStart: true,
   requires: [INotebookTracker],
   activate: (app: JupyterFrontEnd, nbTracker: INotebookTracker) => {
-    const panel = new CommentPanel({ tracker: nbTracker });
+    const commentTracker = new WidgetTracker<CommentWidget<any>>({
+      namespace: 'comment-widgets'
+    });
+
+    const panel = new CommentPanel({
+      tracker: nbTracker,
+      commands: app.commands
+    });
     app.shell.add(panel, 'right', { rank: 500 });
+
+    panel.commentAdded.connect((_, comment) => {
+      void commentTracker.add(comment);
+    });
 
     nbTracker.activeCellChanged.connect((_, cells) => {
       panel.update();
     });
 
-    addCommands(app, nbTracker, panel);
+    addCommands(app, nbTracker, commentTracker, panel);
+
+    panel.commentMenu.addItem({ command: CommandIDs.deleteComment });
 
     app.contextMenu.addItem({
       command: CommandIDs.addComment,
       selector: '.jp-Notebook .jp-Cell',
       rank: 13
+    });
+
+    app.contextMenu.addItem({
+      command: CommandIDs.deleteComment,
+      selector: '.jp-Notebook .jp-Cell',
+      rank: 0
     });
   }
 };
@@ -46,6 +66,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 function addCommands(
   app: JupyterFrontEnd,
   nbTracker: INotebookTracker,
+  commentTracker: WidgetTracker<CommentWidget<any>>,
   panel: CommentPanel
 ): void {
   const getAwareness = (): Awareness | undefined => {
@@ -78,6 +99,23 @@ function addCommands(
           panel.update();
         }
       });
+    }
+  });
+
+  app.commands.addCommand(CommandIDs.deleteComment, {
+    label: 'Delete Comment',
+    execute: () => {
+      const currentComment = commentTracker.currentWidget;
+      if (currentComment != null) {
+        const id = currentComment.activeID;
+        const metadata = currentComment.metadata;
+        if (id === currentComment.commentID) {
+          deleteComment(metadata, id);
+        } else {
+          deleteReply(metadata, id, currentComment.commentID);
+        }
+        panel.update();
+      }
     }
   });
 }
