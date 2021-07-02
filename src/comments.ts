@@ -65,10 +65,9 @@ export function edit(
     return;
   }
   if (editid == commentid) {
-    editComment(metadata, commentid, modifiedText)
-  }
-  else {
-    editReply(metadata, commentid, editid, modifiedText)
+    editComment(metadata, commentid, modifiedText);
+  } else {
+    editReply(metadata, commentid, editid, modifiedText);
   }
 }
 
@@ -77,36 +76,36 @@ function editReply(
   commentid: string,
   id: string,
   modifiedText: string
-): void{
+): void {
   const comment = getCommentByID(metadata, commentid);
   if (comment == null) {
-    console.warn("Comment does not exist!")
-    return; 
+    console.warn('Comment does not exist!');
+    return;
   }
   const replyIndex = comment.replies.findIndex(r => r.id === id);
   if (replyIndex === -1) {
     return;
   }
-  comment.replies[replyIndex].text = modifiedText
+  comment.replies[replyIndex].text = modifiedText;
   // Maybe we should inclued an edited flag to render?
-  comment.replies[replyIndex].time = new Date(new Date().getTime()).toLocaleString()
-
+  comment.replies[replyIndex].time = new Date(
+    new Date().getTime()
+  ).toLocaleString();
 }
 
 function editComment(
   metadata: IObservableJSON,
   id: string,
   modifiedText: string
-): void{
+): void {
   const comment = getCommentByID(metadata, id);
   if (comment == null) {
-    console.warn("Comment does not exist!")
-    return; 
+    console.warn('Comment does not exist!');
+    return;
   }
-  comment.text = modifiedText
+  comment.text = modifiedText;
   // Maybe we should inclued an edited flag to render?
-  comment.time = new Date(new Date().getTime()).toLocaleString()
-
+  comment.time = new Date(new Date().getTime()).toLocaleString();
 }
 
 export function addReply(
@@ -146,19 +145,14 @@ export function deleteReply(
   comment.replies.splice(replyIndex, 1);
   comments[commentIndex] = comment;
   metadata.set('comments', comments as any);
-
 }
 
-export function deleteComment(
-  metadata: IObservableJSON,
-  id: string
-): void {
+export function deleteComment(metadata: IObservableJSON, id: string): void {
   const comments = getComments(metadata);
   if (comments == null) {
     return;
   }
-  const commentIndex = comments.findIndex(c=> c.id === id);
+  const commentIndex = comments.findIndex(c => c.id === id);
   comments.splice(commentIndex, 1);
   metadata.set('comments', comments as any);
-
 }
