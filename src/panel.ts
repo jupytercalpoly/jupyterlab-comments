@@ -1,4 +1,4 @@
-import { Panel, Widget } from '@lumino/widgets';
+import { Menu, Panel, Widget } from '@lumino/widgets';
 import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
 import { listIcon } from '@jupyterlab/ui-components';
@@ -8,6 +8,8 @@ import { addComment, getComments } from './comments';
 import { Cell } from '@jupyterlab/cells';
 import { YBaseCell } from '@jupyterlab/shared-models';
 import { getCommentTimeString, getIdentity } from './utils';
+import { Signal } from '@lumino/signaling';
+import { CommandRegistry } from '@lumino/commands';
 
 export class CommentPanel extends Panel {
   constructor(options: CommentPanel.IOptions) {
@@ -18,11 +20,14 @@ export class CommentPanel extends Panel {
     this.title.icon = listIcon;
     this.addClass('jc-CommentPanel');
 
+    // Create the input element for adding new comments
     const node = document.createElement('div');
     node.setAttribute('contentEditable', 'true');
     node.classList.add('jc-CommentInput');
     const inputWidget = (this._inputWidget = new Widget({ node }));
     this.addWidget(inputWidget);
+
+    this._commentMenu = new Menu({ commands: options.commands });
   }
 
   onAfterAttach(msg: Message): void {
@@ -82,6 +87,9 @@ export class CommentPanel extends Panel {
     this.update();
   }
 
+  /**
+   * Re-render the comment widgets when an `update` message is recieved.
+   */
   onUpdateRequest(msg: Message): void {
     super.onUpdateRequest(msg);
 
@@ -113,23 +121,52 @@ export class CommentPanel extends Panel {
     // T is currently always 'Cell' for CommentWidget<T>
     // Will have to be made generic in the future
     // (switch statement on comment.type?)
+    //
+    // TODO: Make this not re-create the comment widget every time.
+    // (Update it instead?)
     for (let comment of comments) {
       const widget = new CommentWidget<Cell>({
         awareness,
         id: comment.id,
         target: cell,
-        metadata: cellModel.metadata
+        metadata: cellModel.metadata,
+        menu: this._commentMenu
       });
-      this.addWidget(widget);
+      this.addComment(widget);
     }
+  }
+
+  /**
+   * Add a comment widget and emit the `commentAdded` signal.
+   */
+  addComment(widget: CommentWidget<any>): void {
+    this.addWidget(widget);
+    this._commentAdded.emit(widget);
+  }
+
+  /**
+   * A signal emitted when a comment is added to the panel.
+   */
+  get commentAdded(): Signal<this, CommentWidget<any>> {
+    return this._commentAdded;
+  }
+
+  /**
+   * The dropdown menu for comment widgets.
+   */
+  get commentMenu(): Menu {
+    return this._commentMenu;
   }
 
   private _tracker: INotebookTracker;
   private _inputWidget: Widget;
+  private _commentAdded = new Signal<this, CommentWidget<any>>(this);
+  private _commentMenu: Menu;
 }
 
 export namespace CommentPanel {
   export interface IOptions extends Panel.IOptions {
     tracker: INotebookTracker;
+    commands: CommandRegistry;
   }
 }
