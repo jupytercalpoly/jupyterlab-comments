@@ -115,7 +115,7 @@ export class CommentWidget<T> extends ReactWidget {
             identity: getIdentity(this._awareness),
             replies: [],
             text: target.textContent!,
-            time: new Date(new Date().getTime()).toLocaleString()
+            time : getCommentTimeString()
           };
 
           addReply(metadata, reply, commentID);

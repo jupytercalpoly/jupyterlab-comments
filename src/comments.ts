@@ -1,6 +1,7 @@
 import { every } from '@lumino/algorithm';
 import { IObservableJSON } from '@jupyterlab/observables';
 import * as comments from './commentformat';
+import { getCommentTimeString } from './utils';
 
 export function verifyComments(comments: Record<string, unknown>): boolean {
   return Array.isArray(comments) && every(comments, verifyComment);
@@ -88,9 +89,7 @@ function editReply(
   }
   comment.replies[replyIndex].text = modifiedText;
   // Maybe we should inclued an edited flag to render?
-  comment.replies[replyIndex].time = new Date(
-    new Date().getTime()
-  ).toLocaleString();
+  comment.time = getCommentTimeString(); 
 }
 
 function editComment(
@@ -105,7 +104,7 @@ function editComment(
   }
   comment.text = modifiedText;
   // Maybe we should inclued an edited flag to render?
-  comment.time = new Date(new Date().getTime()).toLocaleString();
+  comment.time = getCommentTimeString(); 
 }
 
 export function addReply(
