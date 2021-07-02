@@ -4,7 +4,7 @@ import { closeIcon, editIcon } from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
-import { addReply, deleteComment, deleteReply, edit} from './comments';
+import { addReply, deleteComment, deleteReply, edit } from './comments';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
 
@@ -18,7 +18,7 @@ type ReactRenderElement =
 type CommentProps = {
   comment: IComment;
   className: string;
-  content: ReactRenderElement; 
+  content: ReactRenderElement;
   onDeleteClick: React.MouseEventHandler;
   onEditClick: React.MouseEventHandler;
 };
@@ -28,13 +28,7 @@ type CommentWrapperProps = {
 };
 
 function JCComment(props: CommentProps): JSX.Element {
-  const {
-    comment,
-    className,
-    content,
-    onEditClick,
-    onDeleteClick,
-  } = props;
+  const { comment, className, content, onEditClick, onDeleteClick } = props;
 
   return (
     <div className={className || ''} id={comment.id}>
@@ -48,8 +42,6 @@ function JCComment(props: CommentProps): JSX.Element {
       <br />
       <span className="jc-Time">{comment.time}</span>
       <br />
-      <br />
-      <p className="jc-Time">{comment.time}</p>
 
       {/* the actual content */}
       {content}
@@ -85,7 +77,7 @@ export class CommentWidget<T> extends ReactWidget {
   render(): ReactRenderElement {
     const metadata = this._metadata;
     const commentID = this.commentID;
-    let replyID: IComment['id'] | null;
+    let editID: IComment['id'];
 
     const _CommentWrapper = (props: CommentWrapperProps): JSX.Element => {
       const { comment } = props;
@@ -93,12 +85,13 @@ export class CommentWidget<T> extends ReactWidget {
       const [isHidden, setIsHidden] = React.useState(true);
       const [isEditable, setIsEditable] = React.useState(false);
       const onBodyClick = (): void => setIsHidden(!isHidden);
-      const onEditClick = (): void => setIsEditable(!isEditable);
+      // const onEditClick = (): void =>{
+      //   setIsEditable(!isEditable);
+      // }
       const onEditReplyClick = (item_id: IComment['id']): void => {
         setIsEditable(!isEditable);
-        replyID = item_id;
-
-      }
+        editID = item_id;
+      };
       const onDeleteClick = (): void => {
         deleteComment(metadata, commentID);
         this.dispose();
@@ -118,8 +111,7 @@ export class CommentWidget<T> extends ReactWidget {
         e.stopPropagation();
         const target = e.target as HTMLDivElement;
 
-        if (!isEditable && !isHidden){
-          console.log(target.textContent)
+        if (!isEditable && !isHidden) {
           const reply: IComment = {
             id: UUID.uuid4(),
             type: 'cell',
@@ -132,14 +124,12 @@ export class CommentWidget<T> extends ReactWidget {
           addReply(metadata, reply, commentID);
           target.textContent! = '';
           setIsHidden(true);
-          console.log('hihih')
-        }
-        else {
-          edit(metadata, commentID, replyID,  target.textContent!)
+          console.log('hihih');
+        } else {
+          edit(metadata, commentID, editID, target.textContent!);
           target.textContent! = '';
-          replyID = null;
-          setIsEditable(!isEditable);
-          console.log(target.textContent)
+          editID = '';
+          setIsEditable(false);
         }
       };
 
@@ -147,27 +137,28 @@ export class CommentWidget<T> extends ReactWidget {
         return <div className="jc-MissingComment" />;
       }
 
-      function getContent(c: IComment): ReactRenderElement{
-        if (!isEditable ) {
-          return  (
-            <p className="jc-Body" onClick={onBodyClick}>
+      function getContent(c: IComment) {
+        let normal = (
+          <p className="jc-Body" onClick={onBodyClick}>
+            {c.text}
+          </p>
+        );
+        let edit_box = (
+          <p className="jc-Body" onClick={onBodyClick}>
+            <div
+              className="jc-InputArea"
+              onKeyDown={onInputKeydown}
+              contentEditable={true}
+            >
               {c.text}
-            </p>
-          );
+            </div>
+          </p>
+        );
+        if (editID == c.id && isEditable) {
+          return edit_box;
         } else {
-          return (
-            <p className="jc-Body" onClick={onBodyClick}>
-              <div
-                className="jc-InputArea"
-                onKeyDown={onInputKeydown}
-                contentEditable={true}
-              >
-                {c.text}
-              </div>
-            </p>
-          );
+          return normal;
         }
-
       }
 
       return (
@@ -176,7 +167,7 @@ export class CommentWidget<T> extends ReactWidget {
             comment={comment}
             content={getContent(comment)}
             className="jc-Comment"
-            onEditClick={onEditClick}
+            onEditClick={onEditReplyClick.bind(this, comment.id)}
             onDeleteClick={onDeleteClick.bind(this)}
           />
           <div className="jc-Replies">
