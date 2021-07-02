@@ -57,18 +57,18 @@ export function addComment(
 export function edit(
   metadata: IObservableJSON,
   commentid: string,
-  replyid: string | null,
+  editid: string,
   modifiedText: string
 ): void {
   const comment = getCommentByID(metadata, commentid);
   if (comment == null) {
     return;
   }
-  if (replyid == null) {
+  if (editid == commentid) {
     editComment(metadata, commentid, modifiedText)
   }
   else {
-    editReply(metadata, commentid, replyid, modifiedText)
+    editReply(metadata, commentid, editid, modifiedText)
   }
 }
 
