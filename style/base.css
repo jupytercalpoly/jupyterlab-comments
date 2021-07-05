@@ -72,11 +72,31 @@
   border-color: var(--jp-brand-color1);
 }
 
+
 .jc-InputArea {
   border: 1px solid #c5c5c5;
   border-top: none;
-  padding: 5px 4px;
-  min-height: 44px;
+  padding: 15px 14px 6px 18px;
+  min-height: 30px;
+}
+
+.jc-EditInputArea {
+  border: 1px solid #c5c5c5;
+  /* border-top: none; */
+  margin-top: 3px;
+  padding: 6px 3px 3px 3px;
+  min-height: 24px;
+}
+
+.jc-ReplyInputArea:empty:before {
+  content: attr(data-placeholder);
+  color: rgba(0, 0, 0, 0.38);
+}
+.jc-ReplyInputArea {
+  border: 1px solid #c5c5c5;
+  border-top: none;
+  padding: 15px 14px 6px 18px;
+  min-height: 30px;
 }
 
 .jc-Ellipses {
