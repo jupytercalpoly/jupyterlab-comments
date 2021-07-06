@@ -25,7 +25,7 @@ type CommentProps = {
 
 type CommentWithRepliesProps = {
   comment: IComment;
-  isEditable: (id: string) => boolean;
+  editID: string;
   className?: string;
 };
 
@@ -108,17 +108,17 @@ function JCComment(props: CommentProps): JSX.Element {
 function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
-  const isEditable = props.isEditable;
+  const editID = props.editID;
 
   return (
     <div className={'jc-CommentWithReplies ' + className}>
-      <JCComment comment={comment} editable={isEditable(comment.id)} />
+      <JCComment comment={comment} editable={editID === comment.id} />
       <div className={'jc-Replies'}>
         {comment.replies.map(reply => (
           <JCComment
             comment={reply}
             className="jc-Reply"
-            editable={isEditable(comment.id)}
+            editable={editID === reply.id}
             key={reply.id}
           />
         ))}
@@ -148,13 +148,12 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
 
   const onClick = commentWidget.handleEvent.bind(commentWidget);
   const onKeyDown = onClick;
-  const isEditable = commentWidget.isEditable.bind(commentWidget);
 
   return (
     <div className={className} onClick={onClick} onKeyDown={onKeyDown}>
       <JCCommentWithReplies
         comment={commentWidget.comment!}
-        isEditable={isEditable}
+        editID={commentWidget.editID}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
     </div>
@@ -224,15 +223,17 @@ export class CommentWidget<T> extends ReactWidget {
    * A building block of other click handlers.
    */
   private _setClickFocus(event: React.MouseEvent): void {
+    const oldActive = document.activeElement;
     const target = event.target as HTMLElement;
     const clickID = Private.getClickID(target);
 
     if (clickID != null) {
       this.activeID = clickID;
-      this.setEditable(clickID, false);
     }
 
-    this.node.focus();
+    if (oldActive == null || oldActive.closest('.jc-CommentWidget') == null) {
+      this.node.focus();
+    }
   }
 
   /**
@@ -260,25 +261,28 @@ export class CommentWidget<T> extends ReactWidget {
   private _handleOtherClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
     this.replyAreaHidden = !this.replyAreaHidden;
+
+    const target = event.target as HTMLElement;
+    const clickID = Private.getClickID(target);
+    if (clickID == null) {
+      return;
+    }
+    this.editID = '';
   }
 
   /**
    * Handle a click on the widget's reply area.
    */
   private _handleReplyClick(event: React.MouseEvent): void {
-    const oldActive = document.activeElement as HTMLElement;
     this._setClickFocus(event);
-    oldActive.focus();
   }
 
   /**
    * Handle a click on the widget's body.
    */
   private _handleBodyClick(event: React.MouseEvent): void {
-    const oldActive = document.activeElement as HTMLElement;
     this._setClickFocus(event);
-    this.setEditable(this.activeID, true);
-    oldActive.focus();
+    this.edit();
   }
 
   /**
@@ -331,18 +335,21 @@ export class CommentWidget<T> extends ReactWidget {
    * Handle a keydown on the widget's body.
    */
   private _handleBodyKeydown(event: React.KeyboardEvent): void {
-    if (!this.isEditable(this.activeID)) {
+    if (this.editID === '') {
       return;
     }
 
     if (event.key === 'Escape') {
-      this.setEditable(this.activeID, false);
+      event.preventDefault();
+      event.stopPropagation();
+      this.editID = '';
       return;
     } else if (event.key === 'Enter') {
+      event.preventDefault();
+      event.stopPropagation();
       const target = event.target as HTMLDivElement;
       edit(this.metadata, this.commentID, this.activeID, target.textContent!);
-      target.textContent = '';
-      this.setEditable(this.activeID, false);
+      this.editID = '';
     }
   }
 
@@ -352,6 +359,21 @@ export class CommentWidget<T> extends ReactWidget {
         {() => <JCCommentWrapper commentWidget={this} />}
       </UseSignal>
     );
+  }
+
+  edit(): void {
+    const comment = document.getElementById(this.activeID);
+    if (comment == null) {
+      return;
+    }
+
+    if (this.editID !== this.activeID) {
+      const elements = comment.getElementsByClassName(
+        'jc-Body'
+      ) as HTMLCollectionOf<HTMLDivElement>;
+      window.getSelection()?.selectAllChildren(elements[0]);
+      this.editID = this.activeID;
+    }
   }
 
   /**
@@ -453,19 +475,14 @@ export class CommentWidget<T> extends ReactWidget {
   }
 
   /**
-   * Whether a comment ID handled by the widget refers to an editable comment.
+   * The ID of the managed comment being edited, or the empty string if none.
    */
-  isEditable(id: string): boolean {
-    return !!this._editableMap.get(id);
+  get editID(): string {
+    return this._editID;
   }
-
-  /**
-   * Sets the editability of a comment managed by the widget.
-   */
-  setEditable(id: string, newVal: boolean): void {
-    const oldVal = this._editableMap.get(id);
-    if (oldVal !== newVal) {
-      this._editableMap.set(id, newVal);
+  set editID(newVal: string) {
+    if (this.editID !== newVal) {
+      this._editID = newVal;
       this._renderNeeded.emit(undefined);
     }
   }
@@ -477,7 +494,7 @@ export class CommentWidget<T> extends ReactWidget {
   private _activeID: string;
   private _menu: Menu;
   private _replyAreaHidden: boolean = true;
-  private _editableMap: Map<string, boolean> = new Map<string, boolean>();
+  private _editID: string = '';
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );
