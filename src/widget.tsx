@@ -1,10 +1,10 @@
 import { ReactWidget } from '@jupyterlab/apputils';
 import * as React from 'react';
-import { closeIcon, editIcon} from '@jupyterlab/ui-components';
+import { closeIcon, editIcon } from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
-import { addReply } from './comments';
+import { addReply, deleteComment, deleteReply } from './comments';
 import { Awareness } from 'y-protocols/awareness';
 import { getIdentity } from './utils';
 
@@ -31,9 +31,17 @@ function JCComment(props: CommentProps): JSX.Element {
 
   return (
     <div className={className || ''} id={comment.id}>
-      <p className="jc-Nametag">{comment.identity.name}</p>
+      <div className="jc-ProfilePicContainer">
+        <div
+          className="jc-ProfilePic"
+          style={{ backgroundColor: comment.identity.color }}
+        />
+      </div>
+      <span className="jc-Nametag">{comment.identity.name}</span>
       <br />
-      <p className="jc-Time">{comment.time}</p>
+      <span className="jc-Time">{comment.time}</span>
+      <br />
+      <br />
       <p className="jc-Body" onClick={onBodyClick}>
         {comment.text}
       </p>
@@ -44,9 +52,7 @@ function JCComment(props: CommentProps): JSX.Element {
       >
         <closeIcon.react />
       </button>
-      <button 
-        className="jc-DeleteButton jp-Button bp3-button bp3-minimal"
-      >
+      <button className="jc-DeleteButton jp-Button bp3-button bp3-minimal">
         <editIcon.react />
       </button>
     </div>
@@ -73,10 +79,13 @@ export class CommentWidget<T> extends ReactWidget {
       const [replies, setReplies] = React.useState(comment.replies);
       const [isHidden, setIsHidden] = React.useState(true);
       const onBodyClick = (): void => setIsHidden(!isHidden);
-      const onDeleteClick = this._deleteComment.bind(this);
-      const onDeleteReplyClick = (item: IComment): void => {
-        const data = replies.filter(r => r.id !== item.id);
-        this._deleteReply(item);
+      const onDeleteClick = (): void => {
+        deleteComment(metadata, commentID)
+        this.dispose();
+      } 
+      const onDeleteReplyClick = (item_id: IComment["id"]): void => {
+        const data = replies.filter(r => r.id !== item_id);
+        deleteReply(metadata, item_id, commentID)
         setReplies(data);
       };
 
@@ -85,19 +94,21 @@ export class CommentWidget<T> extends ReactWidget {
           return;
         }
 
-        const target = e.target as HTMLTextAreaElement;
+        e.preventDefault();
+        e.stopPropagation();
+        const target = e.target as HTMLDivElement;
 
         const reply: IComment = {
           id: UUID.uuid4(),
           type: 'cell',
           identity: getIdentity(this._awareness),
           replies: [],
-          text: target.value,
+          text: target.textContent!,
           time: new Date(new Date().getTime()).toLocaleString()
         };
 
         addReply(metadata, reply, commentID);
-        target.value = '';
+        target.textContent = '';
         setIsHidden(true);
       };
 
@@ -111,7 +122,7 @@ export class CommentWidget<T> extends ReactWidget {
             comment={comment}
             className="jc-Comment"
             onBodyClick={onBodyClick}
-            onDeleteClick={onDeleteClick}
+            onDeleteClick={onDeleteClick.bind(this)}
           />
           <div className="jc-Replies">
             {replies.map(reply => (
@@ -119,74 +130,22 @@ export class CommentWidget<T> extends ReactWidget {
                 comment={reply}
                 className="jc-Comment jc-Reply"
                 onBodyClick={onBodyClick}
-                onDeleteClick={onDeleteReplyClick.bind(this, reply)}
+                onDeleteClick={onDeleteReplyClick.bind(this, reply.id)}
                 key={reply.id}
               />
             ))}
           </div>
-          <textarea
+          <div
             className="jc-InputArea"
             hidden={isHidden}
             onKeyDown={onInputKeydown}
+            contentEditable={true}
           />
         </div>
       );
     };
 
-
     return <_CommentWrapper comment={this.comment!} />;
-  }
-
-  protected _deleteReply(rcomment: IComment): void {
-    const comments = this._metadata.get('comments');
-    const commentList = comments as any as IComment[];
-    const commentIndex = commentList.findIndex(c => c.id === this.commentID);
-    const comment = commentList[commentIndex];
-    const replyIndex = comment.replies.findIndex(r => r.id === rcomment.id);
-    if (replyIndex === -1) {
-      console.warn('comment does not have reply with id', rcomment.id);
-      return;
-    }
-    comment.replies.splice(replyIndex, 1);
-    commentList[commentIndex] = comment;
-    this._metadata.set('comments', commentList as any);
-  }
-
-  protected _deleteComment(e: React.MouseEvent): void {
-    const comments = this._metadata.get('comments');
-
-    if (comments == null) {
-      console.warn('comment source has no comments');
-      this.dispose();
-      return;
-    }
-
-    const target = (e.target as HTMLElement).closest('.jc-Comment');
-    if (target == null) {
-      console.warn("event target isn't descended from .jc-Comment element");
-      return;
-    }
-
-    const commentList = comments as any as IComment[];
-    const commentIndex = commentList.findIndex(c => c.id === this.commentID);
-
-    if (commentIndex === -1) {
-      console.warn(
-        'comment source does not have comment with id',
-        this.commentID
-      );
-      this.dispose();
-      return;
-    }
-
-    const comment = commentList[commentIndex];
-
-    if (target.id === comment.id) {
-      // deleting main comment
-      commentList.splice(commentIndex, 1);
-      this._metadata.set('comments', commentList as any);
-      this.dispose();
-    } 
   }
 
   get comment(): IComment | undefined {

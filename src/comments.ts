@@ -13,6 +13,7 @@ export function verifyComment(comment: Record<string, unknown>): boolean {
     'identity' in comment &&
     'id' in (comment['identity'] as comments.IIdentity) &&
     'name' in (comment['identity'] as comments.IIdentity) &&
+    'color' in (comment['identity'] as comments.IIdentity) &&
     'text' in comment &&
     'replies' in comment &&
     'time' in comment
@@ -70,4 +71,39 @@ export function addReply(
 
   comments[commentIndex].replies.push(reply);
   metadata.set('comments', comments as any);
+}
+
+export function deleteReply(
+  metadata: IObservableJSON,
+  reply_id: string,
+  parent_id: string
+): void {
+  const comments = getComments(metadata);
+  if (comments == null) {
+    return;
+  }
+  const commentIndex = comments.findIndex(c => c.id === parent_id);
+  const comment = comments[commentIndex];
+  const replyIndex = comment.replies.findIndex(r => r.id === reply_id);
+  if (replyIndex === -1) {
+    return;
+  }
+  comment.replies.splice(replyIndex, 1);
+  comments[commentIndex] = comment;
+  metadata.set('comments', comments as any);
+
+}
+
+export function deleteComment(
+  metadata: IObservableJSON,
+  id: string
+): void {
+  const comments = getComments(metadata);
+  if (comments == null) {
+    return;
+  }
+  const commentIndex = comments.findIndex(c=> c.id === id);
+  comments.splice(commentIndex, 1);
+  metadata.set('comments', comments as any);
+
 }

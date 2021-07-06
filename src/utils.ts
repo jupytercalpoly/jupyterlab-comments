@@ -3,7 +3,8 @@ import { IIdentity } from './commentformat';
 
 export const emptyIdentity: IIdentity = {
   id: 0,
-  name: ''
+  name: '',
+  color: ''
 };
 
 export function getIdentity(awareness: Awareness): IIdentity {
@@ -13,10 +14,11 @@ export function getIdentity(awareness: Awareness): IIdentity {
   }
 
   const userInfo = localState['user'];
-  if ('name' in userInfo) {
+  if ('name' in userInfo && 'color' in userInfo) {
     return {
       id: awareness.clientID,
-      name: userInfo['name']
+      name: userInfo['name'],
+      color: userInfo['color']
     };
   }
 

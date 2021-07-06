@@ -9,6 +9,7 @@ export type CommentType = 'null' | 'cell' | 'text';
 export interface IIdentity {
   id: number;
   name: string;
+  color: string;
 }
 
 /**
