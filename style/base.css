@@ -10,6 +10,10 @@
   border: 1px solid #c5c5c5;
 }
 
+.jc-Comment:hover .jc-Ellipses {
+  display: inline-block;
+}
+
 .jc-Nametag {
   font-weight: bold;
   margin-left: 10px;
@@ -83,6 +87,7 @@
   float: right;
   width: 25px;
   height: 25px;
+  display: none;
 }
 
 .jc-Ellipses > svg {
