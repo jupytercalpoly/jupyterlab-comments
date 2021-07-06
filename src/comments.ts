@@ -47,6 +47,10 @@ export function addComment(
   metadata: IObservableJSON,
   comment: comments.IComment
 ): void {
+  if (comment.text == ''){
+    console.warn("Empty string cannot be a comment")
+    return;
+  }
   const comments = getComments(metadata);
   if (comments == null) {
     metadata.set('comments', [comment as any]);
@@ -63,6 +67,10 @@ export function edit(
 ): void {
   const comment = getCommentByID(metadata, commentid);
   if (comment == null) {
+    return;
+  }
+  if (modifiedText == ''){
+    console.warn("Empty string cannot be a comment/reply")
     return;
   }
   if (editid == commentid) {
@@ -112,6 +120,10 @@ export function addReply(
   reply: comments.IComment,
   id: string
 ): void {
+  if (reply.text == ''){
+    console.warn("Empty string cannot be a reply")
+    return;
+  }
   const comments = getComments(metadata);
   if (comments == null) {
     return;
