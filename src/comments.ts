@@ -69,6 +69,10 @@ export function edit(
   if (comment == null) {
     return;
   }
+  if (modifiedText == ''){
+    console.warn("bleh")
+    return;
+  }
   if (editid == commentid) {
     editComment(metadata, commentid, modifiedText);
   } else {
