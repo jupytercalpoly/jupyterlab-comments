@@ -70,7 +70,7 @@ export function edit(
     return;
   }
   if (modifiedText == ''){
-    console.warn("bleh")
+    console.warn("Empty string cannot be a comment/reply")
     return;
   }
   if (editid == commentid) {
