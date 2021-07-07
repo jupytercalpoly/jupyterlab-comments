@@ -25,6 +25,14 @@ type CommentProps = {
   onDropdownClick: React.MouseEventHandler;
 };
 
+type ReplyProps = {
+  comment: IComment;
+  className: string;
+  onInputKeydown: React.KeyboardEventHandler;
+  isHidden: boolean;
+
+}
+
 type CommentWrapperProps = {
   comment: IComment;
 };
@@ -75,6 +83,32 @@ function JCComment(props: CommentProps): JSX.Element {
       </div>
 
       <br />
+    </div>
+  );
+}
+
+function JCReply(props: ReplyProps): JSX.Element {
+  const {
+    comment,
+    className,
+    isHidden,
+    onInputKeydown,
+  } = props;
+
+  return (
+    <div hidden={isHidden}>
+      {/* <div
+        className="jc-ProfilePic"
+        style={{ backgroundColor: comment.identity.color }}
+      /> */}
+      {console.log(comment)}
+      
+      <div
+        className={className}
+        onKeyDown={onInputKeydown}
+        contentEditable={true}
+        data-placeholder="reply"
+      />
     </div>
   );
 }
@@ -179,7 +213,7 @@ export class CommentWidget<T> extends ReactWidget {
         let edit_box = (
           <div className="jc-Body" onClick={onBodyClick}>
             <div
-              className="jc-InputArea"
+              className="jc-EditInputArea"
               onKeyDown={onInputKeydown}
               contentEditable={true}
               suppressContentEditableWarning={true}
@@ -220,12 +254,13 @@ export class CommentWidget<T> extends ReactWidget {
               ))}
             </div>
           </div>
-          <div
-            className="jc-InputArea"
-            hidden={isHidden}
-            onKeyDown={onInputKeydown}
-            contentEditable={true}
-          />
+
+          <JCReply className="jc-ReplyInputArea"
+             comment={comment}
+             isHidden={isHidden}
+             onInputKeydown={onInputKeydown}
+            />
+
         </>
       );
     };
