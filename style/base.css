@@ -28,6 +28,12 @@
 
 .jc-Body {
   display: inline-block;
+  outline: none;
+  border: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: transparent;
 }
 
 .jc-DeleteButton {

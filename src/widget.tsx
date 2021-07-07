@@ -4,7 +4,7 @@ import { ellipsesIcon } from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
-import { addReply, edit } from './comments';
+import { addReply, deleteComment, deleteReply, edit } from './comments';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
 import { Menu } from '@lumino/widgets';
@@ -56,7 +56,6 @@ type ReplyAreaProps = {
 function JCComment(props: CommentProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
-  const editable = props.editable;
 
   return (
     <div
@@ -80,7 +79,7 @@ function JCComment(props: CommentProps): JSX.Element {
         //@ts-ignore (TypeScript doesn't know about custom attributes)
         jcEventArea="dropdown"
       >
-        <ellipsesIcon.react className="jc-Ellipses jc-no-reply" />
+        <ellipsesIcon.react className="jc-Ellipses" />
       </span>
 
       <br />
@@ -89,16 +88,15 @@ function JCComment(props: CommentProps): JSX.Element {
 
       <br />
 
-      {/* the actual content */}
-      <div
-        className="jc-Body jc-no-reply"
-        contentEditable={editable}
-        suppressContentEditableWarning={true}
+      <input
+        className="jc-Body"
+        type="text"
+        defaultValue={comment.text}
+        // contentEditable={editable}
+        // suppressContentEditableWarning={true}
         //@ts-ignore (TypeScript doesn't know about custom attributes)
         jcEventArea="body"
-      >
-        {comment.text}
-      </div>
+      ></input>
 
       <br />
     </div>
@@ -260,14 +258,20 @@ export class CommentWidget<T> extends ReactWidget {
    */
   private _handleOtherClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
-    this.replyAreaHidden = !this.replyAreaHidden;
 
     const target = event.target as HTMLElement;
     const clickID = Private.getClickID(target);
     if (clickID == null) {
       return;
     }
+
     this.editID = '';
+
+    if (this.replyAreaHidden) {
+      this.revealReply();
+    } else {
+      this.replyAreaHidden = true;
+    }
   }
 
   /**
@@ -282,7 +286,7 @@ export class CommentWidget<T> extends ReactWidget {
    */
   private _handleBodyClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
-    this.edit();
+    this.editActive();
   }
 
   /**
@@ -315,19 +319,19 @@ export class CommentWidget<T> extends ReactWidget {
     event.preventDefault();
     event.stopPropagation();
 
-    const target = event.target as HTMLDivElement;
+    const target = event.target as HTMLInputElement;
 
     const reply: IComment = {
       id: UUID.uuid4(),
       type: 'cell',
       identity: getIdentity(this._awareness),
       replies: [],
-      text: target.textContent!,
+      text: target.value,
       time: getCommentTimeString()
     };
 
     addReply(this.metadata, reply, this.commentID);
-    target.textContent! = '';
+    target.value = '';
     this.replyAreaHidden = true;
   }
 
@@ -335,21 +339,29 @@ export class CommentWidget<T> extends ReactWidget {
    * Handle a keydown on the widget's body.
    */
   private _handleBodyKeydown(event: React.KeyboardEvent): void {
+    console.log('edit keydown', event.key, this.editID);
     if (this.editID === '') {
       return;
     }
 
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      this.editID = '';
-      return;
-    } else if (event.key === 'Enter') {
-      event.preventDefault();
-      event.stopPropagation();
-      const target = event.target as HTMLDivElement;
-      edit(this.metadata, this.commentID, this.activeID, target.textContent!);
-      this.editID = '';
+    const target = event.target as HTMLInputElement;
+
+    switch (event.key) {
+      case 'Escape':
+        event.preventDefault();
+        event.stopPropagation();
+        this.editID = '';
+        target.blur();
+        break;
+      case 'Enter':
+        event.preventDefault();
+        event.stopPropagation();
+        edit(this.metadata, this.commentID, this.activeID, target.value);
+        this.editID = '';
+        target.blur();
+        break;
+      default:
+        break;
     }
   }
 
@@ -361,18 +373,60 @@ export class CommentWidget<T> extends ReactWidget {
     );
   }
 
-  edit(): void {
+  /**
+   * Open the widget's reply area and focus on it.
+   */
+  revealReply(): void {
+    if (this.isAttached === false) {
+      return;
+    }
+
+    this.replyAreaHidden = false;
+    const nodes = this.node.getElementsByClassName(
+      'jc-InputArea'
+    ) as HTMLCollectionOf<HTMLDivElement>;
+    nodes[0].focus();
+  }
+
+  /**
+   * Select the body area of the currently active comment for editing.
+   */
+  editActive(): void {
+    if (this.isAttached === false) {
+      return;
+    }
+
     const comment = document.getElementById(this.activeID);
     if (comment == null) {
       return;
     }
 
     if (this.editID !== this.activeID) {
+      this.editID = this.activeID;
       const elements = comment.getElementsByClassName(
         'jc-Body'
-      ) as HTMLCollectionOf<HTMLDivElement>;
-      window.getSelection()?.selectAllChildren(elements[0]);
-      this.editID = this.activeID;
+      ) as HTMLCollectionOf<HTMLInputElement>;
+      const target = elements[0];
+      target.select();
+    }
+  }
+
+  /**
+   * Delete the currently active comment or reply.
+   *
+   * ### Notes
+   * If the base comment is deleted, the widget will be disposed.
+   */
+  deleteActive(): void {
+    if (this.isAttached === false) {
+      return;
+    }
+
+    if (this.activeID === this.commentID) {
+      deleteComment(this.metadata, this.commentID);
+      this.dispose();
+    } else {
+      deleteReply(this.metadata, this.activeID, this.commentID);
     }
   }
 
