@@ -36,6 +36,10 @@
   background-color: transparent;
 }
 
+.jc-Body:focus {
+  outline: 1px solid var(--jp-ui-font-color3);
+}
+
 .jc-DeleteButton {
   bottom: 0px;
   right: 0px;

@@ -47,11 +47,6 @@ type ReplyAreaProps = {
  *
  * @param className - a string that will be used as the className of the
  * container element.
- *
- * @param onBodyClick - a function that will be run when the comment is clicked.
- *
- * @param onDropdownClick - a function that will be run when the comment's
- * dropdown (ellipses) menu is clicked.
  */
 function JCComment(props: CommentProps): JSX.Element {
   const comment = props.comment;
@@ -339,7 +334,6 @@ export class CommentWidget<T> extends ReactWidget {
    * Handle a keydown on the widget's body.
    */
   private _handleBodyKeydown(event: React.KeyboardEvent): void {
-    console.log('edit keydown', event.key, this.editID);
     if (this.editID === '') {
       return;
     }

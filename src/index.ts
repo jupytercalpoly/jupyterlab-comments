@@ -64,9 +64,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
     });
 
     app.contextMenu.addItem({
-      command: CommandIDs.deleteComment,
+      command: 'jl-chat:listen',
       selector: '.jp-Notebook .jp-Cell',
-      rank: 0
+      rank: 14
     });
   }
 };
@@ -80,6 +80,14 @@ function addCommands(
   const getAwareness = (): Awareness | undefined => {
     return (nbTracker.currentWidget?.model?.sharedModel as YNotebook).awareness;
   };
+
+  app.commands.addCommand('jl-chat:listen', {
+    label: 'Listen For Awareness Changes',
+    execute: () => {
+      const awareness = getAwareness();
+      awareness?.on('change', () => console.log(awareness.getLocalState()));
+    }
+  });
 
   app.commands.addCommand(CommandIDs.addComment, {
     label: 'Add Comment',
