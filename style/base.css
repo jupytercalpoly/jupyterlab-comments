@@ -10,6 +10,10 @@
   border: 1px solid #c5c5c5;
 }
 
+.jc-Comment:hover .jc-Ellipses {
+  display: inline-block;
+}
+
 .jc-Nametag {
   font-weight: bold;
   margin-left: 10px;
@@ -24,6 +28,16 @@
 
 .jc-Body {
   display: inline-block;
+  outline: none;
+  border: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: transparent;
+}
+
+.jc-Body:focus {
+  outline: 1px solid var(--jp-ui-font-color3);
 }
 
 .jc-DeleteButton {
@@ -72,7 +86,6 @@
   border-color: var(--jp-brand-color1);
 }
 
-
 .jc-InputArea {
   border: 1px solid #c5c5c5;
   border-top: none;
@@ -103,6 +116,7 @@
   float: right;
   width: 25px;
   height: 25px;
+  display: none;
 }
 
 .jc-Ellipses > svg {
