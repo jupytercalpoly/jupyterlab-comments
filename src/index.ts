@@ -53,6 +53,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
       (_, comment) => void commentTracker.add(comment)
     );
 
+    panel.revealed.connect(() => panel.update());
+
     shell.currentChanged.connect(() => panel.update());
 
     const onActiveCellChanged = (_: any, cell: Cell | null): void => {

@@ -148,6 +148,9 @@ export class CommentPanel extends Panel {
     this._commentAdded.emit(widget);
   }
 
+  /**
+   * Scroll the comment with the given id into view.
+   */
   scrollToComment(id: string): void {
     const node = document.getElementById(id);
     if (node == null) {
@@ -155,6 +158,21 @@ export class CommentPanel extends Panel {
     }
 
     node.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  /**
+   * Show the widget, make it visible to its parent widget, and emit the
+   * `revealed` signal.
+   *
+   * ### Notes
+   * This causes the [[isHidden]] property to be false.
+   * If the widget is not explicitly hidden, this is a no-op.
+   */
+  show(): void {
+    if (this.isHidden) {
+      this._revealed.emit(undefined);
+      super.show();
+    }
   }
 
   /**
@@ -171,6 +189,13 @@ export class CommentPanel extends Panel {
     return this._commentMenu;
   }
 
+  /**
+   * A signal emitted when the panel is about to be shown.
+   */
+  get revealed(): Signal<this, undefined> {
+    return this._revealed;
+  }
+
   get awareness(): Awareness | undefined {
     const sharedModel = this._tracker.currentWidget?.context.model.sharedModel;
     if (sharedModel == null) {
@@ -182,6 +207,7 @@ export class CommentPanel extends Panel {
   private _tracker: INotebookTracker;
   private _inputWidget: Widget;
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
+  private _revealed = new Signal<this, undefined>(this);
   private _commentMenu: Menu;
 }
 
