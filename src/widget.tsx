@@ -348,13 +348,23 @@ export class CommentWidget<T> extends ReactWidget {
       case 'Escape':
         event.preventDefault();
         event.stopPropagation();
+        target.textContent = this.text!;
         this.editID = '';
         target.blur();
         break;
       case 'Enter':
         event.preventDefault();
         event.stopPropagation();
-        edit(this.metadata, this.commentID, this.activeID, target.textContent!);
+        if (target.textContent === '') {
+          target.textContent = this.text!;
+        } else {
+          edit(
+            this.metadata,
+            this.commentID,
+            this.activeID,
+            target.textContent!
+          );
+        }
         this.editID = '';
         target.blur();
         break;
