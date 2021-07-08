@@ -51,6 +51,7 @@ type ReplyAreaProps = {
 function JCComment(props: CommentProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
+  const editable = props.editable;
 
   return (
     <div
@@ -83,15 +84,16 @@ function JCComment(props: CommentProps): JSX.Element {
 
       <br />
 
-      <input
-        className="jc-Body"
-        type="text"
-        defaultValue={comment.text}
-        // contentEditable={editable}
-        // suppressContentEditableWarning={true}
+      <div
+        className="jc-Body jc-EditInputArea"
+        contentEditable={editable}
+        suppressContentEditableWarning={true}
         //@ts-ignore (TypeScript doesn't know about custom attributes)
         jcEventArea="body"
-      ></input>
+        onFocus={() => document.execCommand('selectAll', false, undefined)}
+      >
+        {comment.text}
+      </div>
 
       <br />
     </div>
@@ -126,11 +128,13 @@ function JCReplyArea(props: ReplyAreaProps): JSX.Element {
 
   return (
     <div
-      className={'jc-InputArea ' + className}
+      className={'jc-ReplyInputArea ' + className}
       contentEditable={true}
       hidden={hidden}
       //@ts-ignore (TypeScript doesn't know about custom attributes)
       jcEventArea="reply"
+      onFocus={() => document.execCommand('selectAll', false, undefined)}
+      data-placeholder="reply"
     />
   );
 }
@@ -224,7 +228,7 @@ export class CommentWidget<T> extends ReactWidget {
       this.activeID = clickID;
     }
 
-    if (oldActive == null || oldActive.closest('.jc-CommentWidget') == null) {
+    if (oldActive == null || !this.node.contains(oldActive)) {
       this.node.focus();
     }
   }
@@ -314,19 +318,19 @@ export class CommentWidget<T> extends ReactWidget {
     event.preventDefault();
     event.stopPropagation();
 
-    const target = event.target as HTMLInputElement;
+    const target = event.target as HTMLDivElement;
 
     const reply: IComment = {
       id: UUID.uuid4(),
       type: 'cell',
       identity: getIdentity(this._awareness),
       replies: [],
-      text: target.value,
+      text: target.textContent!,
       time: getCommentTimeString()
     };
 
     addReply(this.metadata, reply, this.commentID);
-    target.value = '';
+    target.textContent = '';
     this.replyAreaHidden = true;
   }
 
@@ -338,7 +342,7 @@ export class CommentWidget<T> extends ReactWidget {
       return;
     }
 
-    const target = event.target as HTMLInputElement;
+    const target = event.target as HTMLDivElement;
 
     switch (event.key) {
       case 'Escape':
@@ -350,7 +354,7 @@ export class CommentWidget<T> extends ReactWidget {
       case 'Enter':
         event.preventDefault();
         event.stopPropagation();
-        edit(this.metadata, this.commentID, this.activeID, target.value);
+        edit(this.metadata, this.commentID, this.activeID, target.textContent!);
         this.editID = '';
         target.blur();
         break;
@@ -377,7 +381,7 @@ export class CommentWidget<T> extends ReactWidget {
 
     this.replyAreaHidden = false;
     const nodes = this.node.getElementsByClassName(
-      'jc-InputArea'
+      'jc-ReplyInputArea'
     ) as HTMLCollectionOf<HTMLDivElement>;
     nodes[0].focus();
   }
@@ -395,14 +399,12 @@ export class CommentWidget<T> extends ReactWidget {
       return;
     }
 
-    if (this.editID !== this.activeID) {
-      this.editID = this.activeID;
-      const elements = comment.getElementsByClassName(
-        'jc-Body'
-      ) as HTMLCollectionOf<HTMLInputElement>;
-      const target = elements[0];
-      target.select();
-    }
+    this.editID = this.activeID;
+    const elements = comment.getElementsByClassName(
+      'jc-Body'
+    ) as HTMLCollectionOf<HTMLDivElement>;
+    const target = elements[0];
+    target.focus();
   }
 
   /**

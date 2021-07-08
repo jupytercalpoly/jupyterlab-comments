@@ -82,7 +82,7 @@
   border-color: var(--jp-brand-color1);
 }
 
-.jc-CommentWidget:focus-within .jc-InputArea {
+.jc-CommentWidget:focus-within .jc-ReplyInputArea {
   border-color: var(--jp-brand-color1);
 }
 
@@ -94,8 +94,6 @@
 }
 
 .jc-EditInputArea {
-  border: 1px solid #c5c5c5;
-  /* border-top: none; */
   margin-top: 3px;
   padding: 6px 3px 3px 3px;
   min-height: 24px;
@@ -103,13 +101,14 @@
 
 .jc-ReplyInputArea:empty:before {
   content: attr(data-placeholder);
-  color: rgba(0, 0, 0, 0.38);
+  color: var(--jp-ui-font-color3);
 }
 .jc-ReplyInputArea {
   border: 1px solid #c5c5c5;
   border-top: none;
   padding: 15px 14px 6px 18px;
   min-height: 30px;
+  word-break: break-word;
 }
 
 .jc-Ellipses {
