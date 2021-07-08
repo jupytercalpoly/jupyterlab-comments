@@ -5,7 +5,7 @@ import {
 
 import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
 import { INotebookTracker } from '@jupyterlab/notebook';
-import { addComment, deleteComment, deleteReply } from './comments';
+import { addComment } from './comments';
 import { UUID } from '@lumino/coreutils';
 import { IComment } from './commentformat';
 import { YNotebook } from '@jupyterlab/shared-models';
@@ -19,6 +19,8 @@ import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 namespace CommandIDs {
   export const addComment = 'jl-chat:add-comment';
   export const deleteComment = 'jl-chat:delete-comment';
+  export const editComment = 'jl-chat:edit-comment';
+  export const replyToComment = 'jl-chat:reply-to-comment';
 }
 
 // namespace HighlightConst {
@@ -136,8 +138,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     addCommands(app, nbTracker, commentTracker, panel);
 
-    // Add an entry to the drop-down menu for comments
+    // Add entries to the drop-down menu for comments
     panel.commentMenu.addItem({ command: CommandIDs.deleteComment });
+    panel.commentMenu.addItem({ command: CommandIDs.editComment });
+    panel.commentMenu.addItem({ command: CommandIDs.replyToComment });
 
 
     app.contextMenu.addItem({
@@ -147,9 +151,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
     });
 
     app.contextMenu.addItem({
-      command: CommandIDs.deleteComment,
+      command: 'jl-chat:listen',
       selector: '.jp-Notebook .jp-Cell',
-      rank: 0
+      rank: 14
     });
   }
 };
@@ -163,6 +167,14 @@ function addCommands(
   const getAwareness = (): Awareness | undefined => {
     return (nbTracker.currentWidget?.model?.sharedModel as YNotebook).awareness;
   };
+
+  app.commands.addCommand('jl-chat:listen', {
+    label: 'Listen For Awareness Changes',
+    execute: () => {
+      const awareness = getAwareness();
+      awareness?.on('change', () => console.log(awareness.getLocalState()));
+    }
+  });
 
   app.commands.addCommand(CommandIDs.addComment, {
     label: 'Add Comment',
@@ -198,14 +210,28 @@ function addCommands(
     execute: () => {
       const currentComment = commentTracker.currentWidget;
       if (currentComment != null) {
-        const id = currentComment.activeID;
-        const metadata = currentComment.metadata;
-        if (id === currentComment.commentID) {
-          deleteComment(metadata, id);
-        } else {
-          deleteReply(metadata, id, currentComment.commentID);
-        }
+        currentComment.deleteActive();
         panel.update();
+      }
+    }
+  });
+
+  app.commands.addCommand(CommandIDs.editComment, {
+    label: 'Edit Comment',
+    execute: () => {
+      const currentComment = commentTracker.currentWidget;
+      if (currentComment != null) {
+        currentComment.editActive();
+      }
+    }
+  });
+
+  app.commands.addCommand(CommandIDs.replyToComment, {
+    label: 'Reply to Comment',
+    execute: () => {
+      const currentComment = commentTracker.currentWidget;
+      if (currentComment != null) {
+        currentComment.revealReply();
       }
     }
   });

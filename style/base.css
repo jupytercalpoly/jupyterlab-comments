@@ -10,6 +10,10 @@
   border: 1px solid #c5c5c5;
 }
 
+.jc-Comment:hover .jc-Ellipses {
+  display: inline-block;
+}
+
 .jc-Nametag {
   font-weight: bold;
   margin-left: 10px;
@@ -24,6 +28,16 @@
 
 .jc-Body {
   display: inline-block;
+  outline: none;
+  border: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: transparent;
+}
+
+.jc-Body:focus {
+  outline: 1px solid var(--jp-ui-font-color3);
 }
 
 .jc-DeleteButton {
@@ -87,15 +101,33 @@
   border-color: var(--jp-brand-color1);
 }
 
-.jc-CommentWidget:focus-within .jc-InputArea {
+.jc-CommentWidget:focus-within .jc-ReplyInputArea {
   border-color: var(--jp-brand-color1);
 }
 
 .jc-InputArea {
   border: 1px solid #c5c5c5;
   border-top: none;
-  padding: 5px 4px;
-  min-height: 44px;
+  padding: 15px 14px 6px 18px;
+  min-height: 30px;
+}
+
+.jc-EditInputArea {
+  margin-top: 3px;
+  padding: 6px 3px 3px 3px;
+  min-height: 24px;
+}
+
+.jc-ReplyInputArea:empty:before {
+  content: attr(data-placeholder);
+  color: var(--jp-ui-font-color3);
+}
+.jc-ReplyInputArea {
+  border: 1px solid #c5c5c5;
+  border-top: none;
+  padding: 15px 14px 6px 18px;
+  min-height: 30px;
+  word-break: break-word;
 }
 
 .jc-Highlight {
@@ -112,6 +144,7 @@
   float: right;
   width: 25px;
   height: 25px;
+  display: none;
 }
 
 .jc-Ellipses > svg {
