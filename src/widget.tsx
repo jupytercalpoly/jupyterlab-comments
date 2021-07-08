@@ -39,6 +39,18 @@ type ReplyAreaProps = {
   className?: string;
 };
 
+function Jdiv(props: any): JSX.Element {
+  return (
+    <div {...props}>{props.children}</div>
+  )
+}
+
+function Jspan(props: any): JSX.Element {
+  return (
+    <span {...props}>{props.children}</span>
+  )
+}
+
 /**
  * A React component that renders a single comment or reply.
  *
@@ -54,29 +66,26 @@ function JCComment(props: CommentProps): JSX.Element {
   const editable = props.editable;
 
   return (
-    <div
+    <Jdiv
       className={'jc-Comment ' + className}
       id={comment.id}
-      //@ts-ignore (TypeScript doesn't know about custom attributes)
       jcEventArea="other"
     >
-      <div className="jc-ProfilePicContainer">
-        <div
+      <Jdiv className="jc-ProfilePicContainer">
+        <Jdiv
           className="jc-ProfilePic"
           style={{ backgroundColor: comment.identity.color }}
-          //@ts-ignore (TypeScript doesn't know about custom attributes)
           jcEventArea="user"
         />
-      </div>
+      </Jdiv>
       <span className="jc-Nametag">{comment.identity.name}</span>
 
-      <span
+      <Jspan
         className="jc-IconContainer"
-        //@ts-ignore (TypeScript doesn't know about custom attributes)
         jcEventArea="dropdown"
       >
         <ellipsesIcon.react className="jc-Ellipses" />
-      </span>
+      </Jspan>
 
       <br />
 
@@ -84,19 +93,18 @@ function JCComment(props: CommentProps): JSX.Element {
 
       <br />
 
-      <div
+      <Jdiv
         className="jc-Body jc-EditInputArea"
         contentEditable={editable}
         suppressContentEditableWarning={true}
-        //@ts-ignore (TypeScript doesn't know about custom attributes)
         jcEventArea="body"
         onFocus={() => document.execCommand('selectAll', false, undefined)}
       >
         {comment.text}
-      </div>
+      </Jdiv>
 
       <br />
-    </div>
+    </Jdiv>
   );
 }
 
@@ -127,11 +135,10 @@ function JCReplyArea(props: ReplyAreaProps): JSX.Element {
   const className = props.className || '';
 
   return (
-    <div
+    <Jdiv
       className={'jc-ReplyInputArea ' + className}
       contentEditable={true}
       hidden={hidden}
-      //@ts-ignore (TypeScript doesn't know about custom attributes)
       jcEventArea="reply"
       onFocus={() => document.execCommand('selectAll', false, undefined)}
       data-placeholder="reply"
