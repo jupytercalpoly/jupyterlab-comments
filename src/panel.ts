@@ -1,15 +1,17 @@
 import { Menu, Panel, Widget } from '@lumino/widgets';
+import { each } from '@lumino/algorithm';
 import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
 import { listIcon } from '@jupyterlab/ui-components';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { CommentWidget } from './widget';
 import { addComment, getComments } from './comments';
-import { Cell } from '@jupyterlab/cells';
-import { YBaseCell } from '@jupyterlab/shared-models';
+import { ICellModel } from '@jupyterlab/cells';
+import { YDocument } from '@jupyterlab/shared-models';
 import { getCommentTimeString, getIdentity } from './utils';
 import { Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
+import { Awareness } from 'y-protocols/awareness';
 
 export class CommentPanel extends Panel {
   constructor(options: CommentPanel.IOptions) {
@@ -68,7 +70,7 @@ export class CommentPanel extends Panel {
       return;
     }
 
-    const awareness = (cellModel.sharedModel as YBaseCell<any>).awareness;
+    const awareness = this.awareness;
     if (awareness == null) {
       console.warn('no Awareness found while adding cell comment');
       return;
@@ -94,46 +96,48 @@ export class CommentPanel extends Panel {
     super.onUpdateRequest(msg);
 
     const tracker = this._tracker;
+    const model = tracker.currentWidget?.model;
+    if (model == null) {
+      console.warn(
+        'Either no current widget or no widget model; aborting panel render'
+      );
+      return;
+    }
+
+    const awareness = this.awareness;
+    if (awareness == null) {
+      console.warn('No awareness; aborting panel render');
+      return;
+    }
 
     while (this.widgets.length > 1) {
       this.widgets[1].dispose();
     }
 
-    const cell = tracker.activeCell;
-    if (cell == null) {
-      console.log('no active cell; aborting panel render');
-      return;
-    }
+    each(model.cells, cell => {
+      const metadata = cell.metadata;
+      const comments = getComments(metadata);
+      if (comments == null) {
+        return;
+      }
 
-    const cellModel = cell.model;
-    const comments = getComments(cellModel.metadata);
-    if (comments == null) {
-      console.log('no comments; aborting panel render');
-      return;
-    }
-
-    const awareness = (cellModel.sharedModel as YBaseCell<any>).awareness;
-    if (awareness == null) {
-      console.warn('no Awareness found; aborting panel render');
-      return;
-    }
-
-    // T is currently always 'Cell' for CommentWidget<T>
-    // Will have to be made generic in the future
-    // (switch statement on comment.type?)
-    //
-    // TODO: Make this not re-create the comment widget every time.
-    // (Update it instead?)
-    for (let comment of comments) {
-      const widget = new CommentWidget<Cell>({
-        awareness,
-        id: comment.id,
-        target: cell,
-        metadata: cellModel.metadata,
-        menu: this._commentMenu
-      });
-      this.addComment(widget);
-    }
+      // T is currently always 'ICellModel' for CommentWidget<T>
+      // Will have to be made generic in the future
+      // (switch statement on comment.type?)
+      //
+      // TODO: Make this not re-create the comment widget every time.
+      // (Update it instead?)
+      for (let comment of comments) {
+        const widget = new CommentWidget<ICellModel>({
+          awareness,
+          id: comment.id,
+          target: cell,
+          metadata: metadata,
+          menu: this._commentMenu
+        });
+        this.addComment(widget);
+      }
+    });
   }
 
   /**
@@ -142,6 +146,33 @@ export class CommentPanel extends Panel {
   addComment(widget: CommentWidget<any>): void {
     this.addWidget(widget);
     this._commentAdded.emit(widget);
+  }
+
+  /**
+   * Scroll the comment with the given id into view.
+   */
+  scrollToComment(id: string): void {
+    const node = document.getElementById(id);
+    if (node == null) {
+      return;
+    }
+
+    node.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  /**
+   * Show the widget, make it visible to its parent widget, and emit the
+   * `revealed` signal.
+   *
+   * ### Notes
+   * This causes the [[isHidden]] property to be false.
+   * If the widget is not explicitly hidden, this is a no-op.
+   */
+  show(): void {
+    if (this.isHidden) {
+      this._revealed.emit(undefined);
+      super.show();
+    }
   }
 
   /**
@@ -158,9 +189,25 @@ export class CommentPanel extends Panel {
     return this._commentMenu;
   }
 
+  /**
+   * A signal emitted when the panel is about to be shown.
+   */
+  get revealed(): Signal<this, undefined> {
+    return this._revealed;
+  }
+
+  get awareness(): Awareness | undefined {
+    const sharedModel = this._tracker.currentWidget?.context.model.sharedModel;
+    if (sharedModel == null) {
+      return undefined;
+    }
+    return (sharedModel as any as YDocument<any>).awareness;
+  }
+
   private _tracker: INotebookTracker;
   private _inputWidget: Widget;
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
+  private _revealed = new Signal<this, undefined>(this);
   private _commentMenu: Menu;
 }
 
