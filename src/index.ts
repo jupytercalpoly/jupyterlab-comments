@@ -1,11 +1,12 @@
 import {
+  ILabShell,
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
 
 import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
 import { INotebookTracker } from '@jupyterlab/notebook';
-import { addComment } from './comments';
+import { addComment, getComments } from './comments';
 import { UUID } from '@lumino/coreutils';
 import { IComment } from './commentformat';
 import { YNotebook } from '@jupyterlab/shared-models';
@@ -13,6 +14,7 @@ import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
 import { CommentPanel } from './panel';
 import { CommentWidget } from './widget';
+import { Cell } from '@jupyterlab/cells';
 
 namespace CommandIDs {
   export const addComment = 'jl-chat:add-comment';
@@ -27,8 +29,12 @@ namespace CommandIDs {
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-chat:plugin',
   autoStart: true,
-  requires: [INotebookTracker],
-  activate: (app: JupyterFrontEnd, nbTracker: INotebookTracker) => {
+  requires: [INotebookTracker, ILabShell],
+  activate: (
+    app: JupyterFrontEnd,
+    nbTracker: INotebookTracker,
+    shell: ILabShell
+  ) => {
     // A widget tracker for comment widgets
     const commentTracker = new WidgetTracker<CommentWidget<any>>({
       namespace: 'comment-widgets'
@@ -39,7 +45,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       tracker: nbTracker,
       commands: app.commands
     });
-    app.shell.add(panel, 'right', { rank: 500 });
+    shell.add(panel, 'right', { rank: 500 });
 
     // Automatically add the comment widgets to the tracker as
     // they're added to the panel
@@ -47,8 +53,25 @@ const plugin: JupyterFrontEndPlugin<void> = {
       (_, comment) => void commentTracker.add(comment)
     );
 
-    // Re-render the panel whenever the active cell changes
-    nbTracker.activeCellChanged.connect((_, cells) => panel.update());
+    panel.revealed.connect(() => panel.update());
+
+    shell.currentChanged.connect(() => panel.update());
+
+    const onActiveCellChanged = (_: any, cell: Cell | null): void => {
+      if (cell == null) {
+        return;
+      }
+
+      const comments = getComments(cell!.model.metadata);
+      if (comments == null) {
+        return;
+      }
+
+      panel.scrollToComment(comments[0].id);
+    };
+
+    // Scroll to a cell's comments when that cell is focused.
+    nbTracker.activeCellChanged.connect(onActiveCellChanged);
 
     addCommands(app, nbTracker, commentTracker, panel);
 
