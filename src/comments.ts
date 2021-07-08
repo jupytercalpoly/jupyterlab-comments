@@ -1,6 +1,7 @@
 import { every } from '@lumino/algorithm';
 import { IObservableJSON } from '@jupyterlab/observables';
 import * as comments from './commentformat';
+import { getCommentTimeString } from './utils';
 
 export function verifyComments(comments: Record<string, unknown>): boolean {
   return Array.isArray(comments) && every(comments, verifyComment);
@@ -46,6 +47,10 @@ export function addComment(
   metadata: IObservableJSON,
   comment: comments.IComment
 ): void {
+  if (comment.text == ''){
+    console.warn("Empty string cannot be a comment")
+    return;
+  }
   const comments = getComments(metadata);
   if (comments == null) {
     metadata.set('comments', [comment as any]);
@@ -54,11 +59,71 @@ export function addComment(
   }
 }
 
+export function edit(
+  metadata: IObservableJSON,
+  commentid: string,
+  editid: string,
+  modifiedText: string
+): void {
+  const comment = getCommentByID(metadata, commentid);
+  if (comment == null) {
+    return;
+  }
+  if (modifiedText == ''){
+    console.warn("Empty string cannot be a comment/reply")
+    return;
+  }
+  if (editid == commentid) {
+    editComment(metadata, commentid, modifiedText);
+  } else {
+    editReply(metadata, commentid, editid, modifiedText);
+  }
+}
+
+function editReply(
+  metadata: IObservableJSON,
+  commentid: string,
+  id: string,
+  modifiedText: string
+): void {
+  const comment = getCommentByID(metadata, commentid);
+  if (comment == null) {
+    console.warn('Comment does not exist!');
+    return;
+  }
+  const replyIndex = comment.replies.findIndex(r => r.id === id);
+  if (replyIndex === -1) {
+    return;
+  }
+  comment.replies[replyIndex].text = modifiedText;
+  // Maybe we should inclued an edited flag to render?
+  comment.time = getCommentTimeString(); 
+}
+
+function editComment(
+  metadata: IObservableJSON,
+  id: string,
+  modifiedText: string
+): void {
+  const comment = getCommentByID(metadata, id);
+  if (comment == null) {
+    console.warn('Comment does not exist!');
+    return;
+  }
+  comment.text = modifiedText;
+  // Maybe we should inclued an edited flag to render?
+  comment.time = getCommentTimeString(); 
+}
+
 export function addReply(
   metadata: IObservableJSON,
   reply: comments.IComment,
   id: string
 ): void {
+  if (reply.text == ''){
+    console.warn("Empty string cannot be a reply")
+    return;
+  }
   const comments = getComments(metadata);
   if (comments == null) {
     return;
@@ -91,19 +156,14 @@ export function deleteReply(
   comment.replies.splice(replyIndex, 1);
   comments[commentIndex] = comment;
   metadata.set('comments', comments as any);
-
 }
 
-export function deleteComment(
-  metadata: IObservableJSON,
-  id: string
-): void {
+export function deleteComment(metadata: IObservableJSON, id: string): void {
   const comments = getComments(metadata);
   if (comments == null) {
     return;
   }
-  const commentIndex = comments.findIndex(c=> c.id === id);
+  const commentIndex = comments.findIndex(c => c.id === id);
   comments.splice(commentIndex, 1);
   metadata.set('comments', comments as any);
-
 }
