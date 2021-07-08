@@ -97,6 +97,7 @@ export class CommentPanel extends Panel {
 
     const tracker = this._tracker;
     const model = tracker.currentWidget?.model;
+
     if (model == null) {
       console.warn(
         'Either no current widget or no widget model; aborting panel render'
