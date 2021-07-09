@@ -2,9 +2,15 @@ import { ReactWidget, UseSignal } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { ellipsesIcon } from '@jupyterlab/ui-components';
 import { CommentType, IComment, IIdentity, ISelection } from './commentformat';
-import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
-import { addReply, deleteComment, deleteReply, edit } from './comments';
+import {
+  addReply,
+  deleteComment,
+  deleteReply,
+  edit,
+  getCommentByID,
+  ISharedMetadatedText
+} from './comments';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
 import { Menu } from '@lumino/widgets';
@@ -131,7 +137,6 @@ function JCComment(props: CommentProps): JSX.Element {
 
       <span className="jc-Time">{comment.time}</span>
 
-      {renderPreview && <br />}
       {renderPreview && <JCPreview comment={comment} target={target} />}
 
       <Jdiv
@@ -218,12 +223,12 @@ export class CommentWidget<T> extends ReactWidget {
   constructor(options: CommentWidget.IOptions<T>) {
     super();
 
-    const { awareness, id, target, metadata, menu } = options;
+    const { awareness, id, target, sharedModel, menu } = options;
     this._awareness = awareness;
     this._commentID = id;
     this._activeID = id;
     this._target = target;
-    this._metadata = metadata;
+    this._sharedModel = sharedModel;
     this._menu = menu;
 
     this.addClass('jc-CommentWidget');
@@ -383,7 +388,7 @@ export class CommentWidget<T> extends ReactWidget {
       time: getCommentTimeString()
     };
 
-    addReply(this.metadata, reply, this.commentID);
+    addReply(this.sharedModel, reply, this.commentID);
     target.textContent = '';
     this.replyAreaHidden = true;
   }
@@ -413,7 +418,7 @@ export class CommentWidget<T> extends ReactWidget {
           target.textContent = this.text!;
         } else {
           edit(
-            this.metadata,
+            this.sharedModel,
             this.commentID,
             this.activeID,
             target.textContent!
@@ -483,10 +488,10 @@ export class CommentWidget<T> extends ReactWidget {
     }
 
     if (this.activeID === this.commentID) {
-      deleteComment(this.metadata, this.commentID);
+      deleteComment(this.sharedModel, this.commentID);
       this.dispose();
     } else {
-      deleteReply(this.metadata, this.activeID, this.commentID);
+      deleteReply(this.sharedModel, this.activeID, this.commentID);
     }
   }
 
@@ -494,16 +499,7 @@ export class CommentWidget<T> extends ReactWidget {
    * The comment object being rendered by the widget.
    */
   get comment(): IComment | undefined {
-    const comments = this._metadata.get('comments');
-    if (comments == null) {
-      return undefined;
-    }
-
-    const commentList = comments as any as IComment[];
-
-    return commentList.find(
-      comment => comment.id != null && comment.id === this.commentID
-    );
+    return getCommentByID(this.sharedModel, this.commentID);
   }
 
   /**
@@ -562,10 +558,10 @@ export class CommentWidget<T> extends ReactWidget {
   }
 
   /**
-   * The metadata object hosting the comment.
+   * The shared model hosting the metadata hosting the comment.
    */
-  get metadata(): IObservableJSON {
-    return this._metadata;
+  get sharedModel(): ISharedMetadatedText {
+    return this._sharedModel;
   }
 
   /**
@@ -604,7 +600,7 @@ export class CommentWidget<T> extends ReactWidget {
   private _awareness: Awareness;
   private _commentID: string;
   private _target: T;
-  private _metadata: IObservableJSON;
+  private _sharedModel: ISharedMetadatedText;
   private _activeID: string;
   private _menu: Menu;
   private _replyAreaHidden: boolean = true;
@@ -620,7 +616,7 @@ export namespace CommentWidget {
 
     id: string;
 
-    metadata: IObservableJSON;
+    sharedModel: ISharedMetadatedText;
 
     target: T;
 

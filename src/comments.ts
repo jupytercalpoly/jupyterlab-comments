@@ -2,11 +2,14 @@ import { every } from '@lumino/algorithm';
 import { PartialJSONObject } from '@lumino/coreutils';
 import * as comments from './commentformat';
 import { getCommentTimeString } from './utils';
+import { ISharedText } from '@jupyterlab/shared-models';
 
 export interface IMetadated {
   getMetadata: () => PartialJSONObject;
   setMetadata: (metadata: PartialJSONObject) => void;
 }
+
+export interface ISharedMetadatedText extends ISharedText, IMetadated {}
 
 export function updateMetadata(model: IMetadated, value: any): void {
   model.setMetadata(Object.assign({}, model.getMetadata(), value));

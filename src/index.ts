@@ -62,7 +62,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         return;
       }
 
-      const comments = getComments(cell!.model.metadata);
+      const comments = getComments(cell.model.sharedModel);
       if (comments == null) {
         return;
       }
@@ -133,7 +133,7 @@ function addCommands(
             time: getCommentTimeString()
           };
 
-          addComment(cell.model.metadata, comment);
+          addComment(cell.model.sharedModel, comment);
 
           panel.update();
         }
