@@ -6,7 +6,7 @@ import {
 
 import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
 import { INotebookTracker } from '@jupyterlab/notebook';
-import { addComment, getComments, selectionComparator } from './comments';
+import { addComment, getComments } from './comments';
 import { UUID } from '@lumino/coreutils';
 import { IComment } from './commentformat';
 import { YNotebook } from '@jupyterlab/shared-models';
@@ -63,37 +63,42 @@ const plugin: JupyterFrontEndPlugin<void> = {
             selectionString = window.getSelection()!.toString();
             if(document.getElementsByClassName('jc-Indicator').length == 0)
             {
+
               let indicator = document.createElement('div');
               indicator.className = 'jc-Indicator';
+
               indicator.onclick = () => {
+
                 let range = nbTracker.activeCell?.editor.getSelection() as CodeEditor.IRange;
+
                 void InputDialog.getText({title: 'Add Comment',
                 }).then(value => {
                   if(value.value != null){
 
-                    let mD = "> [";
-                    let text = mD.concat(selectionString, "]\n ", value.value);
-                    
                     const comment : IComment = {
                       id: UUID.uuid4(),
                       type: 'text',
                       identity: getIdentity((nbTracker.currentWidget?.model
                         ?.sharedModel as YNotebook).awareness),
                       replies: [],
-                      text: text,
+                      text: value.value,
                       time: getCommentTimeString(),
-                      selection: selectionComparator(range.start, range.end)
+                      selection: {
+                        start: range.start,
+                        end: range.end,
+                        //source: nbTracker.activeCell!.model,
+                        content: selectionString
+                      }
                     };
 
                     if(nbTracker.activeCell != null)
                     {
                       addComment(nbTracker.activeCell.model.metadata, comment);
                     }
-                    
+
                     panel.update();
                   }
                 });
-                
               };
               indicator.onmouseover = () => {
                 onHover = true;
@@ -101,6 +106,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
               indicator.onmouseout = () => {
                 onHover = false;
               };
+
               nbTracker.activeCell?.node.childNodes[1].appendChild(indicator);
             }
           }

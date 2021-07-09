@@ -2,8 +2,6 @@ import { every } from '@lumino/algorithm';
 import { IObservableJSON } from '@jupyterlab/observables';
 import * as comments from './commentformat';
 import { getCommentTimeString } from './utils';
-import { CodeEditor } from '@jupyterlab/codeeditor';
-import { ITextSelection } from './commentformat';
 
 export function verifyComments(comments: Record<string, unknown>): boolean {
   return Array.isArray(comments) && every(comments, verifyComment);
@@ -19,7 +17,8 @@ export function verifyComment(comment: Record<string, unknown>): boolean {
     'color' in (comment['identity'] as comments.IIdentity) &&
     'text' in comment &&
     'replies' in comment &&
-    'time' in comment
+    'time' in comment &&
+    (comment['type'] == 'text' ? 'selection' in comment : true)
   );
 }
 
@@ -168,22 +167,4 @@ export function deleteComment(metadata: IObservableJSON, id: string): void {
   const commentIndex = comments.findIndex(c => c.id === id);
   comments.splice(commentIndex, 1);
   metadata.set('comments', comments as any);
-}
-
-export function selectionComparator(start: CodeEditor.IPosition, end: CodeEditor.IPosition) : ITextSelection {
-  if(start.line < end.line || (start.line == end.line && start.column < end.column)){
-    return {
-      startline: start.line,
-      startchar: start.column,
-      endline: end.line,
-      endchar: end.column
-    };
-  } else {
-    return {
-      startline: end.line,
-      startchar: end.column,
-      endline: start.line,
-      endchar: start.column
-    };
-  }
 }

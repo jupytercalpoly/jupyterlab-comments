@@ -142,14 +142,8 @@ export class CommentPanel extends Panel {
         if(comment.type == 'text')
         {
           selections.push({
-            start: {
-              line: comment.selection!.startline,
-              column: comment.selection!.startchar
-            },
-            end: {
-              line: comment.selection!.endline,
-              column: comment.selection!.endchar
-            },
+            start: comment.selection!.start,
+            end: comment.selection!.end,
             style: {
               className: 'jc-Highlight',
               color: 'black',
@@ -158,12 +152,6 @@ export class CommentPanel extends Panel {
             uuid: comment.id
           });
         }
-        //tracker.currentWidget?.content.widgets
-        // let selection = {
-
-        // };
-        // cell.selections.set(cell.id, );
-        
       }
       cell.selections.set(cell.id, selections);
     });
