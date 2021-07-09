@@ -1,7 +1,7 @@
 import { ReactWidget, UseSignal } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { ellipsesIcon } from '@jupyterlab/ui-components';
-import { CommentType, IComment, IIdentity } from './commentformat';
+import { CommentType, IComment, IIdentity, ISelection } from './commentformat';
 import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
 import { addReply, deleteComment, deleteReply, edit } from './comments';
@@ -9,6 +9,7 @@ import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
 import { Menu } from '@lumino/widgets';
 import { Signal } from '@lumino/signaling';
+import { ICellModel } from '@jupyterlab/cells';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -21,12 +22,15 @@ type CommentProps = {
   comment: IComment;
   className?: string;
   editable?: boolean;
+  target?: any;
+  isReply?: boolean;
 };
 
 type CommentWithRepliesProps = {
   comment: IComment;
   editID: string;
   className?: string;
+  target?: any;
 };
 
 type CommentWrapperProps = {
@@ -39,16 +43,52 @@ type ReplyAreaProps = {
   className?: string;
 };
 
+type PreviewProps = {
+  comment: IComment;
+  target: any;
+};
+
 function Jdiv(props: any): JSX.Element {
-  return (
-    <div {...props}>{props.children}</div>
-  )
+  return <div {...props}>{props.children}</div>;
 }
 
 function Jspan(props: any): JSX.Element {
+  return <span {...props}>{props.children}</span>;
+}
+
+function JCPreview(props: PreviewProps): JSX.Element {
+  const { comment, target } = props;
+
+  let cell;
+  let selection;
+  let previewText;
+
+  switch (comment.type) {
+    case 'cell':
+      cell = target as ICellModel;
+
+      if (cell.value.text.length > 140) {
+        previewText = cell.value.text.slice(0, 140) + '...';
+      } else {
+        previewText = cell.value.text.slice(0, cell.value.text.length);
+      }
+      break;
+    case 'text':
+      selection = target as ISelection;
+      cell = selection.source;
+      previewText = cell.value.text.slice(selection.start, selection.end);
+      break;
+    default:
+      previewText = 'Unrecognized comment type';
+      break;
+  }
+
   return (
-    <span {...props}>{props.children}</span>
-  )
+    <div className="jc-Preview">
+      <div className="jc-PreviewBar" />
+      <span className="jc-PreviewText">{previewText}</span>
+    </div>
+  );
 }
 
 /**
@@ -64,6 +104,9 @@ function JCComment(props: CommentProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
   const editable = props.editable;
+  const target = props.target;
+  const isReply = props.isReply == null ? false : props.isReply;
+  const renderPreview = target != null && !isReply;
 
   return (
     <Jdiv
@@ -80,10 +123,7 @@ function JCComment(props: CommentProps): JSX.Element {
       </Jdiv>
       <span className="jc-Nametag">{comment.identity.name}</span>
 
-      <Jspan
-        className="jc-IconContainer"
-        jcEventArea="dropdown"
-      >
+      <Jspan className="jc-IconContainer" jcEventArea="dropdown">
         <ellipsesIcon.react className="jc-Ellipses" />
       </Jspan>
 
@@ -91,7 +131,8 @@ function JCComment(props: CommentProps): JSX.Element {
 
       <span className="jc-Time">{comment.time}</span>
 
-      <br />
+      {renderPreview && <br />}
+      {renderPreview && <JCPreview comment={comment} target={target} />}
 
       <Jdiv
         className="jc-Body jc-EditInputArea"
@@ -102,8 +143,6 @@ function JCComment(props: CommentProps): JSX.Element {
       >
         {comment.text}
       </Jdiv>
-
-      <br />
     </Jdiv>
   );
 }
@@ -112,17 +151,24 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
   const editID = props.editID;
+  const target = props.target;
 
   return (
     <div className={'jc-CommentWithReplies ' + className}>
-      <JCComment comment={comment} editable={editID === comment.id} />
+      <JCComment
+        comment={comment}
+        editable={editID === comment.id}
+        target={target}
+      />
       <div className={'jc-Replies'}>
         {comment.replies.map(reply => (
           <JCComment
             comment={reply}
             className="jc-Reply"
             editable={editID === reply.id}
+            target={target}
             key={reply.id}
+            isReply={true}
           />
         ))}
       </div>
@@ -158,6 +204,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
       <JCCommentWithReplies
         comment={commentWidget.comment!}
         editID={commentWidget.editID}
+        target={commentWidget.target}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
     </div>
