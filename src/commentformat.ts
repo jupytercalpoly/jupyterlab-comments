@@ -12,6 +12,13 @@ export interface IIdentity {
   color: string;
 }
 
+export interface ITextSelection {
+  startline: number;
+  startchar: number;
+  endline: number;
+  endchar: number;
+}
+
 /**
  * A type for the metadata representation of a comment.
  */
@@ -22,4 +29,5 @@ export type IComment = {
   replies: IComment[];
   text: string;
   time: string;
+  selection?: ITextSelection
 };

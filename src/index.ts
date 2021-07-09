@@ -1,11 +1,12 @@
 import {
+  ILabShell,
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
 
 import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
 import { INotebookTracker } from '@jupyterlab/notebook';
-import { addComment } from './comments';
+import { addComment, getComments, selectionComparator } from './comments';
 import { UUID } from '@lumino/coreutils';
 import { IComment } from './commentformat';
 import { YNotebook } from '@jupyterlab/shared-models';
@@ -14,7 +15,7 @@ import { getCommentTimeString, getIdentity } from './utils';
 import { CommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { CodeEditor } from '@jupyterlab/codeeditor';
-import { CodeMirrorEditor } from '@jupyterlab/codemirror';
+import { Cell } from '@jupyterlab/cells';
 
 namespace CommandIDs {
   export const addComment = 'jl-chat:add-comment';
@@ -23,19 +24,18 @@ namespace CommandIDs {
   export const replyToComment = 'jl-chat:reply-to-comment';
 }
 
-// namespace HighlightConst {
-//   export const lineBuf = 17;
-//   export const charSize = 7.82666015625;
-// }
-
 /**
  * Initialization data for the jupyterlab-chat extension.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-chat:plugin',
   autoStart: true,
-  requires: [INotebookTracker],
-  activate: (app: JupyterFrontEnd, nbTracker: INotebookTracker) => {
+  requires: [INotebookTracker, ILabShell],
+  activate: (
+    app: JupyterFrontEnd,
+    nbTracker: INotebookTracker,
+    shell: ILabShell
+  ) => {
     // A widget tracker for comment widgets
     const commentTracker = new WidgetTracker<CommentWidget<any>>({
       namespace: 'comment-widgets'
@@ -66,8 +66,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
               let indicator = document.createElement('div');
               indicator.className = 'jc-Indicator';
               indicator.onclick = () => {
-                console.log(selectionString);
-                console.log("sel: ", nbTracker.activeCell?.editor.getSelection());
                 let range = nbTracker.activeCell?.editor.getSelection() as CodeEditor.IRange;
                 void InputDialog.getText({title: 'Add Comment',
                 }).then(value => {
@@ -83,21 +81,16 @@ const plugin: JupyterFrontEndPlugin<void> = {
                         ?.sharedModel as YNotebook).awareness),
                       replies: [],
                       text: text,
-                      time: new Date(new Date().getTime()).toLocaleString()
+                      time: getCommentTimeString(),
+                      selection: selectionComparator(range.start, range.end)
                     };
 
                     if(nbTracker.activeCell != null)
                     {
                       addComment(nbTracker.activeCell.model.metadata, comment);
                     }
-                  
-                    (nbTracker.activeCell?.editor as CodeMirrorEditor).doc.markText(
-                      {line: range.start.line, ch: range.start.column}, 
-                      {line: range.end.line, ch: range.end.column},
-                      {className: 'jc-Highlight'});
                     
                     panel.update();
-                    nbTracker.activeCell?.editor.setSelection(range);
                   }
                 });
                 
@@ -108,8 +101,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
               indicator.onmouseout = () => {
                 onHover = false;
               };
-              nbTracker.activeCell?.node.childNodes[1].appendChild(indicator); //firstChild?.
-              //childNodes[1].childNodes[1].childNodes[1].firstChild?
+              nbTracker.activeCell?.node.childNodes[1].appendChild(indicator);
             }
           }
           else
@@ -125,7 +117,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         awarenessTracker = true; 
       }
     });
-    app.shell.add(panel, 'right', { rank: 500 });
+    shell.add(panel, 'right', { rank: 500 });
 
     // Automatically add the comment widgets to the tracker as
     // they're added to the panel
@@ -133,8 +125,25 @@ const plugin: JupyterFrontEndPlugin<void> = {
       (_, comment) => void commentTracker.add(comment)
     );
 
-    // Re-render the panel whenever the active cell changes
-    nbTracker.activeCellChanged.connect((_, cells) => panel.update());
+    panel.revealed.connect(() => panel.update());
+
+    shell.currentChanged.connect(() => panel.update());
+
+    const onActiveCellChanged = (_: any, cell: Cell | null): void => {
+      if (cell == null) {
+        return;
+      }
+
+      const comments = getComments(cell!.model.metadata);
+      if (comments == null) {
+        return;
+      }
+
+      panel.scrollToComment(comments[0].id);
+    };
+
+    // Scroll to a cell's comments when that cell is focused.
+    nbTracker.activeCellChanged.connect(onActiveCellChanged);
 
     addCommands(app, nbTracker, commentTracker, panel);
 

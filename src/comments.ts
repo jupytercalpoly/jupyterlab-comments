@@ -2,6 +2,8 @@ import { every } from '@lumino/algorithm';
 import { IObservableJSON } from '@jupyterlab/observables';
 import * as comments from './commentformat';
 import { getCommentTimeString } from './utils';
+import { CodeEditor } from '@jupyterlab/codeeditor';
+import { ITextSelection } from './commentformat';
 
 export function verifyComments(comments: Record<string, unknown>): boolean {
   return Array.isArray(comments) && every(comments, verifyComment);
@@ -47,8 +49,8 @@ export function addComment(
   metadata: IObservableJSON,
   comment: comments.IComment
 ): void {
-  if (comment.text == ''){
-    console.warn("Empty string cannot be a comment")
+  if (comment.text == '') {
+    console.warn('Empty string cannot be a comment');
     return;
   }
   const comments = getComments(metadata);
@@ -69,8 +71,8 @@ export function edit(
   if (comment == null) {
     return;
   }
-  if (modifiedText == ''){
-    console.warn("Empty string cannot be a comment/reply")
+  if (modifiedText == '') {
+    console.warn('Empty string cannot be a comment/reply');
     return;
   }
   if (editid == commentid) {
@@ -97,7 +99,7 @@ function editReply(
   }
   comment.replies[replyIndex].text = modifiedText;
   // Maybe we should inclued an edited flag to render?
-  comment.time = getCommentTimeString(); 
+  comment.time = getCommentTimeString();
 }
 
 function editComment(
@@ -112,7 +114,7 @@ function editComment(
   }
   comment.text = modifiedText;
   // Maybe we should inclued an edited flag to render?
-  comment.time = getCommentTimeString(); 
+  comment.time = getCommentTimeString();
 }
 
 export function addReply(
@@ -120,8 +122,8 @@ export function addReply(
   reply: comments.IComment,
   id: string
 ): void {
-  if (reply.text == ''){
-    console.warn("Empty string cannot be a reply")
+  if (reply.text == '') {
+    console.warn('Empty string cannot be a reply');
     return;
   }
   const comments = getComments(metadata);
@@ -166,4 +168,22 @@ export function deleteComment(metadata: IObservableJSON, id: string): void {
   const commentIndex = comments.findIndex(c => c.id === id);
   comments.splice(commentIndex, 1);
   metadata.set('comments', comments as any);
+}
+
+export function selectionComparator(start: CodeEditor.IPosition, end: CodeEditor.IPosition) : ITextSelection {
+  if(start.line < end.line || (start.line == end.line && start.column < end.column)){
+    return {
+      startline: start.line,
+      startchar: start.column,
+      endline: end.line,
+      endchar: end.column
+    };
+  } else {
+    return {
+      startline: end.line,
+      startchar: end.column,
+      endline: start.line,
+      endchar: start.column
+    };
+  }
 }
