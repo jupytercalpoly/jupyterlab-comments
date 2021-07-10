@@ -12,6 +12,7 @@ import { getCommentTimeString, getIdentity } from './utils';
 import { Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
+import { ISelection } from './commentformat';
 
 export class CommentPanel extends Panel {
   constructor(options: CommentPanel.IOptions) {
@@ -128,7 +129,7 @@ export class CommentPanel extends Panel {
       //
       // TODO: Make this not re-create the comment widget every time.
       // (Update it instead?)
-      let selections = []
+      let selections = [];
       for (let comment of comments) {
         const widget = new CommentWidget<ICellModel>({
           awareness,
@@ -137,13 +138,12 @@ export class CommentPanel extends Panel {
           metadata: metadata,
           menu: this._commentMenu
         });
-        
+
         this.addComment(widget);
-        if(comment.type == 'text')
-        {
+        if (comment.type == 'text') {
           selections.push({
-            start: comment.selection!.start,
-            end: comment.selection!.end,
+            start: (comment as ISelection).start,
+            end: (comment as ISelection).end,
             style: {
               className: 'jc-Highlight',
               color: 'black',

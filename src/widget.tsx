@@ -6,7 +6,7 @@ import { IObservableJSON } from '@jupyterlab/observables';
 import { UUID } from '@lumino/coreutils';
 import { addReply, deleteComment, deleteReply, edit } from './comments';
 import { Awareness } from 'y-protocols/awareness';
-import { getCommentTimeString, getIdentity } from './utils';
+import { getCommentTimeString, getIdentity, lineToIndex } from './utils';
 import { Menu } from '@lumino/widgets';
 import { Signal } from '@lumino/signaling';
 import { ICellModel } from '@jupyterlab/cells';
@@ -60,11 +60,11 @@ function JCPreview(props: PreviewProps): JSX.Element {
   const { comment, target } = props;
 
   let cell;
-  let selection;
+  //let selection;
   let previewText;
 
   switch (comment.type) {
-    case 'cell':
+    case 'cell': {
       cell = target as ICellModel;
 
       if (cell.value.text.length > 140) {
@@ -73,21 +73,33 @@ function JCPreview(props: PreviewProps): JSX.Element {
         previewText = cell.value.text.slice(0, cell.value.text.length);
       }
       break;
-    case 'text':
-      selection = target as ISelection;
-      console.log(selection);
-      console.log(target);
-      //cell = selection.source;
-      console.log(selection.content);
-      if(comment.selection!.content.length > 140) {
-        previewText = comment.selection!.content.slice(0, 140) + '...';
+    }
+    case 'text': {
+      //selection = target as ISelection;
+      cell = target as ICellModel;
+      let mainText = cell.value.text;
+      let initIndex = (comment as ISelection).start;
+      let endIndex = (comment as ISelection).end;
+      let start = lineToIndex(mainText, initIndex.line, initIndex.column);
+      let end = lineToIndex(mainText, endIndex.line, endIndex.column);
+      if (start < end) {
+        previewText = cell.value.text.slice(start, end + 1);
       } else {
-        previewText = comment.selection!.content;
+        if (endIndex.column == 0) {
+          previewText = cell.value.text.slice(end, start + 1);
+        } else {
+          previewText = cell.value.text.slice(end + 1, start + 1);
+        }
+      }
+      if (previewText.length > 140) {
+        previewText = previewText.slice(0, 140) + '...';
       }
       break;
-    default:
+    }
+    default: {
       previewText = 'Unrecognized comment type';
       break;
+    }
   }
 
   return (
