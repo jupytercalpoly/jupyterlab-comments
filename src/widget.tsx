@@ -100,6 +100,7 @@ function JCPreview(props: PreviewProps): JSX.Element {
       previewText = 'Unrecognized comment type';
       break;
     }
+
   }
 
   return (

@@ -1,3 +1,4 @@
+
 //import { ICellModel } from "@jupyterlab/cells";
 import { CodeEditor } from '@jupyterlab/codeeditor';
 
@@ -13,6 +14,12 @@ export interface IIdentity {
   id: number;
   name: string;
   color: string;
+}
+
+export interface ISelection {
+  start: number;
+  end: number;
+  source: ICellModel;
 }
 
 /**
