@@ -5,7 +5,7 @@ import {
 } from '@jupyterlab/application';
 
 import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
-import { INotebookTracker } from '@jupyterlab/notebook';
+import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { addComment, getComments } from './comments';
 import { UUID } from '@lumino/coreutils';
 import { IComment } from './commentformat';
@@ -15,6 +15,7 @@ import { getCommentTimeString, getIdentity } from './utils';
 import { CommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
+import * as Y from 'yjs';
 
 namespace CommandIDs {
   export const addComment = 'jl-chat:add-comment';
@@ -63,7 +64,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
 
       const comments = getComments(cell.model.sharedModel);
-      if (comments == null) {
+      if (comments == null || comments.length === 0) {
         return;
       }
 
@@ -72,6 +73,41 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     // Scroll to a cell's comments when that cell is focused.
     nbTracker.activeCellChanged.connect(onActiveCellChanged);
+
+    // Looks for changes to metadata on cells and updates the panel as they occur.
+    // This is what allows comments to be real-time.
+    const handleCellChanges = (events: Y.YEvent[], t: Y.Transaction): void => {
+      for (let e of events) {
+        if (
+          e.target instanceof Y.Map &&
+          (e as Y.YMapEvent<any>).keysChanged.has('metadata')
+        ) {
+          panel.update();
+          return;
+        }
+      }
+    };
+
+    let currPanel: NotebookPanel | null = null;
+    // Attaches an observer to the current notebook's collaborative cells model
+    const onNotebookChanged = (_: any, panel: NotebookPanel | null): void => {
+      if (panel == null) {
+        return;
+      }
+
+      let model: YNotebook;
+
+      if (currPanel != null) {
+        model = currPanel.model!.sharedModel as YNotebook;
+        model.ycells.unobserveDeep(handleCellChanges);
+      }
+
+      model = panel.model!.sharedModel as YNotebook;
+      model.ycells.observeDeep(handleCellChanges);
+      currPanel = panel;
+    };
+
+    nbTracker.currentChanged.connect(onNotebookChanged);
 
     addCommands(app, nbTracker, commentTracker, panel);
 
@@ -85,12 +121,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
       selector: '.jp-Notebook .jp-Cell',
       rank: 13
     });
-
-    app.contextMenu.addItem({
-      command: 'jl-chat:listen',
-      selector: '.jp-Notebook .jp-Cell',
-      rank: 14
-    });
   }
 };
 
@@ -103,14 +133,6 @@ function addCommands(
   const getAwareness = (): Awareness | undefined => {
     return (nbTracker.currentWidget?.model?.sharedModel as YNotebook).awareness;
   };
-
-  app.commands.addCommand('jl-chat:listen', {
-    label: 'Listen For Awareness Changes',
-    execute: () => {
-      const awareness = getAwareness();
-      awareness?.on('change', () => console.log(awareness.getLocalState()));
-    }
-  });
 
   app.commands.addCommand(CommandIDs.addComment, {
     label: 'Add Comment',

@@ -73,8 +73,7 @@ export function addComment(
     return;
   }
 
-  const metadata = model.getMetadata();
-  const comments = _getComments(metadata) || [];
+  const comments = getComments(model) || [];
   comments.push(comment);
   updateMetadata(model, { comments });
 }
