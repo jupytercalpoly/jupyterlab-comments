@@ -16,12 +16,6 @@ export interface IIdentity {
   color: string;
 }
 
-export interface ISelection {
-  start: number;
-  end: number;
-  source: ICellModel;
-}
-
 /**
  * A type for the properties of a text selection
  */
