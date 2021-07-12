@@ -1,3 +1,7 @@
+
+//import { ICellModel } from "@jupyterlab/cells";
+import { CodeEditor } from '@jupyterlab/codeeditor';
+
 /**
  * A type for the 'target' of a comment.
  */
@@ -10,6 +14,16 @@ export interface IIdentity {
   id: number;
   name: string;
   color: string;
+}
+
+/**
+ * A type for the properties of a text selection
+ */
+export interface ISelection extends IComment {
+  start: CodeEditor.IPosition;
+  end: CodeEditor.IPosition;
+  //source: ICellModel;
+  //content: string;
 }
 
 /**

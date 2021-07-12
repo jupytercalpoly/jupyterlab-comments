@@ -16,11 +16,13 @@
 
   --jc-nametag-font-size: normal;
   --jc-nametag-font-weight: 500;
+
+  --var-jc-linesep: 2px;
 }
 
 .jc-CommentPanel {
   background-color: var(--jc-panel-background-color);
-  color: var(--jc-widget-color);
+  color: var(--jc-comment-color);
   overflow: auto;
 }
 
@@ -45,7 +47,7 @@
 }
 
 .jc-Body {
-  display: inline-block;
+  display: block;
   outline: none;
   border: none;
   appearance: none;
@@ -68,8 +70,27 @@
   padding: 5px 4px;
 }
 
+.jc-Indicator {
+  width: 10px;
+  height: 10px;
+  background-color: orangered;
+  float: right;
+  /*margin-top: -20px;*/
+  text-align: center;
+  margin: auto auto;
+  border-radius: 5px;
+  padding: 5px;
+  z-index: 5;
+}
+
+.jc-Indicator:hover {
+  background-color: orange;
+  width: 12px;
+  width: 12px;
+}
+
 .jc-ProfilePic {
-  display: inline-block;
+  display: block;
   border-radius: 50%;
   top: 0;
   left: 0;
@@ -92,7 +113,8 @@
 }
 
 .jc-EditInputArea {
-  padding: 3px 3px 3px 3px;
+  margin-top: var(--var-jc-linesep);
+  padding: 3px;
 }
 
 .jc-ReplyInputArea:empty:before {
@@ -107,6 +129,14 @@
   word-break: break-word;
 }
 
+.jc-Highlight {
+  background-color: rgba(255, 165, 0, 0.25);
+}
+
+.jc-HighlightFocus {
+  background-color: rgba(255, 165, 0, 0.65);
+}
+
 .jc-Ellipses {
   float: right;
   width: var(--jc-dropdown-size);
@@ -118,4 +148,23 @@
 }
 .jc-Ellipses > svg {
   width: var(--jc-dropdown-size);
+}
+
+.jc-Preview {
+  display: grid;
+  grid-template-columns: 6px calc(100% - 6px);
+  padding-left: 10px;
+  margin-top: var(--var-jc-linesep);
+}
+.jc-PreviewBar {
+  width: 2px;
+  height: 100%;
+  background-color: orange;
+}
+.jc-PreviewText {
+  color: var(--jc-timestamp-color);
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-left: 10px;
 }
