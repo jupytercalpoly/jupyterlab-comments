@@ -17,7 +17,7 @@ export function verifyComment(comment: Record<string, unknown>): boolean {
     'color' in (comment['identity'] as comments.IIdentity) &&
     'text' in comment &&
     'replies' in comment &&
-    'time' in comment
+    'time' in comment /*&& comment stuff */
   );
 }
 

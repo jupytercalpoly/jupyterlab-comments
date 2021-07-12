@@ -70,6 +70,25 @@
   padding: 5px 4px;
 }
 
+.jc-Indicator {
+  width: 10px;
+  height: 10px;
+  background-color: orangered;
+  float: right;
+  /*margin-top: -20px;*/
+  text-align: center;
+  margin: auto auto;
+  border-radius: 5px;
+  padding: 5px;
+  z-index: 5;
+}
+
+.jc-Indicator:hover {
+  background-color: orange;
+  width: 12px;
+  width: 12px;
+}
+
 .jc-ProfilePic {
   display: block;
   border-radius: 50%;
@@ -108,6 +127,14 @@
   padding: 10px;
   /* min-height: 30px; */
   word-break: break-word;
+}
+
+.jc-Highlight {
+  background-color: rgba(255, 165, 0, 0.25);
+}
+
+.jc-HighlightFocus {
+  background-color: rgba(255, 165, 0, 0.65);
 }
 
 .jc-Ellipses {

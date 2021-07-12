@@ -38,3 +38,15 @@ export function getCommentTimeString(): string {
   });
   return time + ' ' + date;
 }
+
+//function that converts a line-column pairing to an index
+export function lineToIndex(str: string, line: number, col: number): number {
+  if (line == 0) {
+    return col == 0 ? col : col - 1;
+  } else {
+    let arr = str.split('\n');
+    return col == 0
+      ? arr.slice(0, line).join('\n').length + col + 1
+      : arr.slice(0, line).join('\n').length + col;
+  }
+}

@@ -8,12 +8,13 @@ import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { addComment, getComments } from './comments';
 import { UUID } from '@lumino/coreutils';
-import { IComment } from './commentformat';
+import { IComment, ISelection } from './commentformat';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
 import { CommentPanel } from './panel';
 import { CommentWidget } from './widget';
+import { CodeEditor } from '@jupyterlab/codeeditor';
 import { Cell } from '@jupyterlab/cells';
 
 namespace CommandIDs {
@@ -44,6 +45,87 @@ const plugin: JupyterFrontEndPlugin<void> = {
     const panel = new CommentPanel({
       tracker: nbTracker,
       commands: app.commands
+    });
+
+    //WIP selection start
+
+    let awarenessTracker = false;
+    let onHover = false;
+    //let selectionString = '';
+
+    nbTracker.activeCellChanged.connect((_, cells) => {
+      panel.update();
+      if (awarenessTracker == false) {
+        (nbTracker.currentWidget?.model?.sharedModel as YNotebook).awareness.on(
+          'change',
+          () => {
+            let range =
+              nbTracker.activeCell?.editor.getSelection() as CodeEditor.IRange;
+            if (
+              range.end.column != range.start.column ||
+              range.end.line != range.start.line
+            ) {
+              if (document.getElementsByClassName('jc-Indicator').length == 0) {
+                let indicator = document.createElement('div');
+                indicator.className = 'jc-Indicator';
+
+                indicator.onclick = () => {
+                  range =
+                    nbTracker.activeCell?.editor.getSelection() as CodeEditor.IRange;
+                  void InputDialog.getText({ title: 'Add Comment' }).then(
+                    value => {
+                      if (value.value != null) {
+                        const comment: ISelection = {
+                          id: UUID.uuid4(),
+                          type: 'text',
+                          identity: getIdentity(
+                            (
+                              nbTracker.currentWidget?.model
+                                ?.sharedModel as YNotebook
+                            ).awareness
+                          ),
+                          replies: [],
+                          text: value.value,
+                          time: getCommentTimeString(),
+                          start: range.start,
+                          end: range.end
+                          //source: nbTracker.activeCell!.model,
+                          //content: selectionString
+                        };
+                        if (nbTracker.activeCell != null) {
+                          addComment(
+                            nbTracker.activeCell.model.metadata,
+                            comment
+                          );
+                        }
+
+                        panel.update();
+                      }
+                    }
+                  );
+                };
+                indicator.onmouseover = () => {
+                  onHover = true;
+                };
+                indicator.onmouseout = () => {
+                  onHover = false;
+                };
+
+                nbTracker.activeCell?.node.childNodes[1].appendChild(indicator);
+              }
+            } else {
+              if (
+                document.getElementsByClassName('jc-Indicator').length != 0 &&
+                onHover == false
+              ) {
+                let elem = document.getElementsByClassName('jc-Indicator')[0];
+                elem.parentNode?.removeChild(elem);
+              }
+            }
+          }
+        );
+        awarenessTracker = true;
+      }
     });
     shell.add(panel, 'right', { rank: 500 });
 
@@ -120,6 +202,7 @@ function addCommands(
         return;
       }
 
+      console.log('SEL TRY: ', nbTracker?.activeCell?.editor.getSelection());
       void InputDialog.getText({
         title: 'Enter Comment'
       }).then(value => {
@@ -132,7 +215,6 @@ function addCommands(
             text: value.value,
             time: getCommentTimeString()
           };
-
           addComment(cell.model.metadata, comment);
 
           panel.update();
