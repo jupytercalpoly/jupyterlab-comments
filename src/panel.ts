@@ -61,12 +61,12 @@ export class CommentPanel extends Panel {
     event.preventDefault();
     event.stopPropagation();
 
-    const cellModel = this._tracker.activeCell?.model;
+    const cellModel = this._tracker.activeCell?.model.sharedModel;
     if (cellModel == null) {
       return;
     }
 
-    const comments = getComments(cellModel.metadata);
+    const comments = getComments(cellModel);
     if (comments == null) {
       return;
     }
@@ -77,7 +77,7 @@ export class CommentPanel extends Panel {
       return;
     }
 
-    addComment(cellModel.metadata, {
+    addComment(cellModel, {
       id: UUID.uuid4(),
       type: 'cell',
       identity: getIdentity(awareness),
@@ -117,8 +117,8 @@ export class CommentPanel extends Panel {
     }
 
     each(model.cells, cell => {
-      const metadata = cell.metadata;
-      const comments = getComments(metadata);
+      const sharedModel = cell.sharedModel;
+      const comments = getComments(sharedModel);
       if (comments == null) {
         return;
       }
@@ -135,7 +135,7 @@ export class CommentPanel extends Panel {
           awareness,
           id: comment.id,
           target: cell,
-          metadata: metadata,
+          sharedModel,
           menu: this._commentMenu
         });
 

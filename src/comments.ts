@@ -1,7 +1,19 @@
 import { every } from '@lumino/algorithm';
-import { IObservableJSON } from '@jupyterlab/observables';
+import { PartialJSONObject } from '@lumino/coreutils';
 import * as comments from './commentformat';
 import { getCommentTimeString } from './utils';
+import { ISharedText } from '@jupyterlab/shared-models';
+
+export interface IMetadated {
+  getMetadata: () => PartialJSONObject;
+  setMetadata: (metadata: PartialJSONObject) => void;
+}
+
+export interface ISharedMetadatedText extends ISharedText, IMetadated {}
+
+export function updateMetadata(model: IMetadated, value: any): void {
+  model.setMetadata(Object.assign({}, model.getMetadata(), value));
+}
 
 export function verifyComments(comments: Record<string, unknown>): boolean {
   return Array.isArray(comments) && every(comments, verifyComment);
@@ -21,21 +33,30 @@ export function verifyComment(comment: Record<string, unknown>): boolean {
   );
 }
 
-export function getComments(
-  metadata: IObservableJSON
+export function _getComments(
+  metadata: PartialJSONObject,
+  verify?: boolean
 ): comments.IComment[] | undefined {
-  const comments = metadata.get('comments');
-  if (comments == null || !verifyComments(comments as any)) {
+  const comments = metadata['comments'];
+  if (comments == null || (verify && !verifyComments(comments as any))) {
     return undefined;
   }
   return comments as any as comments.IComment[];
 }
 
+export function getComments(
+  model: IMetadated,
+  verify?: boolean
+): comments.IComment[] | undefined {
+  const metadata = model.getMetadata();
+  return _getComments(metadata, verify);
+}
+
 export function getCommentByID(
-  metadata: IObservableJSON,
+  model: IMetadated,
   id: string
 ): comments.IComment | undefined {
-  const comments = getComments(metadata);
+  const comments = getComments(model);
   if (comments == null) {
     return undefined;
   }
@@ -44,126 +65,152 @@ export function getCommentByID(
 }
 
 export function addComment(
-  metadata: IObservableJSON,
+  model: IMetadated,
   comment: comments.IComment
 ): void {
   if (comment.text == '') {
     console.warn('Empty string cannot be a comment');
     return;
   }
-  const comments = getComments(metadata);
-  if (comments == null) {
-    metadata.set('comments', [comment as any]);
-  } else {
-    metadata.set('comments', [...(comments as any), comment as any]);
-  }
+
+  const comments = getComments(model) || [];
+  comments.push(comment);
+  updateMetadata(model, { comments });
 }
 
 export function edit(
-  metadata: IObservableJSON,
+  model: IMetadated,
   commentid: string,
   editid: string,
   modifiedText: string
 ): void {
-  const comment = getCommentByID(metadata, commentid);
-  if (comment == null) {
-    return;
-  }
-  if (modifiedText == '') {
-    console.warn('Empty string cannot be a comment/reply');
-    return;
-  }
   if (editid == commentid) {
-    editComment(metadata, commentid, modifiedText);
+    editComment(model, commentid, modifiedText);
   } else {
-    editReply(metadata, commentid, editid, modifiedText);
+    editReply(model, commentid, editid, modifiedText);
   }
 }
 
 function editReply(
-  metadata: IObservableJSON,
+  model: IMetadated,
   commentid: string,
   id: string,
   modifiedText: string
 ): void {
-  const comment = getCommentByID(metadata, commentid);
-  if (comment == null) {
-    console.warn('Comment does not exist!');
+  if (modifiedText === '') {
+    console.warn('Empty string cannot be a comment');
     return;
   }
-  const replyIndex = comment.replies.findIndex(r => r.id === id);
-  if (replyIndex === -1) {
-    return;
-  }
-  comment.replies[replyIndex].text = modifiedText;
-  // Maybe we should inclued an edited flag to render?
-  comment.time = getCommentTimeString();
-}
 
-function editComment(
-  metadata: IObservableJSON,
-  id: string,
-  modifiedText: string
-): void {
-  const comment = getCommentByID(metadata, id);
-  if (comment == null) {
-    console.warn('Comment does not exist!');
-    return;
-  }
-  comment.text = modifiedText;
-  // Maybe we should inclued an edited flag to render?
-  comment.time = getCommentTimeString();
-}
-
-export function addReply(
-  metadata: IObservableJSON,
-  reply: comments.IComment,
-  id: string
-): void {
-  if (reply.text == '') {
-    console.warn('Empty string cannot be a reply');
-    return;
-  }
-  const comments = getComments(metadata);
+  const comments = getComments(model);
   if (comments == null) {
     return;
   }
 
-  const commentIndex = comments.findIndex(comment => comment.id === id);
+  const comment = comments.find(c => c.id === commentid);
+  if (comment == null) {
+    return;
+  }
+
+  const reply = comment.replies.find(r => r.id === id);
+  if (reply == null) {
+    return;
+  }
+
+  reply.text = modifiedText;
+  reply.time = getCommentTimeString();
+
+  updateMetadata(model, { comments });
+}
+
+function editComment(
+  model: IMetadated,
+  id: string,
+  modifiedText: string
+): void {
+  if (modifiedText === '') {
+    console.warn('Empty string cannot be a comment');
+    return;
+  }
+
+  const comments = getComments(model);
+  if (comments == null) {
+    return;
+  }
+
+  const comment = comments.find(c => c.id === id);
+  if (comment == null) {
+    return;
+  }
+
+  comment.text = modifiedText;
+  comment.time = getCommentTimeString();
+
+  updateMetadata(model, { comments });
+}
+
+export function addReply(
+  model: IMetadated,
+  reply: comments.IComment,
+  id: string
+): void {
+  if (reply.text === '') {
+    console.warn('Empty string cannot be a reply');
+    return;
+  }
+
+  const comments = getComments(model);
+  if (comments == null) {
+    return;
+  }
+
+  const comment = comments.find(c => c.id === id);
+  if (comment == null) {
+    return;
+  }
+
+  comment.replies.push(reply);
+
+  updateMetadata(model, { comments });
+}
+
+export function deleteReply(
+  model: IMetadated,
+  replyID: string,
+  parentID: string
+): void {
+  const comments = getComments(model);
+  if (comments == null) {
+    return;
+  }
+
+  const comment = comments.find(c => c.id === parentID);
+  if (comment == null) {
+    return;
+  }
+
+  const replyIndex = comment.replies.findIndex(r => r.id === replyID);
+  if (replyIndex === -1) {
+    return;
+  }
+
+  comment.replies.splice(replyIndex, 1);
+
+  updateMetadata(model, { comments });
+}
+
+export function deleteComment(model: IMetadated, id: string): void {
+  const comments = getComments(model);
+  if (comments == null) {
+    return;
+  }
+
+  const commentIndex = comments.findIndex(c => c.id === id);
   if (commentIndex === -1) {
     return;
   }
 
-  comments[commentIndex].replies.push(reply);
-  metadata.set('comments', comments as any);
-}
-
-export function deleteReply(
-  metadata: IObservableJSON,
-  reply_id: string,
-  parent_id: string
-): void {
-  const comments = getComments(metadata);
-  if (comments == null) {
-    return;
-  }
-  const commentIndex = comments.findIndex(c => c.id === parent_id);
-  const comment = comments[commentIndex];
-  const replyIndex = comment.replies.findIndex(r => r.id === reply_id);
-  if (replyIndex === -1) {
-    return;
-  }
-  comment.replies.splice(replyIndex, 1);
-  comments[commentIndex] = comment;
-  metadata.set('comments', comments as any);
-}
-
-export function deleteComment(metadata: IObservableJSON, id: string): void {
-  const comments = getComments(metadata);
-  if (comments == null) {
-    return;
-  }
-  const commentIndex = comments.findIndex(c => c.id === id);
   comments.splice(commentIndex, 1);
-  metadata.set('comments', comments as any);
+
+  updateMetadata(model, { comments });
 }
