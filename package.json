@@ -56,7 +56,8 @@
     "@jupyterlab/ui-components": "^3.1.0-beta.0",
     "@lumino/widgets": "^1.23.0",
     "@types/codemirror": "^5.60.2",
-    "yjs": "^13.5.10"
+    "codemirror": "~5.61.0",
+    "yjs": "^13.5.11"
   },
   "devDependencies": {
     "@jupyterlab/builder": "^3.0.0",
