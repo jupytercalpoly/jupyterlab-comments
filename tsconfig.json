@@ -20,7 +20,8 @@
     "target": "es2018",
     "types": [],
     "allowJs": true,
-    "checkJs": true
+    "checkJs": true,
+    "lib": ["es2018", "dom"]
   },
   "include": ["src/*"]
 }
