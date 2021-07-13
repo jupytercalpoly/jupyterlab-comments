@@ -11,6 +11,7 @@ export interface IMetadated {
 
 export interface ISharedMetadatedText extends ISharedText, IMetadated {}
 
+
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function updateMetadata(model: IMetadated, value: any): void {
   model.setMetadata(Object.assign({}, model.getMetadata(), value));
@@ -38,11 +39,11 @@ export function _getComments(
   metadata: PartialJSONObject,
   verify?: boolean
 ): comments.IComment[] | undefined {
-  const comments = metadata['comments'];
-  if (comments == null || (verify && !verifyComments(comments as any))) {
-    return undefined;
+  const comments = metadata['comments'] as any;
+  if (comments == null || (verify && !verifyComments(comments))) {
+    return;
   }
-  return comments as any as comments.IComment[];
+  return comments as comments.IComment[];
 }
 
 export function getComments(
@@ -59,7 +60,7 @@ export function getCommentByID(
 ): comments.IComment | undefined {
   const comments = getComments(model);
   if (comments == null) {
-    return undefined;
+    return;
   }
 
   return comments.find(comment => comment.id === id);

@@ -64,20 +64,18 @@ function Jspan(props: any): JSX.Element {
 
 function JCPreview(props: PreviewProps): JSX.Element {
   const { comment, target } = props;
-
   let cell;
   //let selection;
   let previewText;
-
   switch (comment.type) {
     case 'cell': {
-      cell = target as ICellModel;
-
-      if (cell.value.text.length > 140) {
-        previewText = cell.value.text.slice(0, 140) + '...';
-      } else {
-        previewText = cell.value.text.slice(0, cell.value.text.length);
-      }
+      // cell = target as ICellModel;
+      // if (cell.value.text.length > 140) {
+      //   previewText = cell.value.text.slice(0, 140) + '...';
+      // } else {
+      //   previewText = cell.value.text.slice(0, cell.value.text.length);
+      // }
+      previewText = "";
       break;
     }
     case 'text': {
@@ -89,13 +87,9 @@ function JCPreview(props: PreviewProps): JSX.Element {
       let start = lineToIndex(mainText, initIndex.line, initIndex.column);
       let end = lineToIndex(mainText, endIndex.line, endIndex.column);
       if (start < end) {
-        previewText = cell.value.text.slice(start, end + 1);
+        previewText = cell.value.text.slice(start, end);
       } else {
-        if (endIndex.column == 0) {
-          previewText = cell.value.text.slice(end, start + 1);
-        } else {
-          previewText = cell.value.text.slice(end + 1, start + 1);
-        }
+        previewText = cell.value.text.slice(end, start);
       }
       if (previewText.length > 140) {
         previewText = previewText.slice(0, 140) + '...';
@@ -107,7 +101,6 @@ function JCPreview(props: PreviewProps): JSX.Element {
       break;
     }
   }
-
   return (
     <div className="jc-Preview">
       <div className="jc-PreviewBar" />
@@ -115,6 +108,7 @@ function JCPreview(props: PreviewProps): JSX.Element {
     </div>
   );
 }
+
 
 /**
  * A React component that renders a single comment or reply.
