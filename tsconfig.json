@@ -19,7 +19,8 @@
     "strictNullChecks": true,
     "target": "es2018",
     "types": [],
-    "allowJs": true
+    "allowJs": true,
+    "checkJs": true
   },
   "include": ["src/*"]
 }
