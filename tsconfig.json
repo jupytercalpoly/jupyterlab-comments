@@ -18,7 +18,8 @@
     "strict": true,
     "strictNullChecks": true,
     "target": "es2017",
-    "types": []
+    "types": [],
+    "allowJs": true
   },
   "include": ["src/*"]
 }
