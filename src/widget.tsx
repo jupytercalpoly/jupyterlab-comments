@@ -71,13 +71,14 @@ function JCPreview(props: PreviewProps): JSX.Element {
 
   switch (comment.type) {
     case 'cell': {
-      cell = target as ICellModel;
+      // cell = target as ICellModel;
 
-      if (cell.value.text.length > 140) {
-        previewText = cell.value.text.slice(0, 140) + '...';
-      } else {
-        previewText = cell.value.text.slice(0, cell.value.text.length);
-      }
+      // if (cell.value.text.length > 140) {
+      //   previewText = cell.value.text.slice(0, 140) + '...';
+      // } else {
+      //   previewText = cell.value.text.slice(0, cell.value.text.length);
+      // }
+      previewText = '';
       break;
     }
     case 'text': {
@@ -89,13 +90,9 @@ function JCPreview(props: PreviewProps): JSX.Element {
       let start = lineToIndex(mainText, initIndex.line, initIndex.column);
       let end = lineToIndex(mainText, endIndex.line, endIndex.column);
       if (start < end) {
-        previewText = cell.value.text.slice(start, end + 1);
+        previewText = cell.value.text.slice(start, end);
       } else {
-        if (endIndex.column == 0) {
-          previewText = cell.value.text.slice(end, start + 1);
-        } else {
-          previewText = cell.value.text.slice(end + 1, start + 1);
-        }
+        previewText = cell.value.text.slice(end, start);
       }
       if (previewText.length > 140) {
         previewText = previewText.slice(0, 140) + '...';
@@ -389,21 +386,23 @@ export class CommentWidget<T> extends ReactWidget {
     if (event.key === 'Escape') {
       this.replyAreaHidden = true;
       return;
-    } else if (event.key !== 'Enter') {
+    } else if (
+      event.key !== 'Enter' ||
+      (event.key === 'Enter' && event.shiftKey)
+    ) {
       return;
     }
 
+    const target = event.target as HTMLDivElement;
     event.preventDefault();
     event.stopPropagation();
-
-    const target = event.target as HTMLDivElement;
 
     const reply: IComment = {
       id: UUID.uuid4(),
       type: 'cell',
       identity: getIdentity(this._awareness),
       replies: [],
-      text: target.textContent!,
+      text: target.innerText,
       time: getCommentTimeString()
     };
 
@@ -426,21 +425,24 @@ export class CommentWidget<T> extends ReactWidget {
       case 'Escape':
         event.preventDefault();
         event.stopPropagation();
-        target.textContent = this.text!;
+        target.innerText = this.text!;
         this.editID = '';
         target.blur();
         break;
       case 'Enter':
+        if (event.shiftKey) {
+          break;
+        }
         event.preventDefault();
         event.stopPropagation();
-        if (target.textContent === '') {
-          target.textContent = this.text!;
+        if (target.innerText === '') {
+          target.innerText = this.text!;
         } else {
           edit(
             this.sharedModel,
             this.commentID,
             this.activeID,
-            target.textContent!
+            target.innerText!
           );
         }
         this.editID = '';

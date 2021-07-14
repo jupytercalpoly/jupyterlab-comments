@@ -1,4 +1,3 @@
-
 //import { ICellModel } from "@jupyterlab/cells";
 import { CodeEditor } from '@jupyterlab/codeeditor';
 
