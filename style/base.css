@@ -54,6 +54,7 @@
   -webkit-appearance: none;
   -moz-appearance: none;
   background-color: transparent;
+  white-space: pre-wrap;
 }
 
 .jc-Body:focus {
@@ -62,6 +63,7 @@
 
 .jc-Reply {
   border-top: none;
+  white-space: pre-wrap;
 }
 
 .jc-CommentInput {

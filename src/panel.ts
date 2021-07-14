@@ -56,6 +56,8 @@ export class CommentPanel extends Panel {
   private _handleKeydown(event: KeyboardEvent): void {
     if (event.key !== 'Enter') {
       return;
+    } else if (event.shiftKey) {
+      return;
     }
 
     event.preventDefault();
@@ -82,7 +84,7 @@ export class CommentPanel extends Panel {
       type: 'cell',
       identity: getIdentity(awareness),
       replies: [],
-      text: this._inputWidget.node.textContent!,
+      text: this._inputWidget.node.innerText,
       time: getCommentTimeString()
     });
 

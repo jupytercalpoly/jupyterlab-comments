@@ -75,7 +75,7 @@ function JCPreview(props: PreviewProps): JSX.Element {
       // } else {
       //   previewText = cell.value.text.slice(0, cell.value.text.length);
       // }
-      previewText = "";
+      previewText = '';
       break;
     }
     case 'text': {
@@ -385,19 +385,20 @@ export class CommentWidget<T> extends ReactWidget {
       return;
     } else if (event.key !== 'Enter') {
       return;
+    } else if (event.shiftKey) {
+      return;
     }
 
+    const target = event.target as HTMLDivElement;
     event.preventDefault();
     event.stopPropagation();
-
-    const target = event.target as HTMLDivElement;
 
     const reply: IComment = {
       id: UUID.uuid4(),
       type: 'cell',
       identity: getIdentity(this._awareness),
       replies: [],
-      text: target.textContent!,
+      text: target.innerText,
       time: getCommentTimeString()
     };
 
@@ -420,21 +421,24 @@ export class CommentWidget<T> extends ReactWidget {
       case 'Escape':
         event.preventDefault();
         event.stopPropagation();
-        target.textContent = this.text!;
+        target.innerText = this.text!;
         this.editID = '';
         target.blur();
         break;
       case 'Enter':
+        if (event.shiftKey) {
+          break;
+        }
         event.preventDefault();
         event.stopPropagation();
-        if (target.textContent === '') {
-          target.textContent = this.text!;
+        if (target.innerText === '') {
+          target.innerText = this.text!;
         } else {
           edit(
             this.sharedModel,
             this.commentID,
             this.activeID,
-            target.textContent!
+            target.innerText!
           );
         }
         this.editID = '';
