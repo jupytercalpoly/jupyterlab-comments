@@ -21,8 +21,6 @@ export function verifyComments(comments: Record<string, unknown>): boolean {
 }
 
 export function verifyComment(comment: Record<string, unknown>): boolean {
-  console.log((comment as unknown as comments.ISelection).end);
-  console.log((comment as unknown as comments.ISelection).start);
   return (
     'id' in comment &&
     'type' in comment &&
