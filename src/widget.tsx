@@ -64,15 +64,12 @@ function Jspan(props: any): JSX.Element {
 
 function JCPreview(props: PreviewProps): JSX.Element {
   const { comment, target } = props;
-
   let cell;
   //let selection;
   let previewText;
-
   switch (comment.type) {
     case 'cell': {
       // cell = target as ICellModel;
-
       // if (cell.value.text.length > 140) {
       //   previewText = cell.value.text.slice(0, 140) + '...';
       // } else {
@@ -104,7 +101,6 @@ function JCPreview(props: PreviewProps): JSX.Element {
       break;
     }
   }
-
   return (
     <div className="jc-Preview">
       <div className="jc-PreviewBar" />
@@ -112,6 +108,7 @@ function JCPreview(props: PreviewProps): JSX.Element {
     </div>
   );
 }
+
 
 /**
  * A React component that renders a single comment or reply.

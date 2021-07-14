@@ -39,6 +39,7 @@ export function getCommentTimeString(): string {
   return time + ' ' + date;
 }
 
+
 //function that converts a line-column pairing to an index
 export function lineToIndex(str: string, line: number, col: number): number {
   if (line == 0) {
