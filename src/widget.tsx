@@ -386,10 +386,9 @@ export class CommentWidget<T> extends ReactWidget {
     if (event.key === 'Escape') {
       this.replyAreaHidden = true;
       return;
-    } else if (
-      event.key !== 'Enter' ||
-      (event.key === 'Enter' && event.shiftKey)
-    ) {
+    } else if (event.key !== 'Enter') {
+      return;
+    } else if (event.shiftKey) {
       return;
     }
 
