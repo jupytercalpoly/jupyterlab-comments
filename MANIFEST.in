@@ -10,6 +10,7 @@ include yarn.lock
 
 exclude lint-staged.config.js
 exclude Press_Release.md
+exclude webpack.config.js
 
 graft jupyterlab_chat/labextension
 

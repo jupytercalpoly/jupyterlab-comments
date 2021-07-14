@@ -1,0 +1,3 @@
+mix.options({
+  legacyNodePolyfills: false
+});
