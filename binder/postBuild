@@ -10,6 +10,7 @@
 import subprocess
 import sys
 from pathlib import Path
+from shutil import copyfile
 
 ROOT = Path.cwd()
 
@@ -39,6 +40,9 @@ _("jupyter", "server", "extension", "list")
 # initially list installed extensions to determine if there are any surprises
 _("jupyter", "labextension", "list")
 
+# copy jupyter_config to the root before starting JupyterLab
+copyfile("binder/jupyter_config.json", "jupyter_config.json")
 
 print("JupyterLab with jupyterlab_comments is ready to run with:\n")
 print("\tjupyter lab\n")
+
