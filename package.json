@@ -84,7 +84,7 @@
   "jupyterlab": {
     "extension": true,
     "outputDir": "jupyterlab_comments/labextension",
-    "webpackCongig": "webpack_config.js"
+    "webpackConfig": "webpack_config.js"
   },
   "husky": {
     "hooks": {

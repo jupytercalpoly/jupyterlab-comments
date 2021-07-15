@@ -15,8 +15,7 @@ import { getCommentTimeString, getIdentity } from './utils';
 import { CommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
-// See note below about bug with importing yjs
-// import * as Y from 'yjs';
+import * as Y from 'yjs';
 
 namespace CommandIDs {
   export const addComment = 'jl-comments:add-comment';
@@ -104,9 +103,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
     //
     // `events` and `t` are currently `any` because of a bug when importing `yjs`
     // Build fails for some people so for now the yjs types aren't being used directly.
-    const handleCellChanges = (events: any, t: any): void => {
+    const handleCellChanges = (events: Y.YEvent[], t: unknown): void => {
       for (let e of events) {
-        if ('keysChanged' in e && e.keysChanged.has('metadata')) {
+        if (
+          e.target instanceof Y.Map &&
+          (e as Y.YMapEvent<any>).keysChanged.has('metadata')
+        ) {
           panel.update();
           return;
         }
