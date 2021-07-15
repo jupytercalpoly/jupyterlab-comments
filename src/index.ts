@@ -16,7 +16,8 @@ import { CommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { CodeEditor } from '@jupyterlab/codeeditor';
 import { Cell } from '@jupyterlab/cells';
-import * as Y from 'yjs';
+// See note below about bug with importing yjs
+// import * as Y from 'yjs';
 
 namespace CommandIDs {
   export const addComment = 'jl-chat:add-comment';
@@ -158,12 +159,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     // Looks for changes to metadata on cells and updates the panel as they occur.
     // This is what allows comments to be real-time.
-    const handleCellChanges = (events: Y.YEvent[], t: Y.Transaction): void => {
+    //
+    // `events` and `t` are currently `any` because of a bug when importing `yjs`
+    // Build fails for some people so for now the yjs types aren't being used directly.
+    const handleCellChanges = (events: any, t: any): void => {
       for (let e of events) {
-        if (
-          e.target instanceof Y.Map &&
-          (e as Y.YMapEvent<any>).keysChanged.has('metadata')
-        ) {
+        if ('keysChanged' in e && e.keysChanged.has('metadata')) {
           panel.update();
           return;
         }
@@ -224,7 +225,6 @@ function addCommands(
         return;
       }
 
-      console.log('SEL TRY: ', nbTracker?.activeCell?.editor.getSelection());
       void InputDialog.getText({
         title: 'Enter Comment'
       }).then(value => {
