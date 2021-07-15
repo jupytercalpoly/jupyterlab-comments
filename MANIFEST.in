@@ -11,7 +11,7 @@ include yarn.lock
 exclude lint-staged.config.js
 exclude Press_Release.md
 
-graft jupyterlab_chat/labextension
+graft jupyterlab_comments/labextension
 
 # Javascript files
 graft src
