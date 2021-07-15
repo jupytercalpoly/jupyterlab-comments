@@ -1,6 +1,6 @@
 # jupyterlab_comments
 
-![Github Actions Status](https://github.com/jupytercalpoly/jupyterlab-comments/workflows/Build/badge.svg)
+![Github Actions Status](https://github.com/jupytercalpoly/jupyterlab-comments/workflows/Build/badge.svg)[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupytercalpoly/jupyterlab-comments/main?urlpath=lab)
 
 Chat and comment in JupyterLab.
 
