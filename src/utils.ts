@@ -3,7 +3,7 @@ import { IIdentity } from './commentformat';
 
 export const emptyIdentity: IIdentity = {
   id: 0,
-  name: '',
+  name: 'User',
   color: ''
 };
 
@@ -14,7 +14,7 @@ export function getIdentity(awareness: Awareness): IIdentity {
   }
 
   const userInfo = localState['user'];
-  if ('name' in userInfo && 'color' in userInfo) {
+  if (userInfo != null && 'name' in userInfo && 'color' in userInfo) {
     return {
       id: awareness.clientID,
       name: userInfo['name'],
@@ -38,7 +38,6 @@ export function getCommentTimeString(): string {
   });
   return time + ' ' + date;
 }
-
 
 //function that converts a line-column pairing to an index
 export function lineToIndex(str: string, line: number, col: number): number {
