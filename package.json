@@ -1,5 +1,5 @@
 {
-  "name": "jupyterlab-chat",
+  "name": "jupyterlab-comments",
   "version": "0.1.0",
   "description": "Chat and comment in JupyterLab",
   "keywords": [
@@ -7,9 +7,9 @@
     "jupyterlab",
     "jupyterlab-extension"
   ],
-  "homepage": "https://github.com/jupytercalpoly/jupyterlab-chat",
+  "homepage": "https://github.com/jupytercalpoly/jupyterlab-comments",
   "bugs": {
-    "url": "https://github.com/jupytercalpoly/jupyterlab-chat/issues"
+    "url": "https://github.com/jupytercalpoly/jupyterlab-comments/issues"
   },
   "license": "BSD-3-Clause",
   "author": {
@@ -25,7 +25,7 @@
   "style": "style/index.css",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jupytercalpoly/jupyterlab-chat.git"
+    "url": "https://github.com/jupytercalpoly/jupyterlab-comments.git"
   },
   "scripts": {
     "build": "jlpm run build:lib && jlpm run build:labextension:dev",
@@ -35,7 +35,7 @@
     "build:lib": "tsc",
     "clean": "jlpm run clean:lib",
     "clean:lib": "rimraf lib tsconfig.tsbuildinfo",
-    "clean:labextension": "rimraf jupyterlab_chat/labextension",
+    "clean:labextension": "rimraf jupyterlab_comments/labextension",
     "clean:all": "jlpm run clean:lib && jlpm run clean:labextension",
     "eslint": "eslint . --ext .ts,.tsx --fix",
     "eslint:check": "eslint . --ext .ts,.tsx",
@@ -83,7 +83,7 @@
   "styleModule": "style/index.js",
   "jupyterlab": {
     "extension": true,
-    "outputDir": "jupyterlab_chat/labextension"
+    "outputDir": "jupyterlab_comments/labextension"
   },
   "husky": {
     "hooks": {

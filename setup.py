@@ -1,5 +1,5 @@
 """
-jupyterlab_chat setup
+jupyterlab_comments setup
 """
 import json
 from pathlib import Path
@@ -9,7 +9,7 @@ import setuptools
 HERE = Path(__file__).parent.resolve()
 
 # The name of the project
-name = "jupyterlab_chat"
+name = "jupyterlab_comments"
 
 lab_path = (HERE / name.replace("-", "_") / "labextension")
 
@@ -19,7 +19,7 @@ ensured_targets = [
     str(lab_path / "static/style.js")
 ]
 
-labext_name = "jupyterlab-chat"
+labext_name = "jupyterlab-comments"
 
 data_files_spec = [
     ("share/jupyter/labextensions/%s" % labext_name, str(lab_path), "**"),
