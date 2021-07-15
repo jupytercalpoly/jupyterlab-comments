@@ -15,6 +15,7 @@ import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity, lineToIndex } from './utils';
 import { Menu } from '@lumino/widgets';
 import { Signal } from '@lumino/signaling';
+import { INotebookTracker } from '@jupyterlab/notebook';
 import { ICellModel } from '@jupyterlab/cells';
 
 /**
@@ -70,11 +71,7 @@ function JCPreview(props: PreviewProps): JSX.Element {
   switch (comment.type) {
     case 'cell': {
       // cell = target as ICellModel;
-      // if (cell.value.text.length > 140) {
-      //   previewText = cell.value.text.slice(0, 140) + '...';
-      // } else {
-      //   previewText = cell.value.text.slice(0, cell.value.text.length);
-      // }
+      // previewText = cell.value.text.split('\n')[0] + '...';
       previewText = '';
       break;
     }
@@ -108,7 +105,6 @@ function JCPreview(props: PreviewProps): JSX.Element {
     </div>
   );
 }
-
 
 /**
  * A React component that renders a single comment or reply.
@@ -236,13 +232,14 @@ export class CommentWidget<T> extends ReactWidget {
   constructor(options: CommentWidget.IOptions<T>) {
     super();
 
-    const { awareness, id, target, sharedModel, menu } = options;
+    const { awareness, id, target, sharedModel, menu, nbTracker } = options;
     this._awareness = awareness;
     this._commentID = id;
     this._activeID = id;
     this._target = target;
     this._sharedModel = sharedModel;
     this._menu = menu;
+    this._tracker = nbTracker;
 
     this.addClass('jc-CommentWidget');
     this.node.tabIndex = 0;
@@ -303,6 +300,17 @@ export class CommentWidget<T> extends ReactWidget {
     if (oldActive == null || !this.node.contains(oldActive)) {
       this.node.focus();
     }
+
+    const cellModel = this.target as any as ICellModel;
+    const notebook = this._tracker.currentWidget?.content;
+    if (notebook == null) {
+      return;
+    }
+
+    const cell = notebook.widgets.find(cell => cell.model.id === cellModel.id);
+    if (cell != null) {
+      cell.node.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 
   /**
@@ -321,7 +329,7 @@ export class CommentWidget<T> extends ReactWidget {
    */
   private _handleUserClick(event: React.MouseEvent): void {
     console.log('clicked user photo!');
-    this._handleOtherClick(event);
+    this._setClickFocus(event);
   }
 
   /**
@@ -622,6 +630,7 @@ export class CommentWidget<T> extends ReactWidget {
   private _menu: Menu;
   private _replyAreaHidden: boolean = true;
   private _editID: string = '';
+  private _tracker: INotebookTracker;
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );
@@ -638,6 +647,8 @@ export namespace CommentWidget {
     target: T;
 
     menu: Menu;
+
+    nbTracker: INotebookTracker;
   }
 
   /**

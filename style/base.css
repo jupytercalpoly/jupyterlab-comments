@@ -105,7 +105,8 @@
 }
 
 .jc-CommentWidget {
-  margin: 0 8px 12px 8px;
+  margin: 0 8px 24px 8px;
+  box-shadow: var(--jp-elevation-z1);
 }
 .jc-CommentWidget:focus-within .jc-Comment {
   border-color: var(--jp-brand-color1);

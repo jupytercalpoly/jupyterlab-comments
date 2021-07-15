@@ -14,23 +14,22 @@ import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
 import { CommentPanel } from './panel';
 import { CommentWidget } from './widget';
-import { CodeEditor } from '@jupyterlab/codeeditor';
 import { Cell } from '@jupyterlab/cells';
 // See note below about bug with importing yjs
 // import * as Y from 'yjs';
 
 namespace CommandIDs {
-  export const addComment = 'jl-chat:add-comment';
-  export const deleteComment = 'jl-chat:delete-comment';
-  export const editComment = 'jl-chat:edit-comment';
-  export const replyToComment = 'jl-chat:reply-to-comment';
+  export const addComment = 'jl-comments:add-comment';
+  export const deleteComment = 'jl-comments:delete-comment';
+  export const editComment = 'jl-comments:edit-comment';
+  export const replyToComment = 'jl-comments:reply-to-comment';
 }
 
 /**
- * Initialization data for the jupyterlab-chat extension.
+ * Initialization data for the jupyterlab-comments extension.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab-chat:plugin',
+  id: 'jupyterlab-comments:plugin',
   autoStart: true,
   requires: [INotebookTracker, ILabShell],
   activate: (
@@ -49,86 +48,46 @@ const plugin: JupyterFrontEndPlugin<void> = {
       commands: app.commands
     });
 
-    //WIP selection start
+    let currAwareness: Awareness | null = null;
 
-    let awarenessTracker = false;
-    let onHover = false;
-    //let selectionString = '';
+    const indicator = Private.createIndicator(panel);
 
-    nbTracker.activeCellChanged.connect((_, cells) => {
-      panel.update();
-      if (awarenessTracker == false) {
-        (nbTracker.currentWidget?.model?.sharedModel as YNotebook).awareness.on(
-          'change',
-          () => {
-            let range =
-              nbTracker.activeCell?.editor.getSelection() as CodeEditor.IRange;
-            if (
-              range.end.column != range.start.column ||
-              range.end.line != range.start.line
-            ) {
-              if (document.getElementsByClassName('jc-Indicator').length == 0) {
-                let indicator = document.createElement('div');
-                indicator.className = 'jc-Indicator';
-
-                indicator.onclick = () => {
-                  range =
-                    nbTracker.activeCell?.editor.getSelection() as CodeEditor.IRange;
-                  void InputDialog.getText({ title: 'Add Comment' }).then(
-                    value => {
-                      if (value.value != null) {
-                        const comment: ISelection = {
-                          id: UUID.uuid4(),
-                          type: 'text',
-                          identity: getIdentity(
-                            (
-                              nbTracker.currentWidget?.model
-                                ?.sharedModel as YNotebook
-                            ).awareness
-                          ),
-                          replies: [],
-                          text: value.value,
-                          time: getCommentTimeString(),
-                          start: range.start,
-                          end: range.end
-                          //source: nbTracker.activeCell!.model,
-                          //content: selectionString
-                        };
-                        if (nbTracker.activeCell != null) {
-                          addComment(
-                            nbTracker.activeCell.model.sharedModel,
-                            comment
-                          );
-                        }
-
-                        panel.update();
-                      }
-                    }
-                  );
-                };
-                indicator.onmouseover = () => {
-                  onHover = true;
-                };
-                indicator.onmouseout = () => {
-                  onHover = false;
-                };
-
-                nbTracker.activeCell?.node.childNodes[1].appendChild(indicator);
-              }
-            } else {
-              if (
-                document.getElementsByClassName('jc-Indicator').length != 0 &&
-                onHover == false
-              ) {
-                let elem = document.getElementsByClassName('jc-Indicator')[0];
-                elem.parentNode?.removeChild(elem);
-              }
-            }
-          }
-        );
-        awarenessTracker = true;
+    // This updates the indicator and scrolls to the comments of the selected cell
+    // when the active cell changes.
+    nbTracker.activeCellChanged.connect((_, cell: Cell | null) => {
+      if (cell == null) {
+        if (indicator.parentElement != null) {
+          indicator.remove();
+        }
+        return;
       }
+
+      const comments = getComments(cell.model.sharedModel);
+      if (comments != null && comments.length !== 0) {
+        panel.scrollToComment(comments[0].id);
+      }
+
+      const awarenessHandler = (): void => {
+        const { start, end } = cell.editor.getSelection();
+
+        if (start.column !== end.column || start.line !== end.line) {
+          if (!cell.node.contains(indicator)) {
+            cell.node.childNodes[1].appendChild(indicator);
+          }
+        } else if (indicator.parentElement != null) {
+          indicator.remove();
+        }
+      };
+
+      if (currAwareness != null) {
+        currAwareness.off('change', awarenessHandler);
+      }
+
+      currAwareness = (nbTracker.currentWidget!.model!.sharedModel as YNotebook)
+        .awareness;
+      currAwareness.on('change', awarenessHandler);
     });
+
     shell.add(panel, 'right', { rank: 500 });
 
     // Automatically add the comment widgets to the tracker as
@@ -138,24 +97,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     );
 
     panel.revealed.connect(() => panel.update());
-
     shell.currentChanged.connect(() => panel.update());
-
-    const onActiveCellChanged = (_: any, cell: Cell | null): void => {
-      if (cell == null) {
-        return;
-      }
-
-      const comments = getComments(cell.model.sharedModel);
-      if (comments == null || comments.length === 0) {
-        return;
-      }
-
-      panel.scrollToComment(comments[0].id);
-    };
-
-    // Scroll to a cell's comments when that cell is focused.
-    nbTracker.activeCellChanged.connect(onActiveCellChanged);
 
     // Looks for changes to metadata on cells and updates the panel as they occur.
     // This is what allows comments to be real-time.
@@ -276,6 +218,49 @@ function addCommands(
       }
     }
   });
+}
+
+namespace Private {
+  export function createIndicator(panel: CommentPanel): HTMLElement {
+    const nbTracker = panel.nbTracker;
+
+    const indicator = document.createElement('div');
+    indicator.className = 'jc-Indicator';
+
+    indicator.onclick = () => {
+      const cell = panel.nbTracker.activeCell;
+      if (cell == null) {
+        return;
+      }
+
+      const range = cell.editor.getSelection();
+
+      void InputDialog.getText({ title: 'Add Comment' }).then(value => {
+        if (value.value == null) {
+          return;
+        }
+
+        const comment: ISelection = {
+          id: UUID.uuid4(),
+          type: 'text',
+          identity: getIdentity(panel.awareness!),
+          replies: [],
+          text: value.value,
+          time: getCommentTimeString(),
+          start: range.start,
+          end: range.end
+        };
+
+        if (nbTracker.activeCell != null) {
+          addComment(cell.model.sharedModel, comment);
+        }
+
+        panel.update();
+      });
+    };
+
+    return indicator;
+  }
 }
 
 export default plugin;
