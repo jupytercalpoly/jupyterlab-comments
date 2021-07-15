@@ -16,7 +16,7 @@ import { CommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { CodeEditor } from '@jupyterlab/codeeditor';
 import { Cell } from '@jupyterlab/cells';
-import * as Y from 'yjs';
+// import * as Y from 'yjs';
 
 namespace CommandIDs {
   export const addComment = 'jl-chat:add-comment';
@@ -158,11 +158,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     // Looks for changes to metadata on cells and updates the panel as they occur.
     // This is what allows comments to be real-time.
-    const handleCellChanges = (events: Y.YEvent[], t: Y.Transaction): void => {
+    const handleCellChanges = (events: any, t: any): void => {
       for (let e of events) {
         if (
-          e.target instanceof Y.Map &&
-          (e as Y.YMapEvent<any>).keysChanged.has('metadata')
+          // e.target instanceof Y.Map &&
+          (e as any).keysChanged.has('metadata')
         ) {
           panel.update();
           return;
