@@ -7,12 +7,12 @@ import {
 import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { addComment, getComments } from './comments';
-import { UUID } from '@lumino/coreutils';
+import { Token, UUID } from '@lumino/coreutils';
 import { IComment, ISelection } from './commentformat';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity } from './utils';
-import { CommentPanel } from './panel';
+import { CommentPanel, ICommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
 import * as Y from 'yjs';
@@ -24,27 +24,39 @@ namespace CommandIDs {
   export const replyToComment = 'jl-comments:reply-to-comment';
 }
 
+const ICommentPanel = new Token<ICommentPanel>(
+  'jupyterlab-comments:comment-panel'
+);
+
+export const panelPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
+  id: 'jupyterlab-comments:panel',
+  autoStart: true,
+  requires: [INotebookTracker],
+  provides: ICommentPanel,
+  activate: (app: JupyterFrontEnd, nbTracker: INotebookTracker) => {
+    return new CommentPanel({
+      tracker: nbTracker,
+      commands: app.commands
+    });
+  }
+};
+
 /**
  * Initialization data for the jupyterlab-comments extension.
  */
-const plugin: JupyterFrontEndPlugin<void> = {
+const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-comments:plugin',
   autoStart: true,
-  requires: [INotebookTracker, ILabShell],
+  requires: [INotebookTracker, ILabShell, ICommentPanel],
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
-    shell: ILabShell
+    shell: ILabShell,
+    panel: ICommentPanel
   ) => {
     // A widget tracker for comment widgets
     const commentTracker = new WidgetTracker<CommentWidget<any>>({
       namespace: 'comment-widgets'
-    });
-
-    // The side panel that will host the comments
-    const panel = new CommentPanel({
-      tracker: nbTracker,
-      commands: app.commands
     });
 
     let currAwareness: Awareness | null = null;
@@ -155,7 +167,7 @@ function addCommands(
   app: JupyterFrontEnd,
   nbTracker: INotebookTracker,
   commentTracker: WidgetTracker<CommentWidget<any>>,
-  panel: CommentPanel
+  panel: ICommentPanel
 ): void {
   const getAwareness = (): Awareness | undefined => {
     return (nbTracker.currentWidget?.model?.sharedModel as YNotebook).awareness;
@@ -223,7 +235,7 @@ function addCommands(
 }
 
 namespace Private {
-  export function createIndicator(panel: CommentPanel): HTMLElement {
+  export function createIndicator(panel: ICommentPanel): HTMLElement {
     const nbTracker = panel.nbTracker;
 
     const indicator = document.createElement('div');
@@ -265,4 +277,8 @@ namespace Private {
   }
 }
 
-export default plugin;
+const plugins: JupyterFrontEndPlugin<any>[] = [
+  panelPlugin,
+  notebookCommentsPlugin
+];
+export default plugins;

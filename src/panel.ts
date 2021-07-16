@@ -14,7 +14,38 @@ import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
 import { ISelection } from './commentformat';
 
-export class CommentPanel extends Panel {
+export interface ICommentPanel extends Panel {
+  /**
+   * Add a comment widget and emit the `commentAdded` signal.
+   */
+  addComment: (widget: CommentWidget<any>) => void;
+
+  /**
+   * Scroll the comment with the given id into view.
+   */
+  scrollToComment: (id: string) => void;
+
+  /**
+   * A signal emitted when a comment is added to the panel.
+   */
+  commentAdded: Signal<this, CommentWidget<any>>;
+
+  /**
+   * The dropdown menu for comment widgets.
+   */
+  commentMenu: Menu;
+
+  /**
+   * A signal emitted when the panel is about to be shown.
+   */
+  revealed: Signal<this, undefined>;
+
+  awareness: Awareness | undefined;
+
+  nbTracker: INotebookTracker;
+}
+
+export class CommentPanel extends Panel implements ICommentPanel {
   constructor(options: CommentPanel.IOptions) {
     super(options);
 
