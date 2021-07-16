@@ -1,11 +1,21 @@
 import { Awareness } from 'y-protocols/awareness';
 import { IIdentity } from './commentformat';
+import { getAnonymousUserName, getRandomColor } from '@jupyterlab/docprovider';
 
 export const emptyIdentity: IIdentity = {
   id: 0,
   name: 'User',
   color: ''
 };
+
+let count = -1;
+export function randomIdentity(): IIdentity {
+  return {
+    id: count--,
+    name: getAnonymousUserName(),
+    color: getRandomColor()
+  };
+}
 
 export function getIdentity(awareness: Awareness): IIdentity {
   const localState = awareness.getLocalState();
@@ -22,7 +32,7 @@ export function getIdentity(awareness: Awareness): IIdentity {
     };
   }
 
-  return emptyIdentity;
+  return randomIdentity();
 }
 
 export function getCommentTimeString(): string {

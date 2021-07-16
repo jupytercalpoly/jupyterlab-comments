@@ -83,7 +83,8 @@
   "styleModule": "style/index.js",
   "jupyterlab": {
     "extension": true,
-    "outputDir": "jupyterlab_comments/labextension"
+    "outputDir": "jupyterlab_comments/labextension",
+    "webpackConfig": "webpack_config.js"
   },
   "husky": {
     "hooks": {

@@ -11,6 +11,7 @@ include yarn.lock
 exclude lint-staged.config.js
 exclude Press_Release.md
 exclude jupyter_config.json
+exclude webpack_config.js
 
 graft jupyterlab_comments/labextension
 

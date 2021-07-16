@@ -23,7 +23,7 @@ export class CommentPanel extends Panel {
     this.title.icon = listIcon;
     this.addClass('jc-CommentPanel');
 
-    // Create the input element for adding new comments
+    // Create the input element for adding new commentgs
     const node = document.createElement('div');
     node.setAttribute('contentEditable', 'true');
     node.classList.add('jc-CommentInput');
@@ -138,7 +138,8 @@ export class CommentPanel extends Panel {
           id: comment.id,
           target: cell,
           sharedModel,
-          menu: this._commentMenu
+          menu: this._commentMenu,
+          nbTracker: this._tracker
         });
 
         this.addComment(widget);
@@ -221,6 +222,10 @@ export class CommentPanel extends Panel {
       return undefined;
     }
     return (sharedModel as any as YDocument<any>).awareness;
+  }
+
+  get nbTracker(): INotebookTracker {
+    return this._tracker;
   }
 
   private _tracker: INotebookTracker;
