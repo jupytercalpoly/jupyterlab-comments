@@ -14,6 +14,10 @@ import { Awareness } from 'y-protocols/awareness';
 import { ISelection } from './commentformat';
 import { ICommentRegistry } from './registry';
 import { CommentFactory } from './factory';
+import { PanelHeader } from './panelHeaderWidget';
+import { ILabShell } from '@jupyterlab/application';
+// import { DocumentWidget } from '@jupyterlab/docregistry';
+
 
 export interface ICommentPanel extends Panel {
   /**
@@ -240,5 +244,6 @@ export namespace CommentPanel {
     tracker: INotebookTracker;
     commands: CommandRegistry;
     registry: ICommentRegistry;
+    labShell: ILabShell;
   }
 }
