@@ -170,3 +170,28 @@
   word-break: break-word;
   margin-left: 10px;
 }
+
+.jc-panelHeader {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px 10px 10px 10px;
+}
+.jc-panelHeader-identity {
+  color: var(--jc-timestamp-color);
+  font-size: var(--jp-ui-font-size0);
+}
+
+.jc-panelHeader-filename{
+  font-size: var(--jp-ui-font-size1);
+}
+
+.jc-panelHeader-left {
+  color: black;
+}
+.jc-panelHeader-right {
+  display: flex;
+  flex-direction: row;
+}
+

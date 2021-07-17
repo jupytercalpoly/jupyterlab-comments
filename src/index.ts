@@ -15,6 +15,7 @@ import { getCommentTimeString, getIdentity } from './utils';
 import { CommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { CodeEditor } from '@jupyterlab/codeeditor';
+
 import { Cell } from '@jupyterlab/cells';
 // See note below about bug with importing yjs
 // import * as Y from 'yjs';
@@ -32,11 +33,11 @@ namespace CommandIDs {
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-chat:plugin',
   autoStart: true,
-  requires: [INotebookTracker, ILabShell],
+  requires: [INotebookTracker, ILabShell ],
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
-    shell: ILabShell
+    shell: ILabShell,
   ) => {
     // A widget tracker for comment widgets
     const commentTracker = new WidgetTracker<CommentWidget<any>>({
@@ -46,7 +47,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
     // The side panel that will host the comments
     const panel = new CommentPanel({
       tracker: nbTracker,
-      commands: app.commands
+      commands: app.commands,
+      labShell: shell
     });
 
     //WIP selection start

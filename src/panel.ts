@@ -13,6 +13,10 @@ import { Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
 import { ISelection } from './commentformat';
+import { PanelHeader } from './panelHeaderWidget';
+import { ILabShell } from '@jupyterlab/application';
+// import { DocumentWidget } from '@jupyterlab/docregistry';
+
 
 export class CommentPanel extends Panel {
   constructor(options: CommentPanel.IOptions) {
@@ -28,8 +32,22 @@ export class CommentPanel extends Panel {
     node.setAttribute('contentEditable', 'true');
     node.classList.add('jc-CommentInput');
     const inputWidget = (this._inputWidget = new Widget({ node }));
-    this.addWidget(inputWidget);
 
+
+    // let filePath: string; 
+    // options.labShell.currentChanged.connect((_, args) => {
+      // if (args.newValue instanceof DocumentWidget){
+        // const docWidget = args.newValue as DocumentWidget;
+        // filePath = docWidget.context.path;
+        const aware = this.awareness;
+        // const panelHeader: Widget = new PanelHeader({ awareness: aware, filename: filePath});
+        const panelHeader: Widget = new PanelHeader({ awareness: aware, filename: "bleh"});
+        this.addWidget(panelHeader);
+        this.addWidget(inputWidget);
+      // }
+    // })
+    
+    // Dropdown for identity
     this._commentMenu = new Menu({ commands: options.commands });
   }
 
@@ -234,5 +252,6 @@ export namespace CommentPanel {
   export interface IOptions extends Panel.IOptions {
     tracker: INotebookTracker;
     commands: CommandRegistry;
+    labShell: ILabShell
   }
 }
