@@ -6,7 +6,7 @@ import { ReactWidget } from '@jupyterlab/apputils';
 
 import { Awareness } from 'y-protocols/awareness';
 
-import {CreateCommentIcon } from './icons';
+import {CommentsHubIcon, CreateCommentIcon} from './icons';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -59,8 +59,8 @@ export class PanelHeader extends ReactWidget {
           <p className="jc-panelHeader-filename">{this._filename}</p>
         </div>
         <div className="jc-panelHeader-right">
-          <div><CreateCommentIcon.react tag="span" /></div>
-          <div>2</div>
+          <div><CreateCommentIcon.react  /></div>
+          <div><CommentsHubIcon.react  /></div>
         </div>
       </div>
     );
