@@ -1,8 +1,12 @@
 import { ReactWidget, UseSignal } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { ellipsesIcon } from '@jupyterlab/ui-components';
-import { CommentType, IComment, IIdentity, ISelection } from './commentformat';
-import { UUID } from '@lumino/coreutils';
+import {
+  ICellSelectionComment,
+  IComment,
+  IIdentity,
+  IReply
+} from './commentformat';
 import {
   addReply,
   deleteComment,
@@ -12,11 +16,12 @@ import {
   ISharedMetadatedText
 } from './comments';
 import { Awareness } from 'y-protocols/awareness';
-import { getCommentTimeString, getIdentity, lineToIndex } from './utils';
+import { getIdentity, lineToIndex } from './utils';
 import { Menu } from '@lumino/widgets';
 import { Signal } from '@lumino/signaling';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { ICellModel } from '@jupyterlab/cells';
+import { CommentFactory, ICommentFactory } from './factory';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -30,7 +35,6 @@ type CommentProps = {
   className?: string;
   editable?: boolean;
   target?: any;
-  isReply?: boolean;
 };
 
 type CommentWithRepliesProps = {
@@ -55,6 +59,12 @@ type PreviewProps = {
   target: any;
 };
 
+type ReplyProps = {
+  reply: IReply;
+  className?: string;
+  editable?: boolean;
+};
+
 function Jdiv(props: any): JSX.Element {
   return <div {...props}>{props.children}</div>;
 }
@@ -75,18 +85,17 @@ function JCPreview(props: PreviewProps): JSX.Element {
       previewText = '';
       break;
     }
-    case 'text': {
-      //selection = target as ISelection;
+    case 'cell-selection': {
       cell = target as ICellModel;
       let mainText = cell.value.text;
-      let initIndex = (comment as ISelection).start;
-      let endIndex = (comment as ISelection).end;
-      let start = lineToIndex(mainText, initIndex.line, initIndex.column);
-      let end = lineToIndex(mainText, endIndex.line, endIndex.column);
+      let selectionComment = comment as ICellSelectionComment;
+      let { start, end } = selectionComment.target;
+      let startIndex = lineToIndex(mainText, start.line, start.column);
+      let endIndex = lineToIndex(mainText, end.line, end.column);
       if (start < end) {
-        previewText = cell.value.text.slice(start, end);
+        previewText = cell.value.text.slice(startIndex, endIndex);
       } else {
-        previewText = cell.value.text.slice(end, start);
+        previewText = cell.value.text.slice(endIndex, startIndex);
       }
       if (previewText.length > 140) {
         previewText = previewText.slice(0, 140) + '...';
@@ -120,8 +129,6 @@ function JCComment(props: CommentProps): JSX.Element {
   const className = props.className || '';
   const editable = props.editable;
   const target = props.target;
-  const isReply = props.isReply == null ? false : props.isReply;
-  const renderPreview = target != null && !isReply;
 
   return (
     <Jdiv
@@ -146,7 +153,7 @@ function JCComment(props: CommentProps): JSX.Element {
 
       <span className="jc-Time">{comment.time}</span>
 
-      {renderPreview && <JCPreview comment={comment} target={target} />}
+      {target != null && <JCPreview comment={comment} target={target} />}
 
       <Jdiv
         className="jc-Body jc-EditInputArea"
@@ -156,6 +163,47 @@ function JCComment(props: CommentProps): JSX.Element {
         onFocus={() => document.execCommand('selectAll', false, undefined)}
       >
         {comment.text}
+      </Jdiv>
+    </Jdiv>
+  );
+}
+
+function JCReply(props: ReplyProps): JSX.Element {
+  const reply = props.reply;
+  const className = props.className ?? '';
+  const editable = props.editable;
+
+  return (
+    <Jdiv
+      className={'jc-Comment jc-Reply ' + className}
+      id={reply.id}
+      jcEventArea="other"
+    >
+      <Jdiv className="jc-ProfilePicContainer">
+        <Jdiv
+          className="jc-ProfilePic"
+          style={{ backgroundColor: reply.identity.color }}
+          jcEventArea="user"
+        />
+      </Jdiv>
+      <span className="jc-Nametag">{reply.identity.name}</span>
+
+      <Jspan className="jc-IconContainer" jcEventArea="dropdown">
+        <ellipsesIcon.react className="jc-Ellipses" />
+      </Jspan>
+
+      <br />
+
+      <span className="jc-Time">{reply.time}</span>
+
+      <Jdiv
+        className="jc-Body jc-EditInputArea"
+        contentEditable={editable}
+        suppressContentEditableWarning={true}
+        jcEventArea="body"
+        onFocus={() => document.execCommand('selectAll', false, undefined)}
+      >
+        {reply.text}
       </Jdiv>
     </Jdiv>
   );
@@ -176,13 +224,10 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
       />
       <div className={'jc-Replies'}>
         {comment.replies.map(reply => (
-          <JCComment
-            comment={reply}
-            className="jc-Reply"
+          <JCReply
+            reply={reply}
             editable={editID === reply.id}
-            target={target}
             key={reply.id}
-            isReply={true}
           />
         ))}
       </div>
@@ -228,11 +273,12 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
 /**
  * A ReactWidget that renders a comment and its replies.
  */
-export class CommentWidget<T> extends ReactWidget {
+export class CommentWidget<T = any> extends ReactWidget {
   constructor(options: CommentWidget.IOptions<T>) {
     super();
 
-    const { awareness, id, target, sharedModel, menu, nbTracker } = options;
+    const { awareness, id, target, sharedModel, menu, nbTracker, factory } =
+      options;
     this._awareness = awareness;
     this._commentID = id;
     this._activeID = id;
@@ -240,6 +286,7 @@ export class CommentWidget<T> extends ReactWidget {
     this._sharedModel = sharedModel;
     this._menu = menu;
     this._tracker = nbTracker;
+    this._factory = factory;
 
     this.addClass('jc-CommentWidget');
     this.node.tabIndex = 0;
@@ -401,14 +448,10 @@ export class CommentWidget<T> extends ReactWidget {
     event.preventDefault();
     event.stopPropagation();
 
-    const reply: IComment = {
-      id: UUID.uuid4(),
-      type: 'cell',
+    const reply = CommentFactory.createReply({
       identity: getIdentity(this._awareness),
-      replies: [],
-      text: target.innerText,
-      time: getCommentTimeString()
-    };
+      text: target.innerText
+    });
 
     addReply(this.sharedModel, reply, this.commentID);
     target.textContent = '';
@@ -544,7 +587,7 @@ export class CommentWidget<T> extends ReactWidget {
   /**
    * The type of the comment.
    */
-  get type(): CommentType | undefined {
+  get type(): string | undefined {
     return this.comment?.type;
   }
 
@@ -558,7 +601,7 @@ export class CommentWidget<T> extends ReactWidget {
   /**
    * An array of replies to the comment.
    */
-  get replies(): IComment[] | undefined {
+  get replies(): IReply[] | undefined {
     return this.comment?.replies;
   }
 
@@ -622,6 +665,10 @@ export class CommentWidget<T> extends ReactWidget {
     }
   }
 
+  get factory(): ICommentFactory {
+    return this._factory;
+  }
+
   private _awareness: Awareness;
   private _commentID: string;
   private _target: T;
@@ -631,6 +678,7 @@ export class CommentWidget<T> extends ReactWidget {
   private _replyAreaHidden: boolean = true;
   private _editID: string = '';
   private _tracker: INotebookTracker;
+  private _factory: ICommentFactory;
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );
@@ -649,6 +697,8 @@ export namespace CommentWidget {
     menu: Menu;
 
     nbTracker: INotebookTracker;
+
+    factory: ICommentFactory;
   }
 
   /**

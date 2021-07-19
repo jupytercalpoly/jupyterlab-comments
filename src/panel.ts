@@ -1,18 +1,19 @@
-import { Menu, Panel, Widget } from '@lumino/widgets';
+import { Menu, Panel } from '@lumino/widgets';
 import { each } from '@lumino/algorithm';
 import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
 import { listIcon } from '@jupyterlab/ui-components';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { CommentWidget } from './widget';
-import { addComment, getComments } from './comments';
+import { getComments } from './comments';
 import { ICellModel } from '@jupyterlab/cells';
 import { YDocument } from '@jupyterlab/shared-models';
-import { getCommentTimeString, getIdentity } from './utils';
 import { Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
 import { ISelection } from './commentformat';
+import { ICommentRegistry } from './registry';
+import { CommentFactory } from './factory';
 
 export interface ICommentPanel extends Panel {
   /**
@@ -50,77 +51,20 @@ export class CommentPanel extends Panel implements ICommentPanel {
     super(options);
 
     this._tracker = options.tracker;
+    this._registry = options.registry;
     this.id = `CommentPanel-${UUID.uuid4()}`;
     this.title.icon = listIcon;
     this.addClass('jc-CommentPanel');
-
-    // Create the input element for adding new commentgs
-    const node = document.createElement('div');
-    node.setAttribute('contentEditable', 'true');
-    node.classList.add('jc-CommentInput');
-    const inputWidget = (this._inputWidget = new Widget({ node }));
-    this.addWidget(inputWidget);
 
     this._commentMenu = new Menu({ commands: options.commands });
   }
 
   onAfterAttach(msg: Message): void {
     super.onAfterAttach(msg);
-    this._inputWidget.node.addEventListener('keydown', this);
   }
 
   onAfterDetach(msg: Message): void {
     super.onAfterDetach(msg);
-    this._inputWidget.node.removeEventListener('keydown', this);
-  }
-
-  handleEvent(event: Event): void {
-    switch (event.type) {
-      case 'keydown':
-        this._handleKeydown(event as KeyboardEvent);
-        break;
-      default:
-        return;
-    }
-  }
-
-  private _handleKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Enter') {
-      return;
-    } else if (event.shiftKey) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const cellModel = this._tracker.activeCell?.model.sharedModel;
-    if (cellModel == null) {
-      return;
-    }
-
-    const comments = getComments(cellModel);
-    if (comments == null) {
-      return;
-    }
-
-    const awareness = this.awareness;
-    if (awareness == null) {
-      console.warn('no Awareness found while adding cell comment');
-      return;
-    }
-
-    addComment(cellModel, {
-      id: UUID.uuid4(),
-      type: 'cell',
-      identity: getIdentity(awareness),
-      replies: [],
-      text: this._inputWidget.node.innerText,
-      time: getCommentTimeString()
-    });
-
-    this._inputWidget.node.textContent = '';
-    this.update();
   }
 
   /**
@@ -145,8 +89,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
       return;
     }
 
-    while (this.widgets.length > 1) {
-      this.widgets[1].dispose();
+    while (this.widgets.length > 0) {
+      this.widgets[0].dispose();
     }
 
     each(model.cells, cell => {
@@ -156,21 +100,46 @@ export class CommentPanel extends Panel implements ICommentPanel {
         return;
       }
 
-      // T is currently always 'ICellModel' for CommentWidget<T>
-      // Will have to be made generic in the future
-      // (switch statement on comment.type?)
-      //
+      let t1: string = '';
+      let t2: string = '';
+      let f1: CommentFactory | undefined;
+      let f2: CommentFactory | undefined;
+      let factory: CommentFactory | undefined;
+
+      let selections = [];
+
       // TODO: Make this not re-create the comment widget every time.
       // (Update it instead?)
-      let selections = [];
       for (let comment of comments) {
+        // Simple factory/type "cache" to speed up panel updates
+        if (comment.type === '') {
+          console.warn('empty comment type is not allowed');
+          continue;
+        } else if (t1 === comment.type) {
+          factory = f1;
+        } else if (t2 === comment.type) {
+          factory = f2;
+          [f2, f1] = [f1, f2];
+          [t2, t1] = [t1, t2];
+        } else {
+          factory = this._registry.getFactory(comment.type);
+          [f2, t2] = [f1, t1];
+          [f1, t1] = [factory, comment.type];
+        }
+
+        if (factory == null) {
+          console.warn('no factory found for comment with type', comment.type);
+          continue;
+        }
+
         const widget = new CommentWidget<ICellModel>({
           awareness,
           id: comment.id,
           target: cell,
           sharedModel,
           menu: this._commentMenu,
-          nbTracker: this._tracker
+          nbTracker: this._tracker,
+          factory
         });
 
         this.addComment(widget);
@@ -260,15 +229,16 @@ export class CommentPanel extends Panel implements ICommentPanel {
   }
 
   private _tracker: INotebookTracker;
-  private _inputWidget: Widget;
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
   private _revealed = new Signal<this, undefined>(this);
   private _commentMenu: Menu;
+  private _registry: ICommentRegistry;
 }
 
 export namespace CommentPanel {
   export interface IOptions extends Panel.IOptions {
     tracker: INotebookTracker;
     commands: CommandRegistry;
+    registry: ICommentRegistry;
   }
 }
