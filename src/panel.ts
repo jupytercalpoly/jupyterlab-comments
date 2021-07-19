@@ -15,7 +15,7 @@ import { Awareness } from 'y-protocols/awareness';
 import { ISelection } from './commentformat';
 import { PanelHeader } from './panelHeaderWidget';
 import { ILabShell } from '@jupyterlab/application';
-// import { DocumentWidget } from '@jupyterlab/docregistry';
+import { DocumentWidget } from '@jupyterlab/docregistry';
 
 
 export class CommentPanel extends Panel {
@@ -33,19 +33,28 @@ export class CommentPanel extends Panel {
     node.classList.add('jc-CommentInput');
     const inputWidget = (this._inputWidget = new Widget({ node }));
 
-
-    // let filePath: string; 
-    // options.labShell.currentChanged.connect((_, args) => {
-      // if (args.newValue instanceof DocumentWidget){
-        // const docWidget = args.newValue as DocumentWidget;
-        // filePath = docWidget.context.path;
+    let filePath: string; 
+    options.labShell.currentChanged.connect((_, args) => {
+      if (args.newValue instanceof DocumentWidget){
+        const docWidget = args.newValue as DocumentWidget;
+        filePath = docWidget.context.path;
         const aware = this.awareness;
-        // const panelHeader: Widget = new PanelHeader({ awareness: aware, filename: filePath});
-        const panelHeader: Widget = new PanelHeader({ awareness: aware, filename: "bleh"});
+        console.log(filePath)
+        const panelHeader: Widget = new PanelHeader({ awareness: aware, filename: filePath});
+        // const panelHeader: Widget = new PanelHeader({ awareness: undefined, filename: filePath});
         this.addWidget(panelHeader);
         this.addWidget(inputWidget);
+      }
+      // else {
+      //   const aware = this.awareness;
+      //   const panelHeader: Widget = new PanelHeader({ awareness: aware, filename: "bleh"});
+      //   this.addWidget(panelHeader);
+      //   this.addWidget(inputWidget);
       // }
-    // })
+    })
+    // const panelHeader: Widget = new PanelHeader({ awareness: this.awareness, filename: "bleh"});
+    // this.addWidget(panelHeader);
+    // this.addWidget(inputWidget);
     
     // Dropdown for identity
     this._commentMenu = new Menu({ commands: options.commands });

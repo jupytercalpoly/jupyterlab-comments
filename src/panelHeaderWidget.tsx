@@ -2,11 +2,13 @@ import * as React from 'react';
 
 import { ReactWidget } from '@jupyterlab/apputils';
 
-// import {getIdentity} from './utils';
+import {getIdentity} from './utils';
 
 import { Awareness } from 'y-protocols/awareness';
 
 import {CommentsHubIcon, CreateCommentIcon} from './icons';
+
+import {caretDownEmptyIcon} from '@jupyterlab/ui-components'
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -20,15 +22,14 @@ type IdentityProps = {
   className: string;
 };
 
-// Awareness doesn't work yet
+  // Awareness doesn't work unfortunatly 
 function UserIdentity(props: IdentityProps): JSX.Element {
   const { awareness } = props;
   const className = props.className || '';
   return (
     <div className={className}>
-      <p>[Your identity]</p>
-      {/* {getIdentity(awareness)} */}
-      {awareness != undefined && console.log(awareness)}
+      {awareness != undefined && getIdentity(awareness).name}
+
     </div>
   );
 }
@@ -58,7 +59,9 @@ export class PanelHeader extends ReactWidget {
           />
           <p className="jc-panelHeader-filename">{this._filename}</p>
         </div>
+
         <div className="jc-panelHeader-right">
+          <div style={{ 'display': 'flex' }}><p className="jc-panelHeader-dropdown">All </p><caretDownEmptyIcon.react fontSize="12px"/></div>
           <div><CreateCommentIcon.react  /></div>
           <div><CommentsHubIcon.react  /></div>
         </div>
