@@ -16,7 +16,7 @@ import { ICommentRegistry } from './registry';
 import { CommentFactory } from './factory';
 import { PanelHeader } from './panelHeaderWidget';
 import { ILabShell } from '@jupyterlab/application';
-// import { DocumentWidget } from '@jupyterlab/docregistry';
+import { DocumentWidget } from '@jupyterlab/docregistry';
 
 
 export interface ICommentPanel extends Panel {

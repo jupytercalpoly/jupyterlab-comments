@@ -194,5 +194,15 @@
 .jc-panelHeader-right {
   display: flex;
   flex-direction: row;
+  justify-content: space-between;
+  height: auto;
+  align-items: start;
+  margin-top: 5px;
+  gap: 1em;
+}
+
+.jc-panelHeader-dropdown {
+  color: var(--jc-timestamp-color);
+  font-size: 14px;
 }
 
