@@ -176,11 +176,22 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  margin: 10px 10px 10px 10px;
+  /* padding: 10px 10px 10px 10px; */
+  padding: 10px;
 }
-.jc-panelHeader-identity {
+.jc-panelHeader-identity-container {
   color: var(--jp-ui-font-color2);
   font-size: var(--jp-ui-font-size0);
+  display: flex
+}
+.jc-panelHeader-editIcon {
+  transform: scale(0.72);
+  float: right;
+  display: none;
+}
+
+.jc-panelHeader-identity-container:hover .jc-panelHeader-editIcon {
+  display: block;
 }
 
 .jc-panelHeader-filename{
@@ -204,5 +215,9 @@
 .jc-panelHeader-dropdown {
   color: var(--jc-timestamp-color);
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  margin-right: -5px;
 }
+
 

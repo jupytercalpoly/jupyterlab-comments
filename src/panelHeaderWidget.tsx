@@ -8,7 +8,7 @@ import { Awareness } from 'y-protocols/awareness';
 
 import { CommentsHubIcon, CreateCommentIcon } from './icons';
 
-import { caretDownEmptyIcon } from '@jupyterlab/ui-components';
+import { caretDownEmptyThinIcon, editIcon } from '@jupyterlab/ui-components';
 
 import { Signal } from '@lumino/signaling';
 import { ILabShell } from '@jupyterlab/application';
@@ -22,44 +22,40 @@ type ReactRenderElement =
 
 type IdentityProps = {
   awareness: Awareness | undefined;
-  className: string;
 };
 
 type DocumentProps = {
   Shell: ILabShell;
 };
 
-// Awareness doesn't work unfortunatly
 function UserIdentity(props: IdentityProps): JSX.Element {
   const { awareness } = props;
-  const className = props.className || '';
   return (
-    <div className={className}>
-      {awareness != undefined && getIdentity(awareness).name}
-    </div>
+      <div className="jc-panelHeader-identity-container">
+        <div>{awareness != undefined && getIdentity(awareness).name}</div>
+        <editIcon.react className="jc-panelHeader-editIcon"/>
+      </div>
   );
 }
 
 function DocumentName(props: DocumentProps): JSX.Element {
-    const [Filename, setFilename] = React.useState('');
-    const { Shell } = props
-    Shell.currentChanged.connect((_, args)=> {
-      const docWidget = args.newValue as DocumentWidget;
-      setFilename(docWidget.context.path);
-    })
-    return (
-      <p className="jc-panelHeader-filename">{Filename}</p>
-    )
+  const [Filename, setFilename] = React.useState('');
+  const { Shell } = props;
+  Shell.currentChanged.connect((_, args) => {
+    const docWidget = args.newValue as DocumentWidget;
+    setFilename(docWidget.context.path);
+  });
+  return <p className="jc-panelHeader-filename">{Filename}</p>;
 }
 
 export class PanelHeader extends ReactWidget {
   constructor(options: PanelHeader.IOptions) {
     super();
-    const {shell} = options;
+    const { shell } = options;
     this._shell = shell;
     this._renderNeeded.connect((_, aware) => {
       this._awareness = aware;
-    })
+    });
   }
 
   render(): ReactRenderElement {
@@ -67,18 +63,15 @@ export class PanelHeader extends ReactWidget {
       <div className="jc-panelHeader">
         <div className="jc-panelHeader-left">
           <UseSignal signal={this._renderNeeded}>
-              { () => <UserIdentity
-                awareness={this._awareness}
-                className="jc-panelHeader-identity"
-              /> }
+            {() => <UserIdentity awareness={this._awareness} />}
           </UseSignal>
-              <DocumentName Shell={this._shell}/>
+          <DocumentName Shell={this._shell} />
         </div>
 
         <div className="jc-panelHeader-right">
-          <div style={{ display: 'flex' }}>
-            <p className="jc-panelHeader-dropdown">All </p>
-            <caretDownEmptyIcon.react fontSize="12px" />
+          <div className="jc-panelHeader-dropdown">
+            <p>All</p>
+            <div><caretDownEmptyThinIcon.react /></div>
           </div>
           <div>
             <CreateCommentIcon.react />
@@ -99,11 +92,13 @@ export class PanelHeader extends ReactWidget {
   }
   private _awareness: Awareness | undefined;
   private _shell: ILabShell;
-  private _renderNeeded: Signal<this, Awareness> = new Signal<this, Awareness>(this);
+  private _renderNeeded: Signal<this, Awareness> = new Signal<this, Awareness>(
+    this
+  );
 }
 
 export namespace PanelHeader {
   export interface IOptions {
-    shell : ILabShell;
+    shell: ILabShell;
   }
 }
