@@ -21,8 +21,6 @@ export interface IIdentity {
 export interface ISelection extends IComment {
   start: CodeEditor.IPosition;
   end: CodeEditor.IPosition;
-  //source: ICellModel;
-  //content: string;
 }
 
 /**

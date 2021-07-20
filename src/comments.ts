@@ -11,7 +11,6 @@ export interface IMetadated {
 
 export interface ISharedMetadatedText extends ISharedText, IMetadated {}
 
-
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function updateMetadata(model: IMetadated, value: any): void {
   model.setMetadata(Object.assign({}, model.getMetadata(), value));

@@ -153,7 +153,10 @@ function JCComment(props: CommentProps): JSX.Element {
         contentEditable={editable}
         suppressContentEditableWarning={true}
         jcEventArea="body"
-        onFocus={() => document.execCommand('selectAll', false, undefined)}
+        onFocus={(e: React.MouseEvent) => {
+          document.execCommand('selectAll', false, undefined);
+          (e.target as HTMLElement).innerHTML = `<p>${comment.text}</p>`;
+        }}
       >
         {comment.text}
       </Jdiv>

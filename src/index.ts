@@ -15,6 +15,7 @@ import { getCommentTimeString, getIdentity } from './utils';
 import { CommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
+import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import * as Y from 'yjs';
 
 namespace CommandIDs {
@@ -30,11 +31,12 @@ namespace CommandIDs {
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-comments:plugin',
   autoStart: true,
-  requires: [INotebookTracker, ILabShell],
+  requires: [INotebookTracker, ILabShell, IRenderMimeRegistry],
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
-    shell: ILabShell
+    shell: ILabShell,
+    reg: IRenderMimeRegistry
   ) => {
     // A widget tracker for comment widgets
     const commentTracker = new WidgetTracker<CommentWidget<any>>({
@@ -42,10 +44,13 @@ const plugin: JupyterFrontEndPlugin<void> = {
     });
 
     // The side panel that will host the comments
-    const panel = new CommentPanel({
-      tracker: nbTracker,
-      commands: app.commands
-    });
+    const panel = new CommentPanel(
+      {
+        tracker: nbTracker,
+        commands: app.commands
+      },
+      reg
+    );
 
     let currAwareness: Awareness | null = null;
 
@@ -109,6 +114,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
           e.target instanceof Y.Map &&
           (e as Y.YMapEvent<any>).keysChanged.has('metadata')
         ) {
+          console.log((e as Y.YMapEvent<any>).target);
+          console.log(t);
           panel.update();
           return;
         }

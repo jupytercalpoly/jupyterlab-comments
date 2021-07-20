@@ -13,12 +13,20 @@ import { Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
 import { ISelection } from './commentformat';
+import {
+  IRenderMimeRegistry,
+  renderLatex,
+  renderMarkdown
+} from '@jupyterlab/rendermime';
 
 export class CommentPanel extends Panel {
-  constructor(options: CommentPanel.IOptions) {
+  registry: IRenderMimeRegistry;
+
+  constructor(options: CommentPanel.IOptions, registry: IRenderMimeRegistry) {
     super(options);
 
     this._tracker = options.tracker;
+    this.registry = registry;
     this.id = `CommentPanel-${UUID.uuid4()}`;
     this.title.icon = listIcon;
     this.addClass('jc-CommentPanel');
@@ -143,6 +151,8 @@ export class CommentPanel extends Panel {
         });
 
         this.addComment(widget);
+        this.render_all(widget, this.registry);
+
         if (comment.type == 'text') {
           selections.push({
             start: (comment as ISelection).start,
@@ -157,6 +167,32 @@ export class CommentPanel extends Panel {
         }
       }
       cell.selections.set(cell.id, selections);
+    });
+  }
+
+  /**
+   * Render markdown and LaTeX in a comment widget
+   */
+  render_all(widget: CommentWidget<any>, registry: IRenderMimeRegistry): void {
+    let nodes = widget.node.getElementsByClassName('jc-Body');
+
+    Array.from(nodes).forEach(element => {
+      renderMarkdown({
+        host: element as HTMLElement,
+        source: (element as HTMLElement).innerText,
+        trusted: true,
+        latexTypesetter: registry.latexTypesetter,
+        linkHandler: registry.linkHandler,
+        resolver: registry.resolver,
+        sanitizer: registry.sanitizer,
+        shouldTypeset: widget.isAttached
+      }).catch(() => console.warn('render Markdown failed'));
+      renderLatex({
+        host: element as HTMLElement,
+        source: (element as HTMLElement).innerText,
+        shouldTypeset: widget.isAttached,
+        latexTypesetter: registry.latexTypesetter
+      }).catch(() => console.warn('render LaTeX failed'));
     });
   }
 

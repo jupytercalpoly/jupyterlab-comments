@@ -950,7 +950,7 @@
     "@lumino/coreutils" "^1.5.3"
     "@lumino/widgets" "^1.19.0"
 
-"@jupyterlab/rendermime@^3.1.0-rc.1":
+"@jupyterlab/rendermime@^3.1.0-beta.0", "@jupyterlab/rendermime@^3.1.0-rc.1":
   version "3.1.0-rc.1"
   resolved "https://registry.yarnpkg.com/@jupyterlab/rendermime/-/rendermime-3.1.0-rc.1.tgz#969b68775c06844d1d6a7bd09d5c9e330a74f39d"
   integrity sha512-mW6p0yLcSIpWrBIJYTAAXaOHauV0x7diro8elUIMdVgfGZtIjybhvJCmnLZ2XbSLwgGwL9LIkXQH+CgX+nctiA==
