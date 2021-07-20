@@ -15,7 +15,6 @@ import { getCommentTimeString, getIdentity } from './utils';
 import { CommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { CodeEditor } from '@jupyterlab/codeeditor';
-import { IDocumentProviderFactory, WebSocketProviderWithLocks} from '@jupyterlab/docprovider';
 
 import { Cell } from '@jupyterlab/cells';
 // See note below about bug with importing yjs
@@ -34,12 +33,11 @@ namespace CommandIDs {
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-chat:plugin',
   autoStart: true,
-  requires: [INotebookTracker, ILabShell, IDocumentProviderFactory],
+  requires: [INotebookTracker, ILabShell],
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
     shell: ILabShell,
-    docprovider: WebSocketProviderWithLocks,
   ) => {
     // A widget tracker for comment widgets
     const commentTracker = new WidgetTracker<CommentWidget<any>>({
@@ -52,10 +50,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
       commands: app.commands,
       labShell: shell
     });
-
-    console.log("what up bb")
-    console.log(docprovider);
-    console.log(docprovider.awareness);
 
     //WIP selection start
 
