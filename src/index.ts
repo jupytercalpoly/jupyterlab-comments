@@ -16,7 +16,12 @@ import { CommentPanel, ICommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
 import { CommentRegistry, ICommentRegistry } from './registry';
+import {
+  getRandomColor,
+  IDocumentProviderFactory
+} from '@jupyterlab/docprovider';
 import * as Y from 'yjs';
+import { CommentModelFactory } from './modelfactory';
 
 namespace CommandIDs {
   export const addComment = 'jl-comments:add-comment';
@@ -83,27 +88,39 @@ export const panelPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-comments:plugin',
   autoStart: true,
-  requires: [INotebookTracker, ILabShell, ICommentPanel, ICommentRegistry],
+  requires: [
+    INotebookTracker,
+    ICommentPanel,
+    ICommentRegistry,
+    IDocumentProviderFactory
+  ],
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
-    shell: ILabShell,
     panel: ICommentPanel,
-    registry: ICommentRegistry
+    registry: ICommentRegistry,
+    docProviderFactory: IDocumentProviderFactory
   ) => {
+    console.log('registry', registry);
+    const modelFactory = new CommentModelFactory({
+      manager: app.serviceManager.contents,
+      docProviderFactory,
+      registry
+    });
+
     // A widget tracker for comment widgets
     const commentTracker = new WidgetTracker<CommentWidget<any>>({
       namespace: 'comment-widgets'
     });
 
-    void registry.createFactory<Cell>({
+    registry.createFactory<Cell>({
       type: 'cell',
       targetFactory: (cell: Cell) => {
         return { cellID: cell.model.id };
       }
     });
 
-    void registry.createFactory<Cell>({
+    registry.createFactory<Cell>({
       type: 'cell-selection',
       targetFactory: (cell: Cell) => {
         const { start, end } = cell.editor.getSelection();
@@ -113,6 +130,41 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
           end
         };
       }
+    });
+
+    registry.createFactory<null>({
+      type: 'test',
+      targetFactory: (x: null) => 0
+    });
+
+    void modelFactory.createNew('/').then(model => {
+      model.addComment({
+        text: UUID.uuid4(),
+        identity: {
+          id: 0,
+          name: 'User-' + UUID.uuid4(),
+          color: getRandomColor()
+        },
+        type: 'test',
+        target: null,
+        id: '1'
+      });
+
+      model.addReply(
+        {
+          text: 'reply',
+          identity: {
+            id: 9,
+            name: 'User-' + UUID.uuid4(),
+            color: getRandomColor()
+          }
+        },
+        '1'
+      );
+
+      console.log('toJSON', model.toJSON());
+
+      void modelFactory._save(model.path, model.ydoc);
     });
 
     let currAwareness: Awareness | null = null;
@@ -167,6 +219,7 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
     // `events` and `t` are currently `any` because of a bug when importing `yjs`
     // Build fails for some people so for now the yjs types aren't being used directly.
     const handleCellChanges = (events: Y.YEvent[], t: unknown): void => {
+      console.log(events);
       for (let e of events) {
         if (
           e.target instanceof Y.Map &&

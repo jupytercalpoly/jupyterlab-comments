@@ -2,7 +2,7 @@ import { IComment, IIdentity, IReply } from './commentformat';
 import { PartialJSONValue, UUID } from '@lumino/coreutils';
 import { getCommentTimeString } from './utils';
 
-export interface ICommentFactory<T = any> {
+export interface ICommentFactory<T> {
   createComment: (options: CommentFactory.ICommentOptions<T>) => IComment;
   createCommentWithPrecomputedTarget: (
     options: Exclude<ICommentOptions<T>, 'target'>,
@@ -16,7 +16,7 @@ export interface ICommentFactory<T = any> {
 /**
  * A class that creates comments of a given type.
  */
-export class CommentFactory<T = any> implements ICommentFactory<T> {
+export class CommentFactory<T> implements ICommentFactory<T> {
   constructor(options: CommentFactory.IOptions<T>) {
     const { type, targetFactory } = options;
 

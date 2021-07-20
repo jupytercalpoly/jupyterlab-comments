@@ -102,9 +102,9 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
       let t1: string = '';
       let t2: string = '';
-      let f1: CommentFactory | undefined;
-      let f2: CommentFactory | undefined;
-      let factory: CommentFactory | undefined;
+      let f1: CommentFactory<any> | undefined;
+      let f2: CommentFactory<any> | undefined;
+      let factory: CommentFactory<any> | undefined;
 
       let selections = [];
 

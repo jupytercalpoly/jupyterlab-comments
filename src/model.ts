@@ -16,12 +16,14 @@ export class CommentFileModel {
    * Construct a new `CommentFileModel`.
    */
   constructor(options: CommentFileModel.IOptions) {
-    const { registry, ydoc, awareness, sourcePath, commentMenu } = options;
+    const { registry, ydoc, awareness, sourcePath, commentMenu, path } =
+      options;
 
     this.registry = registry;
     this.ydoc = ydoc;
     this.awarenss = awareness;
     this._sourcePath = sourcePath;
+    this._path = path;
     this._commentMenu = commentMenu;
 
     this.comments.observe(this._commentsObserver);
@@ -78,6 +80,7 @@ export class CommentFileModel {
     // I don't understand YArrayEvent well enough yet so I'm just logging it here.
     console.log(event);
   };
+
   /**
    * Create a comment from an `ICommentOptions` object.
    *
@@ -310,7 +313,7 @@ export class CommentFileModel {
   /**
    * The dropdown menu for comment widgets.
    */
-  get commentMenu(): Menu {
+  get commentMenu(): Menu | undefined {
     return this._commentMenu;
   }
 
@@ -322,8 +325,13 @@ export class CommentFileModel {
     return this._changed;
   }
 
+  get path(): string {
+    return this._path;
+  }
+
   private _sourcePath: string;
-  private _commentMenu: Menu;
+  private _path: string;
+  private _commentMenu: Menu | undefined;
   private _isDisposed: boolean = false;
   private _changed = new Signal<this, CommentFileModel.IChange>(this);
 }
@@ -332,9 +340,10 @@ export namespace CommentFileModel {
   export interface IOptions {
     registry: ICommentRegistry;
     ydoc: YDocument<any>;
+    path: string;
     sourcePath: string;
     awareness: Awareness;
-    commentMenu: Menu;
+    commentMenu?: Menu;
   }
 
   /**

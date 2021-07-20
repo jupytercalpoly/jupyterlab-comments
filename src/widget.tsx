@@ -665,7 +665,7 @@ export class CommentWidget<T = any> extends ReactWidget {
     }
   }
 
-  get factory(): ICommentFactory {
+  get factory(): ICommentFactory<any> {
     return this._factory;
   }
 
@@ -678,7 +678,7 @@ export class CommentWidget<T = any> extends ReactWidget {
   private _replyAreaHidden: boolean = true;
   private _editID: string = '';
   private _tracker: INotebookTracker;
-  private _factory: ICommentFactory;
+  private _factory: ICommentFactory<any>;
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );
@@ -698,7 +698,7 @@ export namespace CommentWidget {
 
     nbTracker: INotebookTracker;
 
-    factory: ICommentFactory;
+    factory: ICommentFactory<any>;
   }
 
   /**

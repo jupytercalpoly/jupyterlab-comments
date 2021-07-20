@@ -2,9 +2,9 @@ import { CommentFactory } from './factory';
 
 export interface ICommentRegistry {
   createFactory: <T>(options: CommentFactory.IOptions<T>) => CommentFactory<T>;
-  getFactory: (id: string) => CommentFactory | undefined;
+  getFactory: (id: string) => CommentFactory<any> | undefined;
 
-  readonly factories: Map<string, CommentFactory>;
+  readonly factories: Map<string, CommentFactory<any>>;
 }
 
 /**
@@ -17,9 +17,9 @@ export class CommentRegistry implements ICommentRegistry {
     return factory;
   }
 
-  getFactory(id: string): CommentFactory | undefined {
+  getFactory(id: string): CommentFactory<any> | undefined {
     return this.factories.get(id);
   }
 
-  readonly factories = new Map<string, CommentFactory>();
+  readonly factories = new Map<string, CommentFactory<any>>();
 }
