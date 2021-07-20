@@ -11,7 +11,6 @@ export interface IMetadated {
 
 export interface ISharedMetadatedText extends ISharedText, IMetadated {}
 
-
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function updateMetadata(model: IMetadated, value: any): void {
   model.setMetadata(Object.assign({}, model.getMetadata(), value));
@@ -153,7 +152,7 @@ function editComment(
 
 export function addReply(
   model: IMetadated,
-  reply: comments.IComment,
+  reply: comments.IReply,
   id: string
 ): void {
   if (reply.text === '') {
