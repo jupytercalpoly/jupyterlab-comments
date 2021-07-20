@@ -1,10 +1,5 @@
-//import { ICellModel } from "@jupyterlab/cells";
 import { CodeEditor } from '@jupyterlab/codeeditor';
-
-/**
- * A type for the 'target' of a comment.
- */
-export type CommentType = 'null' | 'cell' | 'text';
+import { PartialJSONValue } from '@lumino/coreutils';
 
 /**
  * A type for the identity of a commentor.
@@ -23,14 +18,38 @@ export interface ISelection extends IComment {
   end: CodeEditor.IPosition;
 }
 
-/**
- * A type for the metadata representation of a comment.
- */
-export type IComment = {
+export interface IBaseComment {
   id: string;
-  type: CommentType;
+  type: string;
   identity: IIdentity;
-  replies: IComment[];
   text: string;
   time: string;
-};
+}
+
+export interface IReply extends IBaseComment {
+  type: 'reply';
+}
+
+export interface ICommentWithReplies extends IBaseComment {
+  replies: IReply[];
+}
+
+export interface IComment extends ICommentWithReplies {
+  target: PartialJSONValue;
+}
+
+export interface ICellComment extends IComment {
+  type: 'cell';
+  target: {
+    cellID: string;
+  };
+}
+
+export interface ICellSelectionComment extends IComment {
+  type: 'cell-selection';
+  target: {
+    cellID: string;
+    start: CodeEditor.IPosition;
+    end: CodeEditor.IPosition;
+  };
+}

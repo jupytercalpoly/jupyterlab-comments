@@ -152,7 +152,7 @@ function editComment(
 
 export function addReply(
   model: IMetadated,
-  reply: comments.IComment,
+  reply: comments.IReply,
   id: string
 ): void {
   if (reply.text === '') {
