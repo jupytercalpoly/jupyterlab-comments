@@ -180,12 +180,13 @@
   margin: 10px 10px 10px 10px;
 }
 .jc-panelHeader-identity {
-  color: var(--jc-timestamp-color);
+  color: var(--jp-ui-font-color2);
   font-size: var(--jp-ui-font-size0);
 }
 
 .jc-panelHeader-filename{
-  font-size: var(--jp-ui-font-size2);
+  font-size: var(--jp-ui-font-size1);
+  color: var(--jp-ui-font-color0);
 }
 
 .jc-panelHeader-left {
