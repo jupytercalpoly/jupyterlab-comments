@@ -5,17 +5,15 @@ import { Message } from '@lumino/messaging';
 import { listIcon } from '@jupyterlab/ui-components';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { CommentWidget } from './widget';
-import { addComment, getComments } from './comments';
+import { getComments } from './comments';
 import { ICellModel } from '@jupyterlab/cells';
 import { YDocument } from '@jupyterlab/shared-models';
-import { getCommentTimeString, getIdentity } from './utils';
 import { Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
 import { ISelection } from './commentformat';
 import { PanelHeader } from './panelHeaderWidget';
 import { ILabShell } from '@jupyterlab/application';
-import { DocumentWidget } from '@jupyterlab/docregistry';
 
 
 export class CommentPanel extends Panel {
@@ -27,97 +25,15 @@ export class CommentPanel extends Panel {
     this.title.icon = listIcon;
     this.addClass('jc-CommentPanel');
 
-    // Create the input element for adding new comments
-    const node = document.createElement('div');
-    node.setAttribute('contentEditable', 'true');
-    node.classList.add('jc-CommentInput');
-    const inputWidget = (this._inputWidget = new Widget({ node }));
+    const panelHeader: PanelHeader = new PanelHeader({ shell: options.labShell});
 
-    let filePath: string; 
-    options.labShell.currentChanged.connect((_, args) => {
-      if (args.newValue instanceof DocumentWidget){
-        const docWidget = args.newValue as DocumentWidget;
-        filePath = docWidget.context.path;
-        const aware = this.awareness;
-        console.log(filePath)
-        const panelHeader: Widget = new PanelHeader({ awareness: aware, filename: filePath});
-        // const panelHeader: Widget = new PanelHeader({ awareness: undefined, filename: filePath});
-        this.addWidget(panelHeader);
-        this.addWidget(inputWidget);
-      }
-      // else {
-      //   const aware = this.awareness;
-      //   const panelHeader: Widget = new PanelHeader({ awareness: aware, filename: "bleh"});
-      //   this.addWidget(panelHeader);
-      //   this.addWidget(inputWidget);
-      // }
-    })
-    // const panelHeader: Widget = new PanelHeader({ awareness: this.awareness, filename: "bleh"});
-    // this.addWidget(panelHeader);
-    // this.addWidget(inputWidget);
-    
+    this.addWidget(panelHeader as Widget);
+
+    this._panelHeader = panelHeader;
     // Dropdown for identity
     this._commentMenu = new Menu({ commands: options.commands });
   }
 
-  onAfterAttach(msg: Message): void {
-    super.onAfterAttach(msg);
-    this._inputWidget.node.addEventListener('keydown', this);
-  }
-
-  onAfterDetach(msg: Message): void {
-    super.onAfterDetach(msg);
-    this._inputWidget.node.removeEventListener('keydown', this);
-  }
-
-  handleEvent(event: Event): void {
-    switch (event.type) {
-      case 'keydown':
-        this._handleKeydown(event as KeyboardEvent);
-        break;
-      default:
-        return;
-    }
-  }
-
-  private _handleKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Enter') {
-      return;
-    } else if (event.shiftKey) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const cellModel = this._tracker.activeCell?.model.sharedModel;
-    if (cellModel == null) {
-      return;
-    }
-
-    const comments = getComments(cellModel);
-    if (comments == null) {
-      return;
-    }
-
-    const awareness = this.awareness;
-    if (awareness == null) {
-      console.warn('no Awareness found while adding cell comment');
-      return;
-    }
-
-    addComment(cellModel, {
-      id: UUID.uuid4(),
-      type: 'cell',
-      identity: getIdentity(awareness),
-      replies: [],
-      text: this._inputWidget.node.innerText,
-      time: getCommentTimeString()
-    });
-
-    this._inputWidget.node.textContent = '';
-    this.update();
-  }
 
   /**
    * Re-render the comment widgets when an `update` message is recieved.
@@ -140,6 +56,7 @@ export class CommentPanel extends Panel {
       console.warn('No awareness; aborting panel render');
       return;
     }
+    this._panelHeader.renderNeeded.emit(awareness)
 
     while (this.widgets.length > 1) {
       this.widgets[1].dispose();
@@ -242,19 +159,24 @@ export class CommentPanel extends Panel {
     return this._revealed;
   }
 
+  get panelHeader(): PanelHeader {
+    return this._panelHeader;
+  }
+
   get awareness(): Awareness | undefined {
     const sharedModel = this._tracker.currentWidget?.context.model.sharedModel;
     if (sharedModel == null) {
       return undefined;
     }
+    this._panelHeader.renderNeeded.emit((sharedModel as any as YDocument<any>).awareness);
     return (sharedModel as any as YDocument<any>).awareness;
   }
 
   private _tracker: INotebookTracker;
-  private _inputWidget: Widget;
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
   private _revealed = new Signal<this, undefined>(this);
   private _commentMenu: Menu;
+  private _panelHeader: PanelHeader;
 }
 
 export namespace CommentPanel {
