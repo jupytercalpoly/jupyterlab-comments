@@ -55,7 +55,12 @@ const ICommentPanel = new Token<ICommentPanel>(
 export const panelPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
   id: 'jupyterlab-comments:panel',
   autoStart: true,
-  requires: [INotebookTracker, ICommentRegistry, ILabShell, IRenderMimeRegistry],
+  requires: [
+    INotebookTracker,
+    ICommentRegistry,
+    ILabShell,
+    IRenderMimeRegistry
+  ],
   provides: ICommentPanel,
   activate: (
     app: JupyterFrontEnd,
@@ -65,11 +70,14 @@ export const panelPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     renderer: IRenderMimeRegistry
   ) => {
     // Create the singleton `CommentPanel`
-    const panel = new CommentPanel({
-      commands: app.commands,
-      tracker,
-      registry
-    }, renderer);
+    const panel = new CommentPanel(
+      {
+        commands: app.commands,
+        tracker,
+        registry
+      },
+      renderer
+    );
 
     // Add the panel to the shell's right area.
     shell.add(panel, 'right', { rank: 500 });
@@ -298,17 +306,19 @@ function addCommands(
   });
 
   app.commands.addCommand(CommandIDs.setFile, {
-    label: 'File from Cell', 
+    label: 'File from Cell',
     execute: () => {
-      console.log(nbTracker.activeCell?.model.metadata.get('comments'));
-      let fileTitle = (nbTracker.activeCell?.model.id!).concat(".comments");
-      new ContentsManager().save(fileTitle, {
-        content: JSON.stringify(nbTracker.activeCell?.model.metadata.get('comments')),
-        format: 'text'
-      }).catch(() => console.warn('file did not save'));
+      let fileTitle = nbTracker.activeCell!.model.id!.concat('.comments');
+      new ContentsManager()
+        .save(fileTitle, {
+          content: JSON.stringify(
+            nbTracker.activeCell?.model.metadata.get('comments')
+          ),
+          format: 'text'
+        })
+        .catch(() => console.warn('file did not save'));
     }
   });
-
 }
 
 namespace Private {

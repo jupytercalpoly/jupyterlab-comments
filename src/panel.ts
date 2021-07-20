@@ -52,7 +52,6 @@ export interface ICommentPanel extends Panel {
 }
 
 export class CommentPanel extends Panel implements ICommentPanel {
-
   renderer: IRenderMimeRegistry;
 
   constructor(options: CommentPanel.IOptions, renderer: IRenderMimeRegistry) {
