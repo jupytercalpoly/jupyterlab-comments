@@ -1,26 +1,29 @@
 import { IComment, IIdentity, IReply } from './commentformat';
 import { CommentFactory } from './factory';
 import { ICommentRegistry } from './registry';
-import { YDocument } from '@jupyterlab/shared-models';
+import { ISharedDocument, YDocument } from '@jupyterlab/shared-models';
 import * as Y from 'yjs';
 import { PartialJSONValue } from '@lumino/coreutils';
 import { ISignal, Signal } from '@lumino/signaling';
 import { Awareness } from 'y-protocols/awareness';
 import { Menu } from '@lumino/widgets';
+import { DocumentRegistry } from '@jupyterlab/docregistry';
+import { IModelDB, ModelDB } from '@jupyterlab/observables';
+import { IChangedArgs } from '@jupyterlab/coreutils';
 
 /**
  * The default model for comment files.
  */
-export class CommentFileModel {
+export class CommentFileModel implements DocumentRegistry.IModel {
   /**
    * Construct a new `CommentFileModel`.
    */
   constructor(options: CommentFileModel.IOptions) {
-    const { registry, ydoc, awareness, sourcePath, commentMenu, path } =
+    const { registry, ymodel, awareness, sourcePath, commentMenu, path } =
       options;
 
     this.registry = registry;
-    this.ydoc = ydoc;
+    this.ymodel = ymodel;
     this.awarenss = awareness;
     this._sourcePath = sourcePath;
     this._path = path;
@@ -54,11 +57,13 @@ export class CommentFileModel {
    * Deserialize the model from JSON.
    */
   fromJSON(value: PartialJSONValue): void {
-    this.ydoc.transact(() => {
+    this.ymodel.transact(() => {
       const comments = this.comments;
       comments.delete(0, comments.length);
       comments.push(value as any as IComment[]);
     });
+
+    this._contentChanged.emit();
   }
 
   /**
@@ -113,6 +118,7 @@ export class CommentFileModel {
     }
 
     this.comments.insert(index, [comment]);
+    this._contentChanged.emit();
   }
 
   /**
@@ -125,6 +131,7 @@ export class CommentFileModel {
     }
 
     this.comments.push([comment]);
+    this._contentChanged.emit();
   }
 
   /**
@@ -139,6 +146,7 @@ export class CommentFileModel {
 
     const reply = this.createReply(options);
     parentComment.replies.splice(index, 0, reply);
+    this._contentChanged.emit();
   }
 
   /**
@@ -153,6 +161,7 @@ export class CommentFileModel {
 
     const reply = this.createReply(options);
     parentComment.replies.push(reply);
+    this._contentChanged.emit();
   }
 
   /**
@@ -164,6 +173,7 @@ export class CommentFileModel {
       const comment = comments.get(i);
       if (comment.id === id) {
         comments.delete(i);
+        this._contentChanged.emit();
         return;
       }
     }
@@ -185,6 +195,7 @@ export class CommentFileModel {
       const replyIndex = comment.replies.findIndex(reply => reply.id === id);
       if (replyIndex !== -1) {
         comment.replies.splice(replyIndex, 1);
+        this._contentChanged.emit();
       }
       return;
     }
@@ -194,6 +205,7 @@ export class CommentFileModel {
       const replyIndex = comment.replies.findIndex(reply => reply.id === id);
       if (replyIndex !== -1) {
         comment.replies.splice(replyIndex, 1);
+        this._contentChanged.emit();
         return;
       }
     }
@@ -212,6 +224,7 @@ export class CommentFileModel {
     }
 
     Object.assign(comment, comment, options);
+    this._contentChanged.emit();
   }
 
   /**
@@ -231,6 +244,7 @@ export class CommentFileModel {
     }
 
     Object.assign(reply, reply, options);
+    this._contentChanged.emit();
   }
 
   /**
@@ -274,18 +288,15 @@ export class CommentFileModel {
     return;
   }
 
+  initialize(): void {
+    return;
+  }
+
   /**
    * The comments associated with the model.
    */
   get comments(): Y.Array<IComment> {
-    return this.ydoc.ydoc.getArray('comments');
-  }
-
-  /**
-   * Whether the model has been disposed.
-   */
-  get isDisposed(): boolean {
-    return this._isDisposed;
+    return this.ymodel.ydoc.getArray('comments');
   }
 
   /**
@@ -296,7 +307,7 @@ export class CommentFileModel {
   /**
    * The underlying model handling RTC between clients.
    */
-  readonly ydoc: YDocument<any>;
+  readonly ymodel: YDocument<any>;
 
   /**
    * The awareness associated with the document being commented on.
@@ -325,21 +336,79 @@ export class CommentFileModel {
     return this._changed;
   }
 
+  /**
+   * The path to the comment file.
+   */
   get path(): string {
     return this._path;
   }
 
+  get sharedModel(): ISharedDocument {
+    return this.ymodel;
+  }
+
+  get readOnly(): boolean {
+    return this._readOnly;
+  }
+  set readOnly(newVal: boolean) {
+    const oldVal = this.readOnly;
+    if (newVal !== oldVal) {
+      this._readOnly = newVal;
+      this._signalStateChange(oldVal, newVal, 'readOnly');
+    }
+  }
+
+  get dirty(): boolean {
+    return this._dirty;
+  }
+  set dirty(newVal: boolean) {
+    const oldVal = this.dirty;
+    if (newVal !== oldVal) {
+      this._dirty = newVal;
+      this._signalStateChange(oldVal, newVal, 'dirty');
+    }
+  }
+
+  get stateChanged(): ISignal<this, IChangedArgs<any>> {
+    return this._stateChanged;
+  }
+
+  get contentChanged(): ISignal<this, void> {
+    return this._contentChanged;
+  }
+
+  get isDisposed(): boolean {
+    return this._isDisposed;
+  }
+
+  private _signalStateChange(oldValue: any, newValue: any, name: string): void {
+    this._stateChanged.emit({
+      oldValue,
+      newValue,
+      name
+    });
+  }
+
+  // These are never used--just here to satisfy the interface requirements.
+  readonly modelDB: IModelDB = new ModelDB();
+  readonly defaultKernelLanguage = '';
+  readonly defaultKernelName = '';
+
+  private _dirty: boolean = false;
+  private _readOnly: boolean = false;
+  private _isDisposed: boolean = false;
   private _sourcePath: string;
   private _path: string;
   private _commentMenu: Menu | undefined;
-  private _isDisposed: boolean = false;
   private _changed = new Signal<this, CommentFileModel.IChange>(this);
+  private _stateChanged = new Signal<this, IChangedArgs<any>>(this);
+  private _contentChanged = new Signal<this, void>(this);
 }
 
 export namespace CommentFileModel {
   export interface IOptions {
     registry: ICommentRegistry;
-    ydoc: YDocument<any>;
+    ymodel: YDocument<any>;
     path: string;
     sourcePath: string;
     awareness: Awareness;
