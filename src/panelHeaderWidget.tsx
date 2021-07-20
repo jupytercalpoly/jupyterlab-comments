@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import { ReactWidget, UseSignal } from '@jupyterlab/apputils';
 
-import { getIdentity } from './utils';
+import { getIdentity, setIdentityName } from './utils';
 
 import { Awareness } from 'y-protocols/awareness';
 
@@ -30,11 +30,51 @@ type DocumentProps = {
 
 function UserIdentity(props: IdentityProps): JSX.Element {
   const { awareness } = props;
+  const handleClick = () => {
+    SetEditable(true);
+  };
+  const [editable, SetEditable] = React.useState(false);
+  let IdentityDiv = () => {
+    if (awareness != undefined) {
+      return (
+        <div
+          contentEditable={editable}
+          className="jc-panelHeader-EditInputArea"
+          onKeyDown={handleKeydown}
+          suppressContentEditableWarning={true}
+        >
+          {getIdentity(awareness).name}
+        </div>
+      );
+    }
+  };
+  const handleKeydown = (event: React.KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      SetEditable(false);
+      return;
+    } else if (event.key !== 'Enter') {
+      return;
+    } else if (event.shiftKey) {
+      return;
+    }
+    const target = event.target as HTMLDivElement;
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (awareness != undefined && target.textContent != null){
+      let result = setIdentityName(awareness, target.textContent);
+      console.log(result)
+    }
+    console.log(target.textContent);
+    SetEditable(false);
+  };
   return (
-      <div className="jc-panelHeader-identity-container">
-        <div>{awareness != undefined && getIdentity(awareness).name}</div>
-        <editIcon.react className="jc-panelHeader-editIcon"/>
+    <div className="jc-panelHeader-identity-container">
+      {IdentityDiv()}
+      <div onClick={() => handleClick()}>
+        <editIcon.react className="jc-panelHeader-editIcon" />
       </div>
+    </div>
   );
 }
 
@@ -71,7 +111,9 @@ export class PanelHeader extends ReactWidget {
         <div className="jc-panelHeader-right">
           <div className="jc-panelHeader-dropdown">
             <p>All</p>
-            <div><caretDownEmptyThinIcon.react /></div>
+            <div>
+              <caretDownEmptyThinIcon.react />
+            </div>
           </div>
           <div>
             <CreateCommentIcon.react />

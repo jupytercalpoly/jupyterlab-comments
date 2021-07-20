@@ -7,6 +7,31 @@ export const emptyIdentity: IIdentity = {
   color: ''
 };
 
+export function setIdentityName(awareness: Awareness, name: string): number{
+  let localState = awareness.getLocalState();
+  if (localState == null ) {
+    return 0;
+  }
+  const oldUser = localState['user'];
+  if (oldUser == null){
+    return 1 ;
+  }
+  let newUser = {
+    'name': name,
+    'color': oldUser['color'],
+  }
+  awareness.setLocalStateField('user', newUser);
+
+  localState = awareness.getLocalState();
+  if (localState == null ) {
+    return 2;
+  }
+  if (localState['user']['name'] != name){
+    return 3;
+  } 
+  return 4;
+}
+
 export function getIdentity(awareness: Awareness): IIdentity {
   const localState = awareness.getLocalState();
   if (localState == null) {
