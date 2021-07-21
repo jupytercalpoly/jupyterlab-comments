@@ -61,9 +61,10 @@ export const panelPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
   ) => {
     // Create the singleton `CommentPanel`
     const panel = new CommentPanel({
+      tracker: tracker,
       commands: app.commands,
-      tracker,
-      registry
+      registry: registry,
+      shell: shell
     });
 
     // Add the panel to the shell's right area.

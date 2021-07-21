@@ -17,6 +17,32 @@ export function randomIdentity(): IIdentity {
   };
 }
 
+export function setIdentityName(awareness: Awareness, name: string): boolean{
+  let localState = awareness.getLocalState();
+  if (localState == null ) {
+    return false;
+  }
+  const oldUser = localState['user'];
+  if (oldUser == null){
+    return false ;
+  }
+  let newUser = {
+    'name': name,
+    'color': oldUser['color'],
+  }
+  awareness.setLocalStateField('user', newUser);
+
+  //Checking if the localState has been updated
+  localState = awareness.getLocalState();
+  if (localState == null ) {
+    return false;
+  }
+  if (localState['user']['name'] != name){
+    return false;
+  } 
+  return true;
+}
+
 export function getIdentity(awareness: Awareness): IIdentity {
   const localState = awareness.getLocalState();
   if (localState == null) {

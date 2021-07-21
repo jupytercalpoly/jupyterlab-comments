@@ -1,4 +1,4 @@
-import { Menu, Panel } from '@lumino/widgets';
+import { Menu, Panel, Widget } from '@lumino/widgets';
 import { each } from '@lumino/algorithm';
 import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
@@ -14,6 +14,9 @@ import { Awareness } from 'y-protocols/awareness';
 import { ISelection } from './commentformat';
 import { ICommentRegistry } from './registry';
 import { CommentFactory } from './factory';
+import { PanelHeader } from './panelHeaderWidget';
+import { ILabShell } from '@jupyterlab/application';
+
 
 export interface ICommentPanel extends Panel {
   /**
@@ -56,16 +59,15 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.title.icon = listIcon;
     this.addClass('jc-CommentPanel');
 
+    const panelHeader: PanelHeader = new PanelHeader({ shell: options.shell});
+
+    this.addWidget(panelHeader as Widget);
+
+    this._panelHeader = panelHeader;
+    // Dropdown for identity
     this._commentMenu = new Menu({ commands: options.commands });
   }
 
-  onAfterAttach(msg: Message): void {
-    super.onAfterAttach(msg);
-  }
-
-  onAfterDetach(msg: Message): void {
-    super.onAfterDetach(msg);
-  }
 
   /**
    * Re-render the comment widgets when an `update` message is recieved.
@@ -88,9 +90,10 @@ export class CommentPanel extends Panel implements ICommentPanel {
       console.warn('No awareness; aborting panel render');
       return;
     }
+    this._panelHeader.renderNeeded.emit(awareness)
 
-    while (this.widgets.length > 0) {
-      this.widgets[0].dispose();
+    while (this.widgets.length > 1) {
+      this.widgets[1].dispose();
     }
 
     each(model.cells, cell => {
@@ -216,11 +219,16 @@ export class CommentPanel extends Panel implements ICommentPanel {
     return this._revealed;
   }
 
+  get panelHeader(): PanelHeader {
+    return this._panelHeader;
+  }
+
   get awareness(): Awareness | undefined {
     const sharedModel = this._tracker.currentWidget?.context.model.sharedModel;
     if (sharedModel == null) {
       return undefined;
     }
+    this._panelHeader.renderNeeded.emit((sharedModel as any as YDocument<any>).awareness);
     return (sharedModel as any as YDocument<any>).awareness;
   }
 
@@ -233,6 +241,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
   private _revealed = new Signal<this, undefined>(this);
   private _commentMenu: Menu;
   private _registry: ICommentRegistry;
+  private _panelHeader: PanelHeader;
 }
 
 export namespace CommentPanel {
@@ -240,5 +249,6 @@ export namespace CommentPanel {
     tracker: INotebookTracker;
     commands: CommandRegistry;
     registry: ICommentRegistry;
+    shell: ILabShell;
   }
 }
