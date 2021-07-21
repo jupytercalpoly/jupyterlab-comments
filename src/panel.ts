@@ -249,6 +249,6 @@ export namespace CommentPanel {
     tracker: INotebookTracker;
     commands: CommandRegistry;
     registry: ICommentRegistry;
-    shell: ILabShell
+    shell: ILabShell;
   }
 }

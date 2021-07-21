@@ -65,7 +65,6 @@ export const panelPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       commands: app.commands,
       registry: registry,
       shell: shell
-
     });
 
     // Add the panel to the shell's right area.
