@@ -17,14 +17,14 @@ export function randomIdentity(): IIdentity {
   };
 }
 
-export function setIdentityName(awareness: Awareness, name: string): number{
+export function setIdentityName(awareness: Awareness, name: string): boolean{
   let localState = awareness.getLocalState();
   if (localState == null ) {
-    return 0;
+    return false;
   }
   const oldUser = localState['user'];
   if (oldUser == null){
-    return 1 ;
+    return false ;
   }
   let newUser = {
     'name': name,
@@ -32,14 +32,15 @@ export function setIdentityName(awareness: Awareness, name: string): number{
   }
   awareness.setLocalStateField('user', newUser);
 
+  //Checking if the localState has been updated
   localState = awareness.getLocalState();
   if (localState == null ) {
-    return 2;
+    return false;
   }
   if (localState['user']['name'] != name){
-    return 3;
+    return false;
   } 
-  return 4;
+  return true;
 }
 
 export function getIdentity(awareness: Awareness): IIdentity {
