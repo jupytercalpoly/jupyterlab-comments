@@ -48,7 +48,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     const panel = new CommentPanel({
       tracker: nbTracker,
       commands: app.commands,
-      labShell: shell
+      shell: shell
     });
 
     //WIP selection start
