@@ -220,11 +220,8 @@
   margin-right: -5px;
 }
 
-.jc-panelHeader-EditInputArea:empty:before {
-  color: var(--jp-ui-font-color3);
-}
 .jc-panelHeader-EditInputArea {
-  border: var(--jc-comment-border);
+  color: var(--jp-ui-font-color3);
   word-break: break-word;
 }
 

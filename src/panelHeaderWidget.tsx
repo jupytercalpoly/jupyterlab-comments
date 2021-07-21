@@ -62,10 +62,8 @@ function UserIdentity(props: IdentityProps): JSX.Element {
     event.stopPropagation();
 
     if (awareness != undefined && target.textContent != null){
-      let result = setIdentityName(awareness, target.textContent);
-      console.log(result)
+      setIdentityName(awareness, target.textContent);
     }
-    console.log(target.textContent);
     SetEditable(false);
   };
   return (
