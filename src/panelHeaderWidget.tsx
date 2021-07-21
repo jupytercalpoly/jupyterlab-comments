@@ -34,12 +34,9 @@ function UserIdentity(props: IdentityProps): JSX.Element {
     SetEditable(true);
   };
   const [editable, SetEditable] = React.useState(false);
-  // const [Name, SetName] = React.useState("");
 
   const IdentityDiv = () => {
     if (awareness != undefined) {
-      // SetName(getIdentity(awareness).name)
-      console.log(editable)
       return (
         <div
           contentEditable={editable}
@@ -47,12 +44,10 @@ function UserIdentity(props: IdentityProps): JSX.Element {
           onKeyDown={handleKeydown}
           suppressContentEditableWarning={true}
         >
-          {/* {Name} */}
           {getIdentity(awareness).name}
         </div>
       );
     }
-    return <div>hihh</div>
   };
 
   const handleKeydown = (event: React.KeyboardEvent): void => {
