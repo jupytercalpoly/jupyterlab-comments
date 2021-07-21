@@ -183,16 +183,18 @@
 .jc-panelHeader-identity-container {
   color: var(--jp-ui-font-color2);
   font-size: var(--jp-ui-font-size0);
-  display: flex
+  display: flex;
+  justify-content: start;
 }
 .jc-panelHeader-editIcon {
   transform: scale(0.72);
   float: right;
-  display: none;
+  display: block;
+  opacity: 0;
 }
 
 .jc-panelHeader-identity-container:hover .jc-panelHeader-editIcon {
-  display: block;
+  opacity: 1;
 }
 
 .jc-panelHeader-filename{
@@ -221,7 +223,12 @@
   margin-right: -5px;
 }
 
-.jc-panelHeader-EditInputArea {
+.jc-panelHeader-EditInputArea-false {
+  color: var(--jp-ui-font-color3);
+  word-break: break-word;
+}
+.jc-panelHeader-EditInputArea-true {
+  border: var(--jc-comment-border);
   color: var(--jp-ui-font-color3);
   word-break: break-word;
 }

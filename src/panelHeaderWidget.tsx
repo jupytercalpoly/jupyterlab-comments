@@ -34,35 +34,48 @@ function UserIdentity(props: IdentityProps): JSX.Element {
     SetEditable(true);
   };
   const [editable, SetEditable] = React.useState(false);
-  let IdentityDiv = () => {
+  // const [Name, SetName] = React.useState("");
+
+  const IdentityDiv = () => {
     if (awareness != undefined) {
+      // SetName(getIdentity(awareness).name)
+      console.log(editable)
       return (
         <div
           contentEditable={editable}
-          className="jc-panelHeader-EditInputArea"
+          className={"jc-panelHeader-EditInputArea-"+editable}
           onKeyDown={handleKeydown}
           suppressContentEditableWarning={true}
         >
+          {/* {Name} */}
           {getIdentity(awareness).name}
         </div>
       );
     }
+    return <div>hihh</div>
   };
+
   const handleKeydown = (event: React.KeyboardEvent): void => {
+    const target = event.target as HTMLDivElement;
     if (event.key === 'Escape') {
       SetEditable(false);
+      target.blur();
       return;
     } else if (event.key !== 'Enter') {
       return;
     } else if (event.shiftKey) {
       return;
     }
-    const target = event.target as HTMLDivElement;
     event.preventDefault();
     event.stopPropagation();
 
-    if (awareness != undefined && target.textContent != null){
-      setIdentityName(awareness, target.textContent);
+    if (awareness != null) {
+      if(target.textContent == '' || target.textContent == null){
+        target.textContent = getIdentity(awareness).name
+      }
+      else if (target.textContent){
+          setIdentityName(awareness, target.textContent);
+      }
     }
     SetEditable(false);
   };

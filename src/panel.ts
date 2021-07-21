@@ -92,8 +92,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
     }
     this._panelHeader.renderNeeded.emit(awareness)
 
-    while (this.widgets.length > 0) {
-      this.widgets[0].dispose();
+    while (this.widgets.length > 1) {
+      this.widgets[1].dispose();
     }
 
     each(model.cells, cell => {
