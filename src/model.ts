@@ -7,7 +7,7 @@ import { PartialJSONValue } from '@lumino/coreutils';
 import { ISignal, Signal } from '@lumino/signaling';
 import { Awareness } from 'y-protocols/awareness';
 import { Menu } from '@lumino/widgets';
-import { DocumentRegistry } from '@jupyterlab/docregistry';
+import { Context, DocumentRegistry } from '@jupyterlab/docregistry';
 import { IModelDB, ModelDB } from '@jupyterlab/observables';
 import { IChangedArgs } from '@jupyterlab/coreutils';
 
@@ -19,15 +19,14 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * Construct a new `CommentFileModel`.
    */
   constructor(options: CommentFileModel.IOptions) {
-    const { registry, ymodel, awareness, sourcePath, commentMenu, path } =
-      options;
+    const { registry, sourcePath, commentMenu, path, context } = options;
 
     this.registry = registry;
-    this.ymodel = ymodel;
-    this.awarenss = awareness;
     this._sourcePath = sourcePath;
     this._path = path;
     this._commentMenu = commentMenu;
+    this._context = context;
+    this.ymodel = context.model.sharedModel as YDocument<any>;
 
     this.comments.observe(this._commentsObserver);
   }
@@ -312,7 +311,9 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   /**
    * The awareness associated with the document being commented on.
    */
-  readonly awarenss: Awareness;
+  get awareness(): Awareness {
+    return this.ymodel.awareness;
+  }
 
   /**
    * The path to the document being commented on.
@@ -381,6 +382,10 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     return this._isDisposed;
   }
 
+  get context(): Context {
+    return this._context;
+  }
+
   private _signalStateChange(oldValue: any, newValue: any, name: string): void {
     this._stateChanged.emit({
       oldValue,
@@ -403,15 +408,15 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   private _changed = new Signal<this, CommentFileModel.IChange>(this);
   private _stateChanged = new Signal<this, IChangedArgs<any>>(this);
   private _contentChanged = new Signal<this, void>(this);
+  private _context: Context;
 }
 
 export namespace CommentFileModel {
   export interface IOptions {
     registry: ICommentRegistry;
-    ymodel: YDocument<any>;
     path: string;
     sourcePath: string;
-    awareness: Awareness;
+    context: Context;
     commentMenu?: Menu;
   }
 

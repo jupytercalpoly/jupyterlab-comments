@@ -24,6 +24,10 @@ export class CommentFactory<T> implements ICommentFactory<T> {
     this.targetFactory = targetFactory;
   }
 
+  createWidget(comment: IComment): any {
+    return null;
+  }
+
   createComment(options: CommentFactory.ICommentOptions<T>): IComment {
     const { target, text, identity, replies, id } = options;
 

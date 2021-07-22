@@ -4,7 +4,7 @@ import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
 import { listIcon } from '@jupyterlab/ui-components';
 import { INotebookTracker } from '@jupyterlab/notebook';
-import { CommentWidget } from './widget';
+import { CommentFileWidget, CommentWidget } from './widget';
 import { getComments } from './comments';
 import { ICellModel } from '@jupyterlab/cells';
 import { YDocument } from '@jupyterlab/shared-models';
@@ -14,6 +14,10 @@ import { Awareness } from 'y-protocols/awareness';
 import { ISelection } from './commentformat';
 import { ICommentRegistry } from './registry';
 import { CommentFactory } from './factory';
+import { IDocumentManager } from '@jupyterlab/docmanager';
+import { Context } from '@jupyterlab/docregistry';
+import { hashString } from './utils';
+import { CommentFileModel } from './model';
 
 export interface ICommentPanel extends Panel {
   /**
@@ -143,10 +147,12 @@ export class CommentPanel extends Panel implements ICommentPanel {
         });
 
         this.addComment(widget);
-        if (comment.type == 'text') {
+
+        if (comment.type == 'cell-selection') {
+          const { start, end } = comment.target as any as ISelection;
           selections.push({
-            start: (comment as ISelection).start,
-            end: (comment as ISelection).end,
+            start,
+            end,
             style: {
               className: 'jc-Highlight',
               color: 'black',
@@ -228,6 +234,10 @@ export class CommentPanel extends Panel implements ICommentPanel {
     return this._tracker;
   }
 
+  get registry(): ICommentRegistry {
+    return this._registry;
+  }
+
   private _tracker: INotebookTracker;
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
   private _revealed = new Signal<this, undefined>(this);
@@ -241,4 +251,84 @@ export namespace CommentPanel {
     commands: CommandRegistry;
     registry: ICommentRegistry;
   }
+}
+
+export namespace CommentPanel2 {
+  export interface IOptions extends CommentPanel.IOptions {
+    docManager: IDocumentManager;
+  }
+}
+
+export class CommentPanel2 extends CommentPanel {
+  constructor(options: CommentPanel2.IOptions) {
+    super(options);
+
+    const { docManager } = options;
+
+    this._docManager = docManager;
+  }
+
+  onUpdateRequest(msg: Message): void {
+    if (this._docWidget == null) {
+      console.log('this._docWidget is null');
+      return;
+    }
+
+    this._docWidget.update();
+  }
+
+  loadModel(sourcePath: string): void {
+    if (this._docWidget != null) {
+      this._docWidget.dispose();
+    }
+
+    const path = hashString(sourcePath).toString() + '.comment';
+    const factory = this._docManager.registry.getModelFactory('text');
+    const preference = this._docManager.registry.getKernelPreference(
+      path,
+      'comment-factory',
+      undefined
+    );
+
+    let context: Context;
+    let isNew: boolean;
+    // @ts-ignore
+    context = this._docManager._findContext(path, 'comment-factory') || null;
+    if (context == null) {
+      // @ts-ignore
+      context = this._docManager._createContext(path, factory, preference);
+      isNew = true;
+      console.log('created new context', context);
+    } else {
+      isNew = false;
+      console.log('found existing context', context);
+    }
+
+    const content = new CommentFileWidget({
+      path,
+      sourcePath,
+      context,
+      registry: this.registry,
+      commentMenu: this.commentMenu
+    });
+
+    void this._docManager.services.ready.then(
+      () => void context!.initialize(isNew)
+    );
+
+    this._docWidget = content;
+    this.addWidget(content);
+    this.update();
+  }
+
+  get currentModel(): CommentFileModel | undefined {
+    const docWidget = this._docWidget;
+    if (docWidget == null) {
+      return;
+    }
+    return docWidget.model;
+  }
+
+  private _docWidget: CommentFileWidget | undefined = undefined;
+  private _docManager: IDocumentManager;
 }

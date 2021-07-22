@@ -17,11 +17,20 @@ import {
 } from './comments';
 import { Awareness } from 'y-protocols/awareness';
 import { getIdentity, lineToIndex } from './utils';
-import { Menu } from '@lumino/widgets';
+import { Menu, Panel } from '@lumino/widgets';
 import { Signal } from '@lumino/signaling';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { ICellModel } from '@jupyterlab/cells';
 import { CommentFactory, ICommentFactory } from './factory';
+import { CommentFileModel } from './model';
+import {
+  ABCWidgetFactory,
+  Context,
+  DocumentRegistry,
+  DocumentWidget
+} from '@jupyterlab/docregistry';
+import { Message } from '@lumino/messaging';
+import { CommentRegistry } from './registry';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -45,7 +54,7 @@ type CommentWithRepliesProps = {
 };
 
 type CommentWrapperProps = {
-  commentWidget: CommentWidget<any>;
+  commentWidget: CommentWidget<any> | CommentWidget2<any>;
   className?: string;
 };
 
@@ -684,6 +693,417 @@ export class CommentWidget<T = any> extends ReactWidget {
   );
 }
 
+export class CommentWidget2<T> extends ReactWidget {
+  constructor(options: CommentWidget2.IOptions<T>) {
+    super();
+
+    const { id, target, model, menu, factory } = options;
+    this._commentID = id;
+    this._activeID = id;
+    this._target = target;
+    this._menu = menu;
+    this._factory = factory;
+    this._model = model;
+
+    this.addClass('jc-CommentWidget');
+    this.node.tabIndex = 0;
+  }
+
+  handleEvent(event: React.SyntheticEvent): void {
+    switch (event.type) {
+      case 'click':
+        this._handleClick(event as React.MouseEvent);
+        break;
+      case 'keydown':
+        this._handleKeydown(event as React.KeyboardEvent);
+        break;
+    }
+  }
+
+  /**
+   * Handle `click` events on the widget.
+   */
+  private _handleClick(event: React.MouseEvent): void {
+    switch (CommentWidget.getEventArea(event)) {
+      case 'body':
+        this._handleBodyClick(event);
+        break;
+      case 'dropdown':
+        this._handleDropdownClick(event);
+        break;
+      case 'reply':
+        this._handleReplyClick(event);
+        break;
+      case 'user':
+        this._handleUserClick(event);
+        break;
+      case 'other':
+        this._handleOtherClick(event);
+        break;
+      case 'none':
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Sets the widget focus and active id on click.
+   *
+   * A building block of other click handlers.
+   */
+  private _setClickFocus(event: React.MouseEvent): void {
+    const oldActive = document.activeElement;
+    const target = event.target as HTMLElement;
+    const clickID = Private.getClickID(target);
+
+    if (clickID != null) {
+      this.activeID = clickID;
+    }
+
+    if (oldActive == null || !this.node.contains(oldActive)) {
+      this.node.focus();
+    }
+  }
+
+  /**
+   * Handle a click on the dropdown (ellipses) area of a widget.
+   */
+  private _handleDropdownClick(event: React.MouseEvent): void {
+    this._setClickFocus(event);
+    this._menu.open(event.pageX, event.pageY);
+  }
+
+  /**
+   * Handle a click on the user icon area of a widget.
+   *
+   * ### Note
+   * Currently just acts as an `other` click.
+   */
+  private _handleUserClick(event: React.MouseEvent): void {
+    console.log('clicked user photo!');
+    this._setClickFocus(event);
+  }
+
+  /**
+   * Handle a click on the widget but not on a specific area.
+   */
+  private _handleOtherClick(event: React.MouseEvent): void {
+    this._setClickFocus(event);
+
+    const target = event.target as HTMLElement;
+    const clickID = Private.getClickID(target);
+    if (clickID == null) {
+      return;
+    }
+
+    this.editID = '';
+
+    if (this.replyAreaHidden) {
+      this.revealReply();
+    } else {
+      this.replyAreaHidden = true;
+    }
+  }
+
+  /**
+   * Handle a click on the widget's reply area.
+   */
+  private _handleReplyClick(event: React.MouseEvent): void {
+    this._setClickFocus(event);
+  }
+
+  /**
+   * Handle a click on the widget's body.
+   */
+  private _handleBodyClick(event: React.MouseEvent): void {
+    this._setClickFocus(event);
+    this.openEditActive();
+  }
+
+  /**
+   * Handle `keydown` events on the widget.
+   */
+  private _handleKeydown(event: React.KeyboardEvent): void {
+    switch (CommentWidget.getEventArea(event)) {
+      case 'reply':
+        this._handleReplyKeydown(event);
+        break;
+      case 'body':
+        this._handleBodyKeydown(event);
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Handle a keydown on the widget's reply area.
+   */
+  private _handleReplyKeydown(event: React.KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.replyAreaHidden = true;
+      return;
+    } else if (event.key !== 'Enter') {
+      return;
+    } else if (event.shiftKey) {
+      return;
+    }
+
+    const target = event.target as HTMLDivElement;
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.model.addReply(
+      {
+        identity: getIdentity(this.model.awareness),
+        text: target.innerText
+      },
+      this.commentID
+    );
+
+    target.textContent = '';
+    this.replyAreaHidden = true;
+  }
+
+  /**
+   * Handle a keydown on the widget's body.
+   */
+  private _handleBodyKeydown(event: React.KeyboardEvent): void {
+    if (this.editID === '') {
+      return;
+    }
+
+    const target = event.target as HTMLDivElement;
+
+    switch (event.key) {
+      case 'Escape':
+        event.preventDefault();
+        event.stopPropagation();
+        target.innerText = this.text!;
+        this.editID = '';
+        target.blur();
+        break;
+      case 'Enter':
+        if (event.shiftKey) {
+          break;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        if (target.innerText === '') {
+          target.innerText = this.text!;
+        } else {
+          this.editActive(target.innerText);
+        }
+        this.editID = '';
+        target.blur();
+        break;
+      default:
+        break;
+    }
+  }
+
+  render(): ReactRenderElement {
+    return (
+      <UseSignal signal={this.renderNeeded}>
+        {() => <JCCommentWrapper commentWidget={this} />}
+      </UseSignal>
+    );
+  }
+
+  /**
+   * Open the widget's reply area and focus on it.
+   */
+  revealReply(): void {
+    if (this.isAttached === false) {
+      return;
+    }
+
+    this.replyAreaHidden = false;
+    const nodes = this.node.getElementsByClassName(
+      'jc-ReplyInputArea'
+    ) as HTMLCollectionOf<HTMLDivElement>;
+    nodes[0].focus();
+  }
+
+  /**
+   * Select the body area of the currently active comment for editing.
+   */
+  openEditActive(): void {
+    if (this.isAttached === false) {
+      return;
+    }
+
+    const comment = document.getElementById(this.activeID);
+    if (comment == null) {
+      return;
+    }
+
+    this.editID = this.activeID;
+    const elements = comment.getElementsByClassName(
+      'jc-Body'
+    ) as HTMLCollectionOf<HTMLDivElement>;
+    const target = elements[0];
+    target.focus();
+  }
+
+  editActive(text: string): void {
+    if (this.activeID === this.commentID) {
+      this.model.editComment({ text }, this.commentID);
+    } else {
+      this.model.editReply({ text }, this.activeID, this.commentID);
+    }
+  }
+
+  /**
+   * Delete the currently active comment or reply.
+   *
+   * ### Notes
+   * If the base comment is deleted, the widget will be disposed.
+   */
+  deleteActive(): void {
+    if (this.isAttached === false) {
+      return;
+    }
+
+    if (this.activeID === this.commentID) {
+      this.model.deleteComment(this.commentID);
+      this.dispose();
+    } else {
+      this.model.deleteReply(this.activeID, this.commentID);
+    }
+  }
+
+  /**
+   * The comment object being rendered by the widget.
+   */
+  get comment(): IComment | undefined {
+    return this.model.getComment(this.commentID);
+  }
+
+  /**
+   * The target of the comment (what is being commented on).
+   */
+  get target(): T {
+    return this._target;
+  }
+
+  /**
+   * Information about the author of the comment.
+   */
+  get identity(): IIdentity | undefined {
+    return this.comment?.identity;
+  }
+
+  /**
+   * The type of the comment.
+   */
+  get type(): string | undefined {
+    return this.comment?.type;
+  }
+
+  /**
+   * The plain body text of the comment.
+   */
+  get text(): string | undefined {
+    return this.comment?.text;
+  }
+
+  /**
+   * An array of replies to the comment.
+   */
+  get replies(): IReply[] | undefined {
+    return this.comment?.replies;
+  }
+
+  /**
+   * The ID of the main comment.
+   */
+  get commentID(): string {
+    return this._commentID;
+  }
+
+  get model(): CommentFileModel {
+    return this._model;
+  }
+
+  /**
+   * The ID of the last-focused comment or reply.
+   */
+  get activeID(): string {
+    return this._activeID;
+  }
+  set activeID(newVal: string) {
+    if (newVal !== this.activeID) {
+      this._activeID = newVal;
+      this._renderNeeded.emit(undefined);
+    }
+  }
+
+  /**
+   * Whether to show the reply area or not
+   */
+  get replyAreaHidden(): boolean {
+    return this._replyAreaHidden;
+  }
+  set replyAreaHidden(newVal: boolean) {
+    if (newVal !== this.replyAreaHidden) {
+      this._replyAreaHidden = newVal;
+      this._renderNeeded.emit(undefined);
+    }
+  }
+
+  /**
+   * A signal emitted when a React re-render is required.
+   */
+  get renderNeeded(): Signal<this, undefined> {
+    return this._renderNeeded;
+  }
+
+  /**
+   * The ID of the managed comment being edited, or the empty string if none.
+   */
+  get editID(): string {
+    return this._editID;
+  }
+  set editID(newVal: string) {
+    if (this.editID !== newVal) {
+      this._editID = newVal;
+      this._renderNeeded.emit(undefined);
+    }
+  }
+
+  get factory(): ICommentFactory<any> {
+    return this._factory;
+  }
+
+  private _model: CommentFileModel;
+  private _commentID: string;
+  private _target: T;
+  private _activeID: string;
+  private _menu: Menu;
+  private _replyAreaHidden: boolean = true;
+  private _editID: string = '';
+  private _factory: ICommentFactory<any>;
+  private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
+    this
+  );
+}
+
+export namespace CommentWidget2 {
+  export interface IOptions<T> {
+    id: string;
+
+    model: CommentFileModel;
+
+    target: T;
+
+    menu: Menu;
+
+    factory: ICommentFactory<any>;
+  }
+}
+
 export namespace CommentWidget {
   export interface IOptions<T> {
     awareness: Awareness;
@@ -746,6 +1166,138 @@ export namespace CommentWidget {
     event.target = areaElement;
 
     return isEventArea(area) ? area : 'other';
+  }
+}
+
+export class CommentFileWidget extends Panel {
+  constructor(options: CommentFileWidget.IOptions) {
+    super();
+
+    const { context, commentMenu } = options;
+    const model = new CommentFileModel(options);
+
+    this.id = `Comments-${model.path}`;
+    this.addClass('jc-CommentFileWidget');
+
+    this._context = context;
+    this._model = model;
+    this._commentMenu = commentMenu;
+  }
+
+  onUpdateRequest(msg: Message): void {
+    super.onUpdateRequest(msg);
+
+    const { comments, registry } = this.model;
+
+    while (this.widgets.length > 0) {
+      this.widgets[0].dispose();
+    }
+
+    let t1: string = '';
+    let t2: string = '';
+    let f1: CommentFactory<any> | undefined;
+    let f2: CommentFactory<any> | undefined;
+    let factory: CommentFactory<any> | undefined;
+    comments.forEach(comment => {
+      // Simple factory/type "cache" to speed up panel updates
+      if (comment.type === '') {
+        console.warn('empty comment type is not allowed');
+        return;
+      } else if (t1 === comment.type) {
+        factory = f1;
+      } else if (t2 === comment.type) {
+        factory = f2;
+        [f2, f1] = [f1, f2];
+        [t2, t1] = [t1, t2];
+      } else {
+        factory = registry.getFactory(comment.type);
+        [f2, t2] = [f1, t1];
+        [f1, t1] = [factory, comment.type];
+      }
+
+      if (factory == null) {
+        console.warn('no factory found for comment with type', comment.type);
+        return;
+      }
+
+      let widget;
+      if (comment.type === 'test') {
+        widget = new CommentWidget2<null>({
+          id: comment.id,
+          target: null,
+          menu: this._commentMenu,
+          factory,
+          model: this.model
+        });
+      } else {
+        widget = factory.createWidget(comment);
+      }
+
+      if (widget != null) {
+        this.addWidget(widget);
+      }
+    });
+  }
+
+  get model(): CommentFileModel {
+    return this._model;
+  }
+
+  get context(): Context {
+    return this._context;
+  }
+
+  private _model: CommentFileModel;
+  private _context: Context;
+  private _commentMenu: Menu;
+}
+
+export namespace CommentFileWidget {
+  export interface IOptions extends CommentFileModel.IOptions {
+    commentMenu: Menu;
+  }
+}
+
+export class CommentWidgetFactory extends ABCWidgetFactory<
+  DocumentWidget<CommentFileWidget>,
+  CommentFileModel
+> {
+  constructor(options: CommentWidgetFactory.IOptions) {
+    super(options);
+
+    const { registry, commentMenu } = options;
+
+    this._registry = registry;
+    this._commentMenu = commentMenu;
+  }
+
+  createNewWidget(
+    context: DocumentRegistry.IContext<DocumentRegistry.IModel>
+  ): DocumentWidget<CommentFileWidget> {
+    const path = context.path;
+
+    const content = new CommentFileWidget({
+      path,
+      sourcePath: path,
+      context: context as Context<DocumentRegistry.IModel>,
+      registry: this._registry,
+      commentMenu: this._commentMenu
+    });
+
+    return new DocumentWidget<CommentFileWidget>({
+      content,
+      context
+    });
+  }
+
+  private _registry: CommentRegistry;
+  private _commentMenu: Menu;
+}
+
+export namespace CommentWidgetFactory {
+  export interface IOptions extends DocumentRegistry.IWidgetFactoryOptions {
+    registry: CommentRegistry;
+    commentMenu: Menu;
   }
 }
 

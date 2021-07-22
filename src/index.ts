@@ -11,17 +11,15 @@ import { Token, UUID } from '@lumino/coreutils';
 import { IComment } from './commentformat';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
-import { getCommentTimeString, getIdentity } from './utils';
-import { CommentPanel, ICommentPanel } from './panel';
-import { CommentWidget } from './widget';
+import { getCommentTimeString, getIdentity, randomIdentity } from './utils';
+import { CommentPanel, CommentPanel2, ICommentPanel } from './panel';
+import { CommentWidget, CommentWidgetFactory } from './widget';
 import { Cell } from '@jupyterlab/cells';
 import { CommentRegistry, ICommentRegistry } from './registry';
-import {
-  getRandomColor,
-  IDocumentProviderFactory
-} from '@jupyterlab/docprovider';
+import { IDocumentManager } from '@jupyterlab/docmanager';
+import { DocumentRegistry, DocumentWidget } from '@jupyterlab/docregistry';
 import * as Y from 'yjs';
-import { CommentModelFactory } from './modelfactory';
+import { Menu } from '@lumino/widgets';
 
 namespace CommandIDs {
   export const addComment = 'jl-comments:add-comment';
@@ -88,25 +86,14 @@ export const panelPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-comments:plugin',
   autoStart: true,
-  requires: [
-    INotebookTracker,
-    ICommentPanel,
-    ICommentRegistry,
-    IDocumentProviderFactory
-  ],
+  requires: [INotebookTracker, ICommentPanel, ICommentRegistry],
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
     panel: ICommentPanel,
-    registry: ICommentRegistry,
-    docProviderFactory: IDocumentProviderFactory
+    registry: ICommentRegistry
   ) => {
     console.log('registry', registry);
-    const modelFactory = new CommentModelFactory({
-      manager: app.serviceManager.contents,
-      docProviderFactory,
-      registry
-    });
 
     // A widget tracker for comment widgets
     const commentTracker = new WidgetTracker<CommentWidget<any>>({
@@ -134,37 +121,7 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
 
     registry.createFactory<null>({
       type: 'test',
-      targetFactory: (x: null) => 0
-    });
-
-    void modelFactory.createNew('/').then(model => {
-      model.addComment({
-        text: UUID.uuid4(),
-        identity: {
-          id: 0,
-          name: 'User-' + UUID.uuid4(),
-          color: getRandomColor()
-        },
-        type: 'test',
-        target: null,
-        id: '1'
-      });
-
-      model.addReply(
-        {
-          text: 'reply',
-          identity: {
-            id: 9,
-            name: 'User-' + UUID.uuid4(),
-            color: getRandomColor()
-          }
-        },
-        '1'
-      );
-
-      console.log('toJSON', model.toJSON());
-
-      void modelFactory._save(model.path, model.ydoc);
+      targetFactory: (x: null) => null
     });
 
     let currAwareness: Awareness | null = null;
@@ -263,6 +220,97 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
       command: CommandIDs.addComment,
       selector: '.jp-Notebook .jp-Cell',
       rank: 13
+    });
+  }
+};
+
+export const jupyterCommentingPlugin: JupyterFrontEndPlugin<void> = {
+  id: 'jupyterlab-comments:commenting-api',
+  autoStart: true,
+  requires: [ICommentRegistry, ILabShell, IDocumentManager, INotebookTracker],
+  activate: (
+    app: JupyterFrontEnd,
+    registry: ICommentRegistry,
+    shell: ILabShell,
+    docManager: IDocumentManager,
+    tracker: INotebookTracker
+  ): void => {
+    const filetype: DocumentRegistry.IFileType = {
+      contentType: 'file',
+      displayName: 'omment',
+      extensions: ['.comment'],
+      fileFormat: 'json',
+      name: 'comment',
+      mimeTypes: ['text/json']
+    };
+
+    const commentMenu = new Menu({ commands: app.commands });
+    commentMenu.addItem({ command: CommandIDs.deleteComment });
+    commentMenu.addItem({ command: CommandIDs.editComment });
+    commentMenu.addItem({ command: CommandIDs.replyToComment });
+
+    const factory = new CommentWidgetFactory({
+      name: 'comment-factory',
+      commentMenu,
+      registry,
+      fileTypes: ['comment'],
+      defaultFor: ['comment']
+    });
+
+    app.docRegistry.addFileType(filetype);
+    app.docRegistry.addWidgetFactory(factory);
+
+    const panel = new CommentPanel2({
+      commands: app.commands,
+      registry,
+      docManager,
+      tracker
+    });
+
+    // Add the panel to the shell's right area.
+    shell.add(panel, 'right', { rank: 600 });
+
+    panel.revealed.connect(() => panel.update());
+    shell.currentChanged.connect((_, args) => {
+      if (args.newValue && args.newValue instanceof DocumentWidget) {
+        const docWidget = args.newValue as DocumentWidget;
+        const path = docWidget.context.path;
+        panel.loadModel(path);
+        console.log('loaded model');
+      }
+    });
+
+    app.commands.addCommand('addComment', {
+      label: 'Add Document Comment',
+      execute: () => {
+        const model = panel.currentModel!;
+        model.addComment({
+          text: UUID.uuid4(),
+          type: 'test',
+          target: null,
+          identity: randomIdentity()
+        });
+        panel.update();
+      },
+      isEnabled: () => panel != null && panel.currentModel != null
+    });
+
+    app.commands.addCommand('saveCommentFile', {
+      label: 'Save Comment File',
+      execute: () => void panel.currentModel!.context.save(),
+      isEnabled: () => panel != null && panel.currentModel != null
+    });
+
+    app.contextMenu.addItem({
+      command: 'addComment',
+      selector: '.lm-Widget',
+      rank: 0
+    });
+
+    app.contextMenu.addItem({
+      command: 'saveCommentFile',
+      selector: '.lm-Widget',
+      rank: 1
     });
   }
 };
@@ -387,6 +435,7 @@ namespace Private {
 const plugins: JupyterFrontEndPlugin<any>[] = [
   panelPlugin,
   notebookCommentsPlugin,
-  commentRegistryPlugin
+  commentRegistryPlugin,
+  jupyterCommentingPlugin
 ];
 export default plugins;
