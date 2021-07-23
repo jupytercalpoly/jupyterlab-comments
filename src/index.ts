@@ -17,6 +17,7 @@ import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
 import { CommentRegistry, ICommentRegistry } from './registry';
 import * as Y from 'yjs';
+import { CellCommentFactory, CellSelectionCommentFactory  } from './factory';
 
 namespace CommandIDs {
   export const addComment = 'jl-comments:add-comment';
@@ -97,24 +98,27 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
       namespace: 'comment-widgets'
     });
 
-    void registry.createFactory<Cell>({
-      type: 'cell',
-      targetFactory: (cell: Cell) => {
-        return { cellID: cell.model.id };
-      }
-    });
+    void registry.addFactory(new CellCommentFactory());
+    void registry.addFactory(new CellSelectionCommentFactory());
 
-    void registry.createFactory<Cell>({
-      type: 'cell-selection',
-      targetFactory: (cell: Cell) => {
-        const { start, end } = cell.editor.getSelection();
-        return {
-          cellID: cell.model.id,
-          start,
-          end
-        };
-      }
-    });
+    // void registry.createFactory<Cell>({
+    //   type: 'cell',
+    //   targetFactory: (cell: Cell) => {
+    //     return { cellID: cell.model.id };
+    //   }
+    // });
+
+    // void registry.createFactory<Cell>({
+    //   type: 'cell-selection',
+    //   targetFactory: (cell: Cell) => {
+    //     const { start, end } = cell.editor.getSelection();
+    //     return {
+    //       cellID: cell.model.id,
+    //       start,
+    //       end
+    //     };
+    //   }
+    // });
 
     let currAwareness: Awareness | null = null;
 

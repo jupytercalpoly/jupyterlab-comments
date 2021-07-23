@@ -21,7 +21,7 @@ import { Menu } from '@lumino/widgets';
 import { Signal } from '@lumino/signaling';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { ICellModel } from '@jupyterlab/cells';
-import { CommentFactory, ICommentFactory } from './factory';
+import { ACommentFactory, CellCommentFactory, CellSelectionCommentFactory } from './factory';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -35,6 +35,7 @@ type CommentProps = {
   className?: string;
   editable?: boolean;
   target?: any;
+  factory: ACommentFactory;
 };
 
 type CommentWithRepliesProps = {
@@ -42,6 +43,7 @@ type CommentWithRepliesProps = {
   editID: string;
   className?: string;
   target?: any;
+  factory: ACommentFactory;
 };
 
 type CommentWrapperProps = {
@@ -57,6 +59,7 @@ type ReplyAreaProps = {
 type PreviewProps = {
   comment: IComment;
   target: any;
+  factory: ACommentFactory;
 };
 
 type ReplyProps = {
@@ -74,39 +77,40 @@ function Jspan(props: any): JSX.Element {
 }
 
 function JCPreview(props: PreviewProps): JSX.Element {
-  const { comment, target } = props;
-  let cell;
-  //let selection;
-  let previewText;
-  switch (comment.type) {
-    case 'cell': {
-      // cell = target as ICellModel;
-      // previewText = cell.value.text.split('\n')[0] + '...';
-      previewText = '';
-      break;
-    }
-    case 'cell-selection': {
-      cell = target as ICellModel;
-      let mainText = cell.value.text;
-      let selectionComment = comment as ICellSelectionComment;
-      let { start, end } = selectionComment.target;
-      let startIndex = lineToIndex(mainText, start.line, start.column);
-      let endIndex = lineToIndex(mainText, end.line, end.column);
-      if (start < end) {
-        previewText = cell.value.text.slice(startIndex, endIndex);
-      } else {
-        previewText = cell.value.text.slice(endIndex, startIndex);
-      }
-      if (previewText.length > 140) {
-        previewText = previewText.slice(0, 140) + '...';
-      }
-      break;
-    }
-    default: {
-      previewText = 'Unrecognized comment type';
-      break;
-    }
-  }
+  const { comment, target, factory } = props;
+
+  // Assuming factory is the proper cellfactory or cellselectionfactory;
+  let previewText = factory.getPreviewText(comment, target);
+
+  // switch (comment.type) {
+  //   case 'cell': {
+  //     // cell = target as ICellModel;
+  //     // previewText = cell.value.text.split('\n')[0] + '...';
+  //     previewText = '';
+  //     break;
+  //   }
+  //   case 'cell-selection': {
+  //     cell = target as ICellModel;
+  //     let mainText = cell.value.text;
+  //     let selectionComment = comment as ICellSelectionComment;
+  //     let { start, end } = selectionComment.target;
+  //     let startIndex = lineToIndex(mainText, start.line, start.column);
+  //     let endIndex = lineToIndex(mainText, end.line, end.column);
+  //     if (start < end) {
+  //       previewText = cell.value.text.slice(startIndex, endIndex);
+  //     } else {
+  //       previewText = cell.value.text.slice(endIndex, startIndex);
+  //     }
+  //     if (previewText.length > 140) {
+  //       previewText = previewText.slice(0, 140) + '...';
+  //     }
+  //     break;
+  //   }
+  //   default: {
+  //     previewText = 'Unrecognized comment type';
+  //     break;
+  //   }
+  // }
   return (
     <div className="jc-Preview">
       <div className="jc-PreviewBar" />
@@ -129,6 +133,7 @@ function JCComment(props: CommentProps): JSX.Element {
   const className = props.className || '';
   const editable = props.editable;
   const target = props.target;
+  const factory = props.factory;
 
   return (
     <Jdiv
@@ -153,7 +158,7 @@ function JCComment(props: CommentProps): JSX.Element {
 
       <span className="jc-Time">{comment.time}</span>
 
-      {target != null && <JCPreview comment={comment} target={target} />}
+      {target != null && <JCPreview comment={comment} target={target} factory={factory}/>}
 
       <Jdiv
         className="jc-Body jc-EditInputArea"
@@ -214,6 +219,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const className = props.className || '';
   const editID = props.editID;
   const target = props.target;
+  const factory = props.factory;
 
   return (
     <div className={'jc-CommentWithReplies ' + className}>
@@ -221,6 +227,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
         comment={comment}
         editable={editID === comment.id}
         target={target}
+        factory={factory}
       />
       <div className={'jc-Replies'}>
         {comment.replies.map(reply => (
@@ -264,6 +271,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
         comment={commentWidget.comment!}
         editID={commentWidget.editID}
         target={commentWidget.target}
+        factory={commentWidget.factory}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
     </div>
@@ -448,7 +456,7 @@ export class CommentWidget<T = any> extends ReactWidget {
     event.preventDefault();
     event.stopPropagation();
 
-    const reply = CommentFactory.createReply({
+    const reply = ACommentFactory.createReply({
       identity: getIdentity(this._awareness),
       text: target.innerText
     });
@@ -665,7 +673,7 @@ export class CommentWidget<T = any> extends ReactWidget {
     }
   }
 
-  get factory(): ICommentFactory {
+  get factory(): ACommentFactory{
     return this._factory;
   }
 
@@ -678,7 +686,7 @@ export class CommentWidget<T = any> extends ReactWidget {
   private _replyAreaHidden: boolean = true;
   private _editID: string = '';
   private _tracker: INotebookTracker;
-  private _factory: ICommentFactory;
+  private _factory: CellCommentFactory | CellSelectionCommentFactory;
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );
@@ -698,7 +706,7 @@ export namespace CommentWidget {
 
     nbTracker: INotebookTracker;
 
-    factory: ICommentFactory;
+    factory: ACommentFactory;
   }
 
   /**
