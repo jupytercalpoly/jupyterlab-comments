@@ -13,13 +13,14 @@ import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity, randomIdentity } from './utils';
 import { CommentPanel, CommentPanel2, ICommentPanel } from './panel';
-import { CommentWidget, CommentWidgetFactory } from './widget';
+import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
 import { CommentRegistry, ICommentRegistry } from './registry';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import { DocumentRegistry, DocumentWidget } from '@jupyterlab/docregistry';
 import * as Y from 'yjs';
 import { Menu } from '@lumino/widgets';
+import { CommentFileModelFactory } from './model';
 
 namespace CommandIDs {
   export const addComment = 'jl-comments:add-comment';
@@ -93,8 +94,6 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
     panel: ICommentPanel,
     registry: ICommentRegistry
   ) => {
-    console.log('registry', registry);
-
     // A widget tracker for comment widgets
     const commentTracker = new WidgetTracker<CommentWidget<any>>({
       namespace: 'comment-widgets'
@@ -197,7 +196,7 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
 
       let model: YNotebook;
 
-      if (currPanel != null) {
+      if (currPanel != null && currPanel.model != null) {
         model = currPanel.model!.sharedModel as YNotebook;
         model.ycells.unobserveDeep(handleCellChanges);
       }
@@ -237,11 +236,11 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<void> = {
   ): void => {
     const filetype: DocumentRegistry.IFileType = {
       contentType: 'file',
-      displayName: 'omment',
+      displayName: 'comment',
       extensions: ['.comment'],
-      fileFormat: 'json',
+      fileFormat: 'text',
       name: 'comment',
-      mimeTypes: ['text/json']
+      mimeTypes: ['text/plain']
     };
 
     const commentMenu = new Menu({ commands: app.commands });
@@ -249,16 +248,13 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<void> = {
     commentMenu.addItem({ command: CommandIDs.editComment });
     commentMenu.addItem({ command: CommandIDs.replyToComment });
 
-    const factory = new CommentWidgetFactory({
-      name: 'comment-factory',
-      commentMenu,
+    const modelFactory = new CommentFileModelFactory({
       registry,
-      fileTypes: ['comment'],
-      defaultFor: ['comment']
+      commentMenu
     });
 
     app.docRegistry.addFileType(filetype);
-    app.docRegistry.addWidgetFactory(factory);
+    app.docRegistry.addModelFactory(modelFactory);
 
     const panel = new CommentPanel2({
       commands: app.commands,
@@ -275,8 +271,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<void> = {
       if (args.newValue && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
         const path = docWidget.context.path;
-        panel.loadModel(path);
-        console.log('loaded model');
+        void panel.loadModel(path);
       }
     });
 
@@ -297,7 +292,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<void> = {
 
     app.commands.addCommand('saveCommentFile', {
       label: 'Save Comment File',
-      execute: () => void panel.currentModel!.context.save(),
+      execute: () => void panel.fileWidget!.context.save(),
       isEnabled: () => panel != null && panel.currentModel != null
     });
 

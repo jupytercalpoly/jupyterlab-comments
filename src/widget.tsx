@@ -23,14 +23,8 @@ import { INotebookTracker } from '@jupyterlab/notebook';
 import { ICellModel } from '@jupyterlab/cells';
 import { CommentFactory, ICommentFactory } from './factory';
 import { CommentFileModel } from './model';
-import {
-  ABCWidgetFactory,
-  Context,
-  DocumentRegistry,
-  DocumentWidget
-} from '@jupyterlab/docregistry';
+import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
-import { CommentRegistry } from './registry';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -1173,15 +1167,12 @@ export class CommentFileWidget extends Panel {
   constructor(options: CommentFileWidget.IOptions) {
     super();
 
-    const { context, commentMenu } = options;
-    const model = new CommentFileModel(options);
-
-    this.id = `Comments-${model.path}`;
-    this.addClass('jc-CommentFileWidget');
-
+    const { context } = options;
     this._context = context;
-    this._model = model;
-    this._commentMenu = commentMenu;
+    this._model = context.model as CommentFileModel;
+
+    this.id = `Comments-${context.path}`;
+    this.addClass('jc-CommentFileWidget');
   }
 
   onUpdateRequest(msg: Message): void {
@@ -1225,7 +1216,7 @@ export class CommentFileWidget extends Panel {
         widget = new CommentWidget2<null>({
           id: comment.id,
           target: null,
-          menu: this._commentMenu,
+          menu: this.model.commentMenu!,
           factory,
           model: this.model
         });
@@ -1249,55 +1240,11 @@ export class CommentFileWidget extends Panel {
 
   private _model: CommentFileModel;
   private _context: Context;
-  private _commentMenu: Menu;
 }
 
 export namespace CommentFileWidget {
-  export interface IOptions extends CommentFileModel.IOptions {
-    commentMenu: Menu;
-  }
-}
-
-export class CommentWidgetFactory extends ABCWidgetFactory<
-  DocumentWidget<CommentFileWidget>,
-  CommentFileModel
-> {
-  constructor(options: CommentWidgetFactory.IOptions) {
-    super(options);
-
-    const { registry, commentMenu } = options;
-
-    this._registry = registry;
-    this._commentMenu = commentMenu;
-  }
-
-  createNewWidget(
-    context: DocumentRegistry.IContext<DocumentRegistry.IModel>
-  ): DocumentWidget<CommentFileWidget> {
-    const path = context.path;
-
-    const content = new CommentFileWidget({
-      path,
-      sourcePath: path,
-      context: context as Context<DocumentRegistry.IModel>,
-      registry: this._registry,
-      commentMenu: this._commentMenu
-    });
-
-    return new DocumentWidget<CommentFileWidget>({
-      content,
-      context
-    });
-  }
-
-  private _registry: CommentRegistry;
-  private _commentMenu: Menu;
-}
-
-export namespace CommentWidgetFactory {
-  export interface IOptions extends DocumentRegistry.IWidgetFactoryOptions {
-    registry: CommentRegistry;
-    commentMenu: Menu;
+  export interface IOptions {
+    context: Context;
   }
 }
 

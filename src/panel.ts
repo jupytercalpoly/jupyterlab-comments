@@ -148,7 +148,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
         this.addComment(widget);
 
-        if (comment.type == 'cell-selection') {
+        if (comment.type === 'cell-selection') {
           const { start, end } = comment.target as any as ISelection;
           selections.push({
             start,
@@ -277,13 +277,24 @@ export class CommentPanel2 extends CommentPanel {
     this._docWidget.update();
   }
 
-  loadModel(sourcePath: string): void {
+  async pathExists(path: string): Promise<boolean> {
+    const contents = this._docManager.services.contents;
+
+    try {
+      void (await contents.get(path));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async loadModel(sourcePath: string): Promise<void> {
     if (this._docWidget != null) {
       this._docWidget.dispose();
     }
 
     const path = hashString(sourcePath).toString() + '.comment';
-    const factory = this._docManager.registry.getModelFactory('text');
+    const factory = this._docManager.registry.getModelFactory('comment-file');
     const preference = this._docManager.registry.getKernelPreference(
       path,
       'comment-factory',
@@ -293,32 +304,46 @@ export class CommentPanel2 extends CommentPanel {
     let context: Context;
     let isNew: boolean;
     // @ts-ignore
-    context = this._docManager._findContext(path, 'comment-factory') || null;
+    context = this._docManager._findContext(path, 'comment-file') || null;
     if (context == null) {
+      if (await this.pathExists(path)) {
+        console.log('found file', path);
+        isNew = false;
+      } else {
+        console.log('did not find file', path);
+        isNew = true;
+      }
       // @ts-ignore
       context = this._docManager._createContext(path, factory, preference);
-      isNew = true;
       console.log('created new context', context);
     } else {
       isNew = false;
       console.log('found existing context', context);
     }
 
-    const content = new CommentFileWidget({
-      path,
-      sourcePath,
-      context,
-      registry: this.registry,
-      commentMenu: this.commentMenu
-    });
+    const content = new CommentFileWidget({ context });
 
     void this._docManager.services.ready.then(
       () => void context!.initialize(isNew)
     );
 
     this._docWidget = content;
+    this.currentModel!.comments.observe(this._onChange.bind(this));
+
     this.addWidget(content);
     this.update();
+  }
+
+  private _onChange(): void {
+    console.log('change');
+    this.update();
+  }
+
+  get ymodel(): YDocument<any> | undefined {
+    if (this._docWidget == null) {
+      return;
+    }
+    return this._docWidget.context.model.sharedModel as YDocument<any>;
   }
 
   get currentModel(): CommentFileModel | undefined {
@@ -327,6 +352,10 @@ export class CommentPanel2 extends CommentPanel {
       return;
     }
     return docWidget.model;
+  }
+
+  get fileWidget(): CommentFileWidget | undefined {
+    return this._docWidget;
   }
 
   private _docWidget: CommentFileWidget | undefined = undefined;

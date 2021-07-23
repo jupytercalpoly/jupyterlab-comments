@@ -7,9 +7,10 @@ import { PartialJSONValue } from '@lumino/coreutils';
 import { ISignal, Signal } from '@lumino/signaling';
 import { Awareness } from 'y-protocols/awareness';
 import { Menu } from '@lumino/widgets';
-import { Context, DocumentRegistry } from '@jupyterlab/docregistry';
+import { DocumentRegistry } from '@jupyterlab/docregistry';
 import { IModelDB, ModelDB } from '@jupyterlab/observables';
 import { IChangedArgs } from '@jupyterlab/coreutils';
+import { Contents } from '@jupyterlab/services';
 
 /**
  * The default model for comment files.
@@ -19,14 +20,11 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * Construct a new `CommentFileModel`.
    */
   constructor(options: CommentFileModel.IOptions) {
-    const { registry, sourcePath, commentMenu, path, context } = options;
+    const { registry, commentMenu, isInitialized } = options;
 
     this.registry = registry;
-    this._sourcePath = sourcePath;
-    this._path = path;
     this._commentMenu = commentMenu;
-    this._context = context;
-    this.ymodel = context.model.sharedModel as YDocument<any>;
+    this._isInitialized = !!isInitialized;
 
     this.comments.observe(this._commentsObserver);
   }
@@ -76,7 +74,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * Deserialize the model from a string.
    */
   fromString(value: string): void {
-    this.fromJSON(JSON.parse(value));
+    this.fromJSON(JSON.parse(value !== '' ? value : '[]'));
   }
 
   private _commentsObserver = (event: Y.YArrayEvent<IComment>): void => {
@@ -288,7 +286,8 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   }
 
   initialize(): void {
-    return;
+    this.sharedModel.clearUndoHistory();
+    this._isInitialized = true;
   }
 
   /**
@@ -306,20 +305,13 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   /**
    * The underlying model handling RTC between clients.
    */
-  readonly ymodel: YDocument<any>;
+  readonly ymodel = new YDocument<any>();
 
   /**
    * The awareness associated with the document being commented on.
    */
   get awareness(): Awareness {
     return this.ymodel.awareness;
-  }
-
-  /**
-   * The path to the document being commented on.
-   */
-  get sourcePath(): string {
-    return this._sourcePath;
   }
 
   /**
@@ -335,13 +327,6 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    */
   get changed(): ISignal<this, CommentFileModel.IChange> {
     return this._changed;
-  }
-
-  /**
-   * The path to the comment file.
-   */
-  get path(): string {
-    return this._path;
   }
 
   get sharedModel(): ISharedDocument {
@@ -382,8 +367,8 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     return this._isDisposed;
   }
 
-  get context(): Context {
-    return this._context;
+  get isInitialized(): boolean {
+    return this._isInitialized;
   }
 
   private _signalStateChange(oldValue: any, newValue: any, name: string): void {
@@ -399,24 +384,20 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   readonly defaultKernelLanguage = '';
   readonly defaultKernelName = '';
 
+  private _isInitialized: boolean;
   private _dirty: boolean = false;
   private _readOnly: boolean = false;
   private _isDisposed: boolean = false;
-  private _sourcePath: string;
-  private _path: string;
   private _commentMenu: Menu | undefined;
   private _changed = new Signal<this, CommentFileModel.IChange>(this);
   private _stateChanged = new Signal<this, IChangedArgs<any>>(this);
   private _contentChanged = new Signal<this, void>(this);
-  private _context: Context;
 }
 
 export namespace CommentFileModel {
   export interface IOptions {
     registry: ICommentRegistry;
-    path: string;
-    sourcePath: string;
-    context: Context;
+    isInitialized?: boolean;
     commentMenu?: Menu;
   }
 
@@ -426,6 +407,58 @@ export namespace CommentFileModel {
    */
   export interface IChange {
     commentChange: any;
+  }
+}
+
+export class CommentFileModelFactory
+  implements DocumentRegistry.IModelFactory<CommentFileModel>
+{
+  constructor(options: CommentFileModelFactory.IOptions) {
+    const { registry, commentMenu } = options;
+
+    this._registry = registry;
+    this._commentMenu = commentMenu;
+  }
+
+  readonly name: string = 'comment-file';
+  readonly contentType: Contents.ContentType = 'file';
+  readonly fileFormat: Contents.FileFormat = 'text';
+
+  createNew(
+    languagePreference?: string,
+    modelDB?: IModelDB,
+    isInitialized?: boolean
+  ): CommentFileModel {
+    const registry = this._registry;
+    const commentMenu = this._commentMenu;
+    return new CommentFileModel({
+      registry,
+      commentMenu,
+      isInitialized
+    });
+  }
+
+  preferredLanguage(path: string): string {
+    return '';
+  }
+
+  dispose(): void {
+    this._isDisposed = true;
+  }
+
+  get isDisposed(): boolean {
+    return this._isDisposed;
+  }
+
+  private _registry: ICommentRegistry;
+  private _commentMenu: Menu;
+  private _isDisposed = false;
+}
+
+export namespace CommentFileModelFactory {
+  export interface IOptions {
+    registry: ICommentRegistry;
+    commentMenu: Menu;
   }
 }
 
