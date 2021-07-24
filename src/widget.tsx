@@ -2,7 +2,6 @@ import { ReactWidget, UseSignal } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { ellipsesIcon } from '@jupyterlab/ui-components';
 import {
-  ICellSelectionComment,
   IComment,
   IIdentity,
   IReply
@@ -16,7 +15,7 @@ import {
   ISharedMetadatedText
 } from './comments';
 import { Awareness } from 'y-protocols/awareness';
-import { getIdentity, lineToIndex } from './utils';
+import { getIdentity } from './utils';
 import { Menu } from '@lumino/widgets';
 import { Signal } from '@lumino/signaling';
 import { INotebookTracker } from '@jupyterlab/notebook';
@@ -295,6 +294,7 @@ export class CommentWidget<T = any> extends ReactWidget {
     this._menu = menu;
     this._tracker = nbTracker;
     this._factory = factory;
+    // this._target = factory.getTarget(this.comment);
 
     this.addClass('jc-CommentWidget');
     this.node.tabIndex = 0;
