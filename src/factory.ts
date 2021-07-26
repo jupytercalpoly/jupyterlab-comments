@@ -1,19 +1,24 @@
-import { ICellSelectionComment, IComment, IIdentity, IReply } from './commentformat';
+import {
+  ICellSelectionComment,
+  IComment,
+  IIdentity,
+  IReply
+} from './commentformat';
 import { PartialJSONValue, UUID } from '@lumino/coreutils';
 import { getCommentTimeString } from './utils';
 import { Cell, ICellModel } from '@jupyterlab/cells';
 
 export abstract class ACommentFactory<T = any> {
-
-  abstract getPreviewText(comment : IComment, target: T): string;
-  constructor(options: ACommentFactory.IOptions<T>) {
-    const { type, targetFactory } = options;
+  abstract getPreviewText(comment: IComment, target: T): string;
+  constructor(options: ACommentFactory.IOptions) {
+    const { type } = options;
     this.type = type;
-    this.targetFactory = targetFactory;
   }
+
+  abstract targetToJSON(target: T): PartialJSONValue;
+
   createComment(options: ACommentFactory.ICommentOptions<T>): IComment {
     const { target, text, identity, replies, id } = options;
-
     return {
       text,
       identity,
@@ -21,7 +26,7 @@ export abstract class ACommentFactory<T = any> {
       id: id ?? UUID.uuid4(),
       replies: replies ?? [],
       time: getCommentTimeString(),
-      target: this.targetFactory(target)
+      target: this.targetToJSON(target)
     };
   }
   createCommentWithPrecomputedTarget(
@@ -52,38 +57,37 @@ export abstract class ACommentFactory<T = any> {
     };
   }
   readonly type: string;
-  readonly targetFactory: (target: T) => PartialJSONValue;
 }
 
 export class CellCommentFactory extends ACommentFactory {
   constructor() {
     super({
-      type: 'cell',
-      targetFactory: (cell: Cell) => {
-        return { cellid: cell.model.id };
-      }
+      type: 'cell'
     });
   }
   getPreviewText(comment: IComment, target: any): string {
-    return ""
+    return '';
+  }
+  targetToJSON(cell: Cell): PartialJSONValue {
+    return { cellid: cell.model.id };
   }
 }
 
 export class CellSelectionCommentFactory extends ACommentFactory {
   constructor() {
     super({
-      type: 'cell-selection',
-      targetFactory: (cell: Cell) => {
-        const { start, end } = cell.editor.getSelection();
-        return {
-          cellID: cell.model.id,
-          start,
-          end
-        };
-      }
+      type: 'cell-selection'
     });
   }
 
+  targetToJSON(cell: Cell): PartialJSONValue {
+    const { start, end } = cell.editor.getSelection();
+    return {
+      cellID: cell.model.id,
+      start,
+      end
+    };
+  }
   getPreviewText(comment: IComment, target: any): string {
     let previewText: string;
     let cell = target as ICellModel;
@@ -100,14 +104,13 @@ export class CellSelectionCommentFactory extends ACommentFactory {
     if (previewText.length > 140) {
       previewText = previewText.slice(0, 140) + '...';
     }
-    return previewText; 
+    return previewText;
   }
 }
 
 export namespace ACommentFactory {
-  export interface IOptions<T> {
+  export interface IOptions {
     type: string; // cell or cell-selection
-    targetFactory: (target: T) => PartialJSONValue;
   }
 
   export interface IReplyOptions {
@@ -121,7 +124,6 @@ export namespace ACommentFactory {
     replies?: IReply[];
   }
 }
-
 
 //function that converts a line-column pairing to an index
 export function lineToIndex(str: string, line: number, col: number): number {
