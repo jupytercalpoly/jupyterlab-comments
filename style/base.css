@@ -200,10 +200,11 @@
 .jc-panelHeader-filename{
   font-size: var(--jp-ui-font-size1);
   color: var(--jp-ui-font-color0);
+  margin-top: -3px;
 }
 
 .jc-panelHeader-left {
-  color: black;
+  color: black; 
 }
 .jc-panelHeader-right {
   display: flex;
