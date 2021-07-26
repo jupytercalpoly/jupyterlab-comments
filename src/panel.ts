@@ -4,19 +4,23 @@ import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
 import { listIcon } from '@jupyterlab/ui-components';
 import { INotebookTracker } from '@jupyterlab/notebook';
-import { CommentWidget } from './widget';
+import { CommentFileWidget, CommentWidget } from './widget';
 import { getComments } from './comments';
 import { ICellModel } from '@jupyterlab/cells';
 import { YDocument } from '@jupyterlab/shared-models';
-import { Signal } from '@lumino/signaling';
+import { ISignal, Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
 import { ISelection } from './commentformat';
 import { ICommentRegistry } from './registry';
 import { ACommentFactory } from './factory';
-import { PanelHeader } from './panelHeaderWidget';
 import { ILabShell } from '@jupyterlab/application';
-
+import { PanelHeader } from './panelHeaderWidget';
+import { IDocumentManager } from '@jupyterlab/docmanager';
+import { Context } from '@jupyterlab/docregistry';
+import { hashString } from './utils';
+import { CommentFileModel } from './model';
+import * as Y from 'yjs';
 
 export interface ICommentPanel extends Panel {
   /**
@@ -59,7 +63,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.title.icon = listIcon;
     this.addClass('jc-CommentPanel');
 
-    const panelHeader: PanelHeader = new PanelHeader({ shell: options.shell});
+    const panelHeader: PanelHeader = new PanelHeader({ shell: options.shell });
 
     this.addWidget(panelHeader as Widget);
 
@@ -67,7 +71,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
     // Dropdown for identity
     this._commentMenu = new Menu({ commands: options.commands });
   }
-
 
   /**
    * Re-render the comment widgets when an `update` message is recieved.
@@ -90,7 +93,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
       console.warn('No awareness; aborting panel render');
       return;
     }
-    this._panelHeader.renderNeeded.emit(awareness)
+    this._panelHeader.renderNeeded.emit(awareness);
 
     while (this.widgets.length > 1) {
       this.widgets[1].dispose();
@@ -146,10 +149,12 @@ export class CommentPanel extends Panel implements ICommentPanel {
         });
 
         this.addComment(widget);
-        if (comment.type == 'text') {
+
+        if (comment.type === 'cell-selection') {
+          const { start, end } = comment.target as any as ISelection;
           selections.push({
-            start: (comment as ISelection).start,
-            end: (comment as ISelection).end,
+            start,
+            end,
             style: {
               className: 'jc-Highlight',
               color: 'black',
@@ -228,12 +233,18 @@ export class CommentPanel extends Panel implements ICommentPanel {
     if (sharedModel == null) {
       return undefined;
     }
-    this._panelHeader.renderNeeded.emit((sharedModel as any as YDocument<any>).awareness);
+    this._panelHeader.renderNeeded.emit(
+      (sharedModel as any as YDocument<any>).awareness
+    );
     return (sharedModel as any as YDocument<any>).awareness;
   }
 
   get nbTracker(): INotebookTracker {
     return this._tracker;
+  }
+
+  get registry(): ICommentRegistry {
+    return this._registry;
   }
 
   private _tracker: INotebookTracker;
@@ -251,4 +262,113 @@ export namespace CommentPanel {
     registry: ICommentRegistry;
     shell: ILabShell;
   }
+}
+
+export namespace CommentPanel2 {
+  export interface IOptions extends CommentPanel.IOptions {
+    docManager: IDocumentManager;
+  }
+}
+
+export class CommentPanel2 extends CommentPanel {
+  constructor(options: CommentPanel2.IOptions) {
+    super(options);
+
+    const { docManager } = options;
+
+    this._docManager = docManager;
+  }
+
+  onUpdateRequest(msg: Message): void {
+    if (this._fileWidget == null) {
+      console.log('this._fileWidget is null');
+      return;
+    }
+
+    this._fileWidget.update();
+  }
+
+  async pathExists(path: string): Promise<boolean> {
+    const contents = this._docManager.services.contents;
+
+    try {
+      void (await contents.get(path));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async getContext(path: string): Promise<Context> {
+    const factory = this._docManager.registry.getModelFactory('comment-file');
+    const preference = this._docManager.registry.getKernelPreference(
+      path,
+      'comment-factory',
+      undefined
+    );
+
+    let context: Context;
+    let isNew: boolean = false;
+    // @ts-ignore
+    context = this._docManager._findContext(path, 'comment-file') || null;
+    if (context == null) {
+      isNew = !(await this.pathExists(path));
+      // @ts-ignore
+      context = this._docManager._createContext(path, factory, preference);
+    }
+
+    void this._docManager.services.ready.then(
+      () => void context!.initialize(isNew)
+    );
+
+    return context;
+  }
+
+  async loadModel(sourcePath: string): Promise<void> {
+    if (this._fileWidget != null) {
+      this._fileWidget.dispose();
+    }
+
+    const path = hashString(sourcePath).toString() + '.comment';
+    const context = await this.getContext(path);
+    const content = new CommentFileWidget({ context });
+
+    this._fileWidget = content;
+    this.currentModel!.comments.observeDeep(this._onChange.bind(this));
+
+    this.addWidget(content);
+    this._modelChanged.emit(content);
+    this.update();
+  }
+
+  private _onChange(changes: Y.YEvent[]): void {
+    this.update();
+  }
+
+  get ymodel(): YDocument<any> | undefined {
+    if (this._fileWidget == null) {
+      return;
+    }
+    return this._fileWidget.context.model.sharedModel as YDocument<any>;
+  }
+
+  get currentModel(): CommentFileModel | undefined {
+    const docWidget = this._fileWidget;
+    if (docWidget == null) {
+      return;
+    }
+    return docWidget.model;
+  }
+
+  get fileWidget(): CommentFileWidget | undefined {
+    return this._fileWidget;
+  }
+
+  get modelChanged(): ISignal<this, CommentFileWidget | undefined> {
+    return this._modelChanged;
+  }
+
+  private _fileWidget: CommentFileWidget | undefined = undefined;
+  private _docManager: IDocumentManager;
+  private _modelChanged = new Signal<this, CommentFileWidget | undefined>(this);
 }

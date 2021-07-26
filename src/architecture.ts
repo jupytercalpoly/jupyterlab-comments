@@ -107,7 +107,7 @@ export interface ICommentFileModel {
   // Whether the model is currently rendered in the comment panel.
   inPanel: boolean;
 
-  // The comment factory registry
+  // The comment registry
   registry: ICommentRegistry;
 }
 

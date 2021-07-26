@@ -17,29 +17,29 @@ export function randomIdentity(): IIdentity {
   };
 }
 
-export function setIdentityName(awareness: Awareness, name: string): boolean{
+export function setIdentityName(awareness: Awareness, name: string): boolean {
   let localState = awareness.getLocalState();
-  if (localState == null ) {
+  if (localState == null) {
     return false;
   }
   const oldUser = localState['user'];
-  if (oldUser == null){
-    return false ;
+  if (oldUser == null) {
+    return false;
   }
   let newUser = {
-    'name': name,
-    'color': oldUser['color'],
-  }
+    name: name,
+    color: oldUser['color']
+  };
   awareness.setLocalStateField('user', newUser);
 
   //Checking if the localState has been updated
   localState = awareness.getLocalState();
-  if (localState == null ) {
+  if (localState == null) {
     return false;
   }
-  if (localState['user']['name'] != name){
+  if (localState['user']['name'] != name) {
     return false;
-  } 
+  }
   return true;
 }
 
@@ -83,4 +83,17 @@ export function lineToIndex(str: string, line: number, col: number): number {
     let arr = str.split('\n');
     return arr.slice(0, line).join('\n').length + col + 1;
   }
+}
+
+export function hashString(s: string): number {
+  let hash = 0;
+  if (s.length == 0) {
+    return hash;
+  }
+  for (let i = 0; i < s.length; i++) {
+    let char = s.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash;
 }

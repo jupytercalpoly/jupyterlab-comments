@@ -11,13 +11,17 @@ import { Token, UUID } from '@lumino/coreutils';
 import { IComment } from './commentformat';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
-import { getCommentTimeString, getIdentity } from './utils';
-import { CommentPanel, ICommentPanel } from './panel';
-import { CommentWidget } from './widget';
+import { getCommentTimeString, getIdentity, randomIdentity } from './utils';
+import { CommentPanel, CommentPanel2, ICommentPanel } from './panel';
+import { CommentWidget, CommentWidget2 } from './widget';
 import { Cell } from '@jupyterlab/cells';
 import { CommentRegistry, ICommentRegistry } from './registry';
+import { IDocumentManager } from '@jupyterlab/docmanager';
+import { DocumentRegistry, DocumentWidget } from '@jupyterlab/docregistry';
 import * as Y from 'yjs';
-import { CellCommentFactory, CellSelectionCommentFactory  } from './factory';
+import { CellCommentFactory, CellSelectionCommentFactory } from './factory';
+import { Menu } from '@lumino/widgets';
+import { CommentFileModelFactory } from './model';
 
 namespace CommandIDs {
   export const addComment = 'jl-comments:add-comment';
@@ -79,22 +83,29 @@ export const panelPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
   }
 };
 
+type CommentTracker = WidgetTracker<CommentWidget<any> | CommentWidget2<any>>;
+
+const ICommentTracker = new Token<CommentTracker>(
+  'jupyterlab-comments:comment-tracker'
+);
 /**
  * A plugin that allows notebooks to be commented on.
  */
-const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
+const notebookCommentsPlugin: JupyterFrontEndPlugin<CommentTracker> = {
   id: 'jupyterlab-comments:plugin',
   autoStart: true,
-  requires: [INotebookTracker, ILabShell, ICommentPanel, ICommentRegistry],
+  requires: [INotebookTracker, ICommentPanel, ICommentRegistry],
+  provides: ICommentTracker,
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
-    shell: ILabShell,
     panel: ICommentPanel,
     registry: ICommentRegistry
   ) => {
     // A widget tracker for comment widgets
-    const commentTracker = new WidgetTracker<CommentWidget<any>>({
+    const commentTracker = new WidgetTracker<
+      CommentWidget<any> | CommentWidget2<any>
+    >({
       namespace: 'comment-widgets'
     });
 
@@ -173,7 +184,7 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
 
       let model: YNotebook;
 
-      if (currPanel != null) {
+      if (currPanel != null && currPanel.model != null) {
         model = currPanel.model!.sharedModel as YNotebook;
         model.ycells.unobserveDeep(handleCellChanges);
       }
@@ -197,13 +208,117 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
       selector: '.jp-Notebook .jp-Cell',
       rank: 13
     });
+
+    return commentTracker;
+  }
+};
+
+export const jupyterCommentingPlugin: JupyterFrontEndPlugin<void> = {
+  id: 'jupyterlab-comments:commenting-api',
+  autoStart: true,
+  requires: [
+    ICommentRegistry,
+    ILabShell,
+    IDocumentManager,
+    INotebookTracker,
+    ICommentTracker
+  ],
+  activate: (
+    app: JupyterFrontEnd,
+    registry: ICommentRegistry,
+    shell: ILabShell,
+    docManager: IDocumentManager,
+    tracker: INotebookTracker,
+    commentTracker: CommentTracker
+  ): void => {
+    const filetype: DocumentRegistry.IFileType = {
+      contentType: 'file',
+      displayName: 'comment',
+      extensions: ['.comment'],
+      fileFormat: 'text',
+      name: 'comment',
+      mimeTypes: ['text/plain']
+    };
+
+    const commentMenu = new Menu({ commands: app.commands });
+    commentMenu.addItem({ command: CommandIDs.deleteComment });
+    commentMenu.addItem({ command: CommandIDs.editComment });
+    commentMenu.addItem({ command: CommandIDs.replyToComment });
+
+    const modelFactory = new CommentFileModelFactory({
+      registry,
+      commentMenu
+    });
+
+    app.docRegistry.addFileType(filetype);
+    app.docRegistry.addModelFactory(modelFactory);
+
+    const panel = new CommentPanel2({
+      commands: app.commands,
+      registry,
+      docManager,
+      tracker,
+      shell
+    });
+
+    // Add the panel to the shell's right area.
+    shell.add(panel, 'right', { rank: 600 });
+
+    panel.revealed.connect(() => panel.update());
+    shell.currentChanged.connect((_, args) => {
+      if (args.newValue && args.newValue instanceof DocumentWidget) {
+        const docWidget = args.newValue as DocumentWidget;
+        void panel.loadModel(docWidget.context.path);
+      }
+    });
+
+    panel.modelChanged.connect((_, fileWidget) => {
+      if (fileWidget != null) {
+        fileWidget.commentAdded.connect(
+          (_, commentWidget) => void commentTracker.add(commentWidget)
+        );
+      }
+    });
+
+    app.commands.addCommand('addComment', {
+      label: 'Add Document Comment',
+      execute: () => {
+        const model = panel.currentModel!;
+        model.addComment({
+          text: UUID.uuid4(),
+          type: 'test',
+          target: null,
+          identity: randomIdentity()
+        });
+        panel.update();
+      },
+      isEnabled: () => panel != null && panel.currentModel != null
+    });
+
+    app.commands.addCommand('saveCommentFile', {
+      label: 'Save Comment File',
+      execute: () => void panel.fileWidget!.context.save(),
+      isEnabled: () => panel != null && panel.currentModel != null
+    });
+
+    app.contextMenu.addItem({
+      command: 'addComment',
+      selector: '.lm-Widget',
+      rank: 0
+    });
+
+    app.contextMenu.addItem({
+      command: 'saveCommentFile',
+      selector: '.lm-Widget',
+      rank: 1
+    });
   }
 };
 
 function addCommands(
   app: JupyterFrontEnd,
   nbTracker: INotebookTracker,
-  commentTracker: WidgetTracker<CommentWidget<any>>,
+  commentTracker: CommentTracker,
   panel: ICommentPanel,
   registry: ICommentRegistry
 ): void {
@@ -255,7 +370,7 @@ function addCommands(
     execute: () => {
       const currentComment = commentTracker.currentWidget;
       if (currentComment != null) {
-        currentComment.editActive();
+        currentComment.openEditActive();
       }
     }
   });
@@ -320,6 +435,7 @@ namespace Private {
 const plugins: JupyterFrontEndPlugin<any>[] = [
   panelPlugin,
   notebookCommentsPlugin,
-  commentRegistryPlugin
+  commentRegistryPlugin,
+  jupyterCommentingPlugin
 ];
 export default plugins;
