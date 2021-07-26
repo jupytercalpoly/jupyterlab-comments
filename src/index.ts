@@ -13,7 +13,7 @@ import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
 import { getCommentTimeString, getIdentity, randomIdentity } from './utils';
 import { CommentPanel, CommentPanel2, ICommentPanel } from './panel';
-import { CommentWidget } from './widget';
+import { CommentWidget, CommentWidget2 } from './widget';
 import { Cell } from '@jupyterlab/cells';
 import { CommentRegistry, ICommentRegistry } from './registry';
 import { IDocumentManager } from '@jupyterlab/docmanager';
@@ -81,13 +81,19 @@ export const panelPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
   }
 };
 
+type CommentTracker = WidgetTracker<CommentWidget<any> | CommentWidget2<any>>;
+
+const ICommentTracker = new Token<CommentTracker>(
+  'jupyterlab-comments:comment-tracker'
+);
 /**
  * A plugin that allows notebooks to be commented on.
  */
-const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
+const notebookCommentsPlugin: JupyterFrontEndPlugin<CommentTracker> = {
   id: 'jupyterlab-comments:plugin',
   autoStart: true,
   requires: [INotebookTracker, ICommentPanel, ICommentRegistry],
+  provides: ICommentTracker,
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
@@ -95,7 +101,9 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
     registry: ICommentRegistry
   ) => {
     // A widget tracker for comment widgets
-    const commentTracker = new WidgetTracker<CommentWidget<any>>({
+    const commentTracker = new WidgetTracker<
+      CommentWidget<any> | CommentWidget2<any>
+    >({
       namespace: 'comment-widgets'
     });
 
@@ -175,7 +183,6 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
     // `events` and `t` are currently `any` because of a bug when importing `yjs`
     // Build fails for some people so for now the yjs types aren't being used directly.
     const handleCellChanges = (events: Y.YEvent[], t: unknown): void => {
-      console.log(events);
       for (let e of events) {
         if (
           e.target instanceof Y.Map &&
@@ -220,19 +227,28 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
       selector: '.jp-Notebook .jp-Cell',
       rank: 13
     });
+
+    return commentTracker;
   }
 };
 
 export const jupyterCommentingPlugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-comments:commenting-api',
   autoStart: true,
-  requires: [ICommentRegistry, ILabShell, IDocumentManager, INotebookTracker],
+  requires: [
+    ICommentRegistry,
+    ILabShell,
+    IDocumentManager,
+    INotebookTracker,
+    ICommentTracker
+  ],
   activate: (
     app: JupyterFrontEnd,
     registry: ICommentRegistry,
     shell: ILabShell,
     docManager: IDocumentManager,
-    tracker: INotebookTracker
+    tracker: INotebookTracker,
+    commentTracker: CommentTracker
   ): void => {
     const filetype: DocumentRegistry.IFileType = {
       contentType: 'file',
@@ -270,8 +286,15 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<void> = {
     shell.currentChanged.connect((_, args) => {
       if (args.newValue && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
-        const path = docWidget.context.path;
-        void panel.loadModel(path);
+        void panel.loadModel(docWidget.context.path);
+      }
+    });
+
+    panel.modelChanged.connect((_, fileWidget) => {
+      if (fileWidget != null) {
+        fileWidget.commentAdded.connect(
+          (_, commentWidget) => void commentTracker.add(commentWidget)
+        );
       }
     });
 
@@ -313,7 +336,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<void> = {
 function addCommands(
   app: JupyterFrontEnd,
   nbTracker: INotebookTracker,
-  commentTracker: WidgetTracker<CommentWidget<any>>,
+  commentTracker: CommentTracker,
   panel: ICommentPanel,
   registry: ICommentRegistry
 ): void {
@@ -365,7 +388,7 @@ function addCommands(
     execute: () => {
       const currentComment = commentTracker.currentWidget;
       if (currentComment != null) {
-        currentComment.editActive();
+        currentComment.openEditActive();
       }
     }
   });

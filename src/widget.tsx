@@ -18,7 +18,7 @@ import {
 import { Awareness } from 'y-protocols/awareness';
 import { getIdentity, lineToIndex } from './utils';
 import { Menu, Panel } from '@lumino/widgets';
-import { Signal } from '@lumino/signaling';
+import { ISignal, Signal } from '@lumino/signaling';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { ICellModel } from '@jupyterlab/cells';
 import { CommentFactory, ICommentFactory } from './factory';
@@ -545,6 +545,11 @@ export class CommentWidget<T = any> extends ReactWidget {
     ) as HTMLCollectionOf<HTMLDivElement>;
     const target = elements[0];
     target.focus();
+  }
+
+  // For interface compatibility between CommentWidget and CommentWidget2
+  openEditActive(): void {
+    this.editActive();
   }
 
   /**
@@ -1178,36 +1183,66 @@ export class CommentFileWidget extends Panel {
   onUpdateRequest(msg: Message): void {
     super.onUpdateRequest(msg);
 
+    // const changes = this._changes;
+    // const { insertions, deletions, updates } = changes;
+    // const toDelete: Widget[] = [];
+
+    // const registry = this.model.registry;
+    // for (let [id, index] of Object.entries(insertions)) {
+    //   const comment = this.model.getComment(id);
+    //   if (comment == null) {
+    //     continue;
+    //   }
+
+    //   const factory = registry.getFactory(id);
+    //   if (factory == null) {
+    //     continue;
+    //   }
+
+    //   let widget;
+    //   if (comment.type === 'test') {
+    //     widget = new CommentWidget2<null>({
+    //       id,
+    //       target: null,
+    //       menu: this.model.commentMenu!,
+    //       factory,
+    //       model: this.model
+    //     });
+    //   } else {
+    //     widget = factory.createWidget(comment);
+    //   }
+
+    //   if (widget == null) {
+    //     continue;
+    //   }
+
+    //   if (index == null) {
+    //     this.addWidget(widget)
+    //   } else {
+    //     this.insertWidget(index, widget);
+    //   }
+    // }
+
+    // this.widgets.forEach((widget) => {
+    //   const id = widget.id;
+    //   if (id in updates) {
+    //     widget.update();
+    //   } else if (id in deletions) {
+    //     toDelete.push(widget);
+    //   }
+    // });
+
+    // toDelete.forEach(widget => widget.dispose());
+
     const { comments, registry } = this.model;
 
     while (this.widgets.length > 0) {
       this.widgets[0].dispose();
     }
 
-    let t1: string = '';
-    let t2: string = '';
-    let f1: CommentFactory<any> | undefined;
-    let f2: CommentFactory<any> | undefined;
-    let factory: CommentFactory<any> | undefined;
     comments.forEach(comment => {
-      // Simple factory/type "cache" to speed up panel updates
-      if (comment.type === '') {
-        console.warn('empty comment type is not allowed');
-        return;
-      } else if (t1 === comment.type) {
-        factory = f1;
-      } else if (t2 === comment.type) {
-        factory = f2;
-        [f2, f1] = [f1, f2];
-        [t2, t1] = [t1, t2];
-      } else {
-        factory = registry.getFactory(comment.type);
-        [f2, t2] = [f1, t1];
-        [f1, t1] = [factory, comment.type];
-      }
-
+      const factory = registry.getFactory(comment.type);
       if (factory == null) {
-        console.warn('no factory found for comment with type', comment.type);
         return;
       }
 
@@ -1225,9 +1260,14 @@ export class CommentFileWidget extends Panel {
       }
 
       if (widget != null) {
-        this.addWidget(widget);
+        this.addComment(widget);
       }
     });
+  }
+
+  addComment(widget: CommentWidget2<any>) {
+    this.addWidget(widget);
+    this._commentAdded.emit(widget);
   }
 
   get model(): CommentFileModel {
@@ -1238,8 +1278,22 @@ export class CommentFileWidget extends Panel {
     return this._context;
   }
 
+  get commentAdded(): ISignal<this, CommentWidget2<any>> {
+    return this._commentAdded;
+  }
+
   private _model: CommentFileModel;
   private _context: Context;
+  private _commentAdded = new Signal<this, CommentWidget2<any>>(this);
+  // private _changes: {
+  //   insertions: { [id: string]: number | null },
+  //   deletions: string[],
+  //   updates: string[]
+  // } = {
+  //   insertions: {},
+  //   deletions: [],
+  //   updates: []
+  // };
 }
 
 export namespace CommentFileWidget {

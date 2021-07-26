@@ -26,7 +26,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     this._commentMenu = commentMenu;
     this._isInitialized = !!isInitialized;
 
-    this.comments.observe(this._commentsObserver);
+    this.comments.observeDeep(this._commentsObserver);
   }
 
   /**
@@ -38,9 +38,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     }
 
     this._isDisposed = true;
-    this.comments.unobserve(this._commentsObserver);
-    // Remove all signal connections from the model.
-    Signal.clearData(this);
+    this.comments.unobserveDeep(this._commentsObserver);
   }
 
   /**
@@ -77,10 +75,10 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     this.fromJSON(JSON.parse(value !== '' ? value : '[]'));
   }
 
-  private _commentsObserver = (event: Y.YArrayEvent<IComment>): void => {
+  private _commentsObserver = (event: Y.YEvent[]): void => {
     // In the future, this should emit a signal describing changes made to the comments.
     // I don't understand YArrayEvent well enough yet so I'm just logging it here.
-    console.log(event);
+    console.log('changes', event as Y.YEvent[]);
   };
 
   /**
