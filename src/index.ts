@@ -19,7 +19,11 @@ import { CommentRegistry, ICommentRegistry } from './registry';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import { DocumentRegistry, DocumentWidget } from '@jupyterlab/docregistry';
 import * as Y from 'yjs';
-import { CellCommentFactory, CellSelectionCommentFactory } from './factory';
+import {
+  CellCommentFactory,
+  CellSelectionCommentFactory,
+  TestCommentFactory
+} from './factory';
 import { Menu } from '@lumino/widgets';
 import { CommentFileModelFactory } from './model';
 
@@ -111,6 +115,7 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<CommentTracker> = {
 
     void registry.addFactory(new CellCommentFactory());
     void registry.addFactory(new CellSelectionCommentFactory());
+    void registry.addFactory(new TestCommentFactory());
 
     let currAwareness: Awareness | null = null;
 

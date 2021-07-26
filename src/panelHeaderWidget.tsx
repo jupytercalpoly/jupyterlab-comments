@@ -10,7 +10,7 @@ import { CommentsHubIcon, CreateCommentIcon } from './icons';
 
 import { caretDownEmptyThinIcon, editIcon } from '@jupyterlab/ui-components';
 
-import { Signal } from '@lumino/signaling';
+import { ISignal, Signal } from '@lumino/signaling';
 import { ILabShell } from '@jupyterlab/application';
 import { DocumentWidget } from '@jupyterlab/docregistry';
 /**
@@ -40,7 +40,7 @@ function UserIdentity(props: IdentityProps): JSX.Element {
       return (
         <div
           contentEditable={editable}
-          className={"jc-panelHeader-EditInputArea-"+editable}
+          className={'jc-panelHeader-EditInputArea-' + editable}
           onKeyDown={handleKeydown}
           suppressContentEditableWarning={true}
         >
@@ -65,11 +65,10 @@ function UserIdentity(props: IdentityProps): JSX.Element {
     event.stopPropagation();
 
     if (awareness != null) {
-      if(target.textContent == '' || target.textContent == null){
-        target.textContent = getIdentity(awareness).name
-      }
-      else if (target.textContent){
-          setIdentityName(awareness, target.textContent);
+      if (target.textContent == '' || target.textContent == null) {
+        target.textContent = getIdentity(awareness).name;
+      } else if (target.textContent) {
+        setIdentityName(awareness, target.textContent);
       }
     }
     SetEditable(false);
@@ -99,9 +98,6 @@ export class PanelHeader extends ReactWidget {
     super();
     const { shell } = options;
     this._shell = shell;
-    this._renderNeeded.connect((_, aware) => {
-      this._awareness = aware;
-    });
   }
 
   render(): ReactRenderElement {
@@ -135,14 +131,21 @@ export class PanelHeader extends ReactWidget {
   /**
    * A signal emitted when a React re-render is required.
    */
-  get renderNeeded(): Signal<this, Awareness> {
+  get renderNeeded(): ISignal<this, void> {
     return this._renderNeeded;
   }
+
+  get awareness(): Awareness | undefined {
+    return this._awareness;
+  }
+  set awareness(newValue: Awareness | undefined) {
+    this._awareness = newValue;
+    this._renderNeeded.emit(undefined);
+  }
+
   private _awareness: Awareness | undefined;
   private _shell: ILabShell;
-  private _renderNeeded: Signal<this, Awareness> = new Signal<this, Awareness>(
-    this
-  );
+  private _renderNeeded = new Signal<this, void>(this);
 }
 
 export namespace PanelHeader {

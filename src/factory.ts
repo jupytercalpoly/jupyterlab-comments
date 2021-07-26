@@ -17,6 +17,10 @@ export abstract class ACommentFactory<T = any> {
 
   abstract targetToJSON(target: T): PartialJSONValue;
 
+  createWidget(comment: IComment): any {
+    return;
+  }
+
   createComment(options: ACommentFactory.ICommentOptions<T>): IComment {
     const { target, text, identity, replies, id } = options;
     return {
@@ -59,25 +63,37 @@ export abstract class ACommentFactory<T = any> {
   readonly type: string;
 }
 
-export class CellCommentFactory extends ACommentFactory {
+export class TestCommentFactory extends ACommentFactory<null> {
   constructor() {
-    super({
-      type: 'cell'
-    });
+    super({ type: 'test' });
   }
+
   getPreviewText(comment: IComment, target: any): string {
     return '';
   }
+
+  targetToJSON(_: null): null {
+    return null;
+  }
+}
+
+export class CellCommentFactory extends ACommentFactory<Cell> {
+  constructor() {
+    super({ type: 'cell' });
+  }
+
+  getPreviewText(comment: IComment, target: any): string {
+    return '';
+  }
+
   targetToJSON(cell: Cell): PartialJSONValue {
     return { cellid: cell.model.id };
   }
 }
 
-export class CellSelectionCommentFactory extends ACommentFactory {
+export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
   constructor() {
-    super({
-      type: 'cell-selection'
-    });
+    super({ type: 'cell-selection' });
   }
 
   targetToJSON(cell: Cell): PartialJSONValue {
@@ -88,6 +104,7 @@ export class CellSelectionCommentFactory extends ACommentFactory {
       end
     };
   }
+
   getPreviewText(comment: IComment, target: any): string {
     let previewText: string;
     let cell = target as ICellModel;

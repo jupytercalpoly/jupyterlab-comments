@@ -93,7 +93,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
       console.warn('No awareness; aborting panel render');
       return;
     }
-    this._panelHeader.renderNeeded.emit(awareness);
+    this._panelHeader.awareness = awareness;
 
     while (this.widgets.length > 1) {
       this.widgets[1].dispose();
@@ -233,9 +233,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
     if (sharedModel == null) {
       return undefined;
     }
-    this._panelHeader.renderNeeded.emit(
-      (sharedModel as any as YDocument<any>).awareness
-    );
     return (sharedModel as any as YDocument<any>).awareness;
   }
 
@@ -285,6 +282,10 @@ export class CommentPanel2 extends CommentPanel {
       return;
     }
 
+    const awareness = this.awareness;
+    if (awareness != null) {
+      this.panelHeader.awareness = awareness;
+    }
     this._fileWidget.update();
   }
 
@@ -366,6 +367,15 @@ export class CommentPanel2 extends CommentPanel {
 
   get modelChanged(): ISignal<this, CommentFileWidget | undefined> {
     return this._modelChanged;
+  }
+
+  get awareness(): Awareness | undefined {
+    const currentModel = this.currentModel;
+    if (currentModel == null) {
+      return;
+    }
+
+    return (currentModel.sharedModel as YDocument<any>).awareness;
   }
 
   private _fileWidget: CommentFileWidget | undefined = undefined;
