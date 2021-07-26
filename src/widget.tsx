@@ -20,7 +20,7 @@ import { Menu } from '@lumino/widgets';
 import { Signal } from '@lumino/signaling';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { ICellModel } from '@jupyterlab/cells';
-import { ACommentFactory, CellCommentFactory, CellSelectionCommentFactory } from './factory';
+import { ACommentFactory } from './factory';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
