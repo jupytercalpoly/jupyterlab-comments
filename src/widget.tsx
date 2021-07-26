@@ -81,35 +81,6 @@ function JCPreview(props: PreviewProps): JSX.Element {
   // Assuming factory is the proper cellfactory or cellselectionfactory;
   let previewText = factory.getPreviewText(comment, target);
 
-  // switch (comment.type) {
-  //   case 'cell': {
-  //     // cell = target as ICellModel;
-  //     // previewText = cell.value.text.split('\n')[0] + '...';
-  //     previewText = '';
-  //     break;
-  //   }
-  //   case 'cell-selection': {
-  //     cell = target as ICellModel;
-  //     let mainText = cell.value.text;
-  //     let selectionComment = comment as ICellSelectionComment;
-  //     let { start, end } = selectionComment.target;
-  //     let startIndex = lineToIndex(mainText, start.line, start.column);
-  //     let endIndex = lineToIndex(mainText, end.line, end.column);
-  //     if (start < end) {
-  //       previewText = cell.value.text.slice(startIndex, endIndex);
-  //     } else {
-  //       previewText = cell.value.text.slice(endIndex, startIndex);
-  //     }
-  //     if (previewText.length > 140) {
-  //       previewText = previewText.slice(0, 140) + '...';
-  //     }
-  //     break;
-  //   }
-  //   default: {
-  //     previewText = 'Unrecognized comment type';
-  //     break;
-  //   }
-  // }
   return (
     <div className="jc-Preview">
       <div className="jc-PreviewBar" />
@@ -294,7 +265,6 @@ export class CommentWidget<T = any> extends ReactWidget {
     this._menu = menu;
     this._tracker = nbTracker;
     this._factory = factory;
-    // this._target = factory.getTarget(this.comment);
 
     this.addClass('jc-CommentWidget');
     this.node.tabIndex = 0;
@@ -686,7 +656,7 @@ export class CommentWidget<T = any> extends ReactWidget {
   private _replyAreaHidden: boolean = true;
   private _editID: string = '';
   private _tracker: INotebookTracker;
-  private _factory: CellCommentFactory | CellSelectionCommentFactory;
+  private _factory: ACommentFactory;
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );

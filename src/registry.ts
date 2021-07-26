@@ -1,9 +1,8 @@
-import { ACommentFactory, CellCommentFactory, CellSelectionCommentFactory } from './factory';
+import { ACommentFactory } from './factory';
 
 export interface ICommentRegistry {
-  // createFactory: <T>(options: ACommentFactory.IOptions<T>) => ACommentFactory<T>;
   getFactory: (id: string) => ACommentFactory | undefined;
-  addFactory: (factory: ACommentFactory | CellCommentFactory | CellSelectionCommentFactory) => void;
+  addFactory: (factory: ACommentFactory) => void;
 
   readonly factories: Map<string, ACommentFactory>;
 }
@@ -12,19 +11,9 @@ export interface ICommentRegistry {
  * A class that manages a map of `CommentFactory`s
  */
 export class CommentRegistry implements ICommentRegistry {
-  // createFactory<T>(options: ACommentFactory.IOptions<T>): ACommentFactory<T> {
-  //   const factory = new CommentFactory<T>(options);
-  //   this.factories.set(options.type, factory);
-  //   return factory;
-  // }
 
-  addFactory(factory: CellCommentFactory | CellSelectionCommentFactory): void{
-    if (factory instanceof CellCommentFactory){
-      this.factories.set('cell', factory)
-    }
-    else if (factory instanceof CellSelectionCommentFactory){
-      this.factories.set('cell-selection', factory)
-    }
+  addFactory(factory: ACommentFactory): void{
+    this.factories.set(factory.type, factory);
   }
 
   getFactory(id: string): ACommentFactory | undefined {

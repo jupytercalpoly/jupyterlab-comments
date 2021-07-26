@@ -101,25 +101,6 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
     void registry.addFactory(new CellCommentFactory());
     void registry.addFactory(new CellSelectionCommentFactory());
 
-    // void registry.createFactory<Cell>({
-    //   type: 'cell',
-    //   targetFactory: (cell: Cell) => {
-    //     return { cellID: cell.model.id };
-    //   }
-    // });
-
-    // void registry.createFactory<Cell>({
-    //   type: 'cell-selection',
-    //   targetFactory: (cell: Cell) => {
-    //     const { start, end } = cell.editor.getSelection();
-    //     return {
-    //       cellID: cell.model.id,
-    //       start,
-    //       end
-    //     };
-    //   }
-    // });
-
     let currAwareness: Awareness | null = null;
 
     const indicator = Private.createIndicator(panel);

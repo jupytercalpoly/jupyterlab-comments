@@ -3,21 +3,9 @@ import { PartialJSONValue, UUID } from '@lumino/coreutils';
 import { getCommentTimeString } from './utils';
 import { Cell, ICellModel } from '@jupyterlab/cells';
 
-// export interface ICommentFactory<T = any> {
-//   createComment: (options: CommentFactory.ICommentOptions<T>) => IComment;
-//   createCommentWithPrecomputedTarget: (
-//     options: Exclude<ICommentOptions<T>, 'target'>,
-//     target: PartialJSONValue
-//   ) => IComment;
-
-//   readonly type: string;
-//   readonly targetFactory: (target: T) => PartialJSONValue;
-// }
-
 export abstract class ACommentFactory<T = any> {
 
-  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-  abstract getPreviewText(comment : IComment, target: any): string;
+  abstract getPreviewText(comment : IComment, target: T): string;
   constructor(options: ACommentFactory.IOptions<T>) {
     const { type, targetFactory } = options;
     this.type = type;
@@ -76,7 +64,6 @@ export class CellCommentFactory extends ACommentFactory {
       }
     });
   }
-  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   getPreviewText(comment: IComment, target: any): string {
     return ""
   }
@@ -96,7 +83,7 @@ export class CellSelectionCommentFactory extends ACommentFactory {
       }
     });
   }
-  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+
   getPreviewText(comment: IComment, target: any): string {
     let previewText: string;
     let cell = target as ICellModel;
@@ -117,17 +104,6 @@ export class CellSelectionCommentFactory extends ACommentFactory {
   }
 }
 
-/**
- * A class that creates comments of a given type.
- */
-// export class CommentFactory<T = any> extends ACommentFactory implements ICommentFactory<T> {
-// export class CommentFactory<T = any> extends ACommentFactory {
-//   constructor(options: CommentFactory.IOptions<T>) {
-//     super(options);
-//   }
-//   previewText = ""
-// }
-
 export namespace ACommentFactory {
   export interface IOptions<T> {
     type: string; // cell or cell-selection
@@ -146,8 +122,6 @@ export namespace ACommentFactory {
   }
 }
 
-// export type ICommentOptions<T> = CommentFactory.ICommentOptions<T>;
-// export type IReplyOptions = CommentFactory.IReplyOptions;
 
 //function that converts a line-column pairing to an index
 export function lineToIndex(str: string, line: number, col: number): number {
