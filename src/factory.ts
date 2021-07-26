@@ -1,32 +1,24 @@
-import { IComment, IIdentity, IReply } from './commentformat';
+import {
+  ICellSelectionComment,
+  IComment,
+  IIdentity,
+  IReply
+} from './commentformat';
 import { PartialJSONValue, UUID } from '@lumino/coreutils';
 import { getCommentTimeString } from './utils';
+import { Cell, ICellModel } from '@jupyterlab/cells';
 
-export interface ICommentFactory<T = any> {
-  createComment: (options: CommentFactory.ICommentOptions<T>) => IComment;
-  createCommentWithPrecomputedTarget: (
-    options: Exclude<ICommentOptions<T>, 'target'>,
-    target: PartialJSONValue
-  ) => IComment;
-
-  readonly type: string;
-  readonly targetFactory: (target: T) => PartialJSONValue;
-}
-
-/**
- * A class that creates comments of a given type.
- */
-export class CommentFactory<T = any> implements ICommentFactory<T> {
-  constructor(options: CommentFactory.IOptions<T>) {
-    const { type, targetFactory } = options;
-
+export abstract class ACommentFactory<T = any> {
+  abstract getPreviewText(comment: IComment, target: T): string;
+  constructor(options: ACommentFactory.IOptions) {
+    const { type } = options;
     this.type = type;
-    this.targetFactory = targetFactory;
   }
 
-  createComment(options: CommentFactory.ICommentOptions<T>): IComment {
-    const { target, text, identity, replies, id } = options;
+  abstract targetToJSON(target: T): PartialJSONValue;
 
+  createComment(options: ACommentFactory.ICommentOptions<T>): IComment {
+    const { target, text, identity, replies, id } = options;
     return {
       text,
       identity,
@@ -34,12 +26,11 @@ export class CommentFactory<T = any> implements ICommentFactory<T> {
       id: id ?? UUID.uuid4(),
       replies: replies ?? [],
       time: getCommentTimeString(),
-      target: this.targetFactory(target)
+      target: this.targetToJSON(target)
     };
   }
-
   createCommentWithPrecomputedTarget(
-    options: Exclude<ICommentOptions<T>, 'target'>,
+    options: Exclude<ACommentFactory.ICommentOptions<T>, 'target'>,
     target: PartialJSONValue
   ): IComment {
     const { text, identity, replies, id } = options;
@@ -54,8 +45,7 @@ export class CommentFactory<T = any> implements ICommentFactory<T> {
       target
     };
   }
-
-  static createReply(options: IReplyOptions): IReply {
+  static createReply(options: ACommentFactory.IReplyOptions): IReply {
     const { text, identity, id } = options;
 
     return {
@@ -66,15 +56,61 @@ export class CommentFactory<T = any> implements ICommentFactory<T> {
       type: 'reply'
     };
   }
-
   readonly type: string;
-  readonly targetFactory: (target: T) => PartialJSONValue;
 }
 
-export namespace CommentFactory {
-  export interface IOptions<T> {
-    type: string;
-    targetFactory: (target: T) => PartialJSONValue;
+export class CellCommentFactory extends ACommentFactory {
+  constructor() {
+    super({
+      type: 'cell'
+    });
+  }
+  getPreviewText(comment: IComment, target: any): string {
+    return '';
+  }
+  targetToJSON(cell: Cell): PartialJSONValue {
+    return { cellid: cell.model.id };
+  }
+}
+
+export class CellSelectionCommentFactory extends ACommentFactory {
+  constructor() {
+    super({
+      type: 'cell-selection'
+    });
+  }
+
+  targetToJSON(cell: Cell): PartialJSONValue {
+    const { start, end } = cell.editor.getSelection();
+    return {
+      cellID: cell.model.id,
+      start,
+      end
+    };
+  }
+  getPreviewText(comment: IComment, target: any): string {
+    let previewText: string;
+    let cell = target as ICellModel;
+    let mainText = cell.value.text;
+    let selectionComment = comment as ICellSelectionComment;
+    let { start, end } = selectionComment.target;
+    let startIndex = lineToIndex(mainText, start.line, start.column);
+    let endIndex = lineToIndex(mainText, end.line, end.column);
+    if (start < end) {
+      previewText = cell.value.text.slice(startIndex, endIndex);
+    } else {
+      previewText = cell.value.text.slice(endIndex, startIndex);
+    }
+    if (previewText.length > 140) {
+      previewText = previewText.slice(0, 140) + '...';
+    }
+    return previewText;
+  }
+}
+
+export namespace ACommentFactory {
+  export interface IOptions {
+    type: string; // cell or cell-selection
   }
 
   export interface IReplyOptions {
@@ -89,5 +125,12 @@ export namespace CommentFactory {
   }
 }
 
-export type ICommentOptions<T> = CommentFactory.ICommentOptions<T>;
-export type IReplyOptions = CommentFactory.IReplyOptions;
+//function that converts a line-column pairing to an index
+export function lineToIndex(str: string, line: number, col: number): number {
+  if (line == 0) {
+    return col;
+  } else {
+    let arr = str.split('\n');
+    return arr.slice(0, line).join('\n').length + col + 1;
+  }
+}

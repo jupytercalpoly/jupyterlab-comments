@@ -1,5 +1,5 @@
 import { IComment, IIdentity, IReply } from './commentformat';
-import { CommentFactory } from './factory';
+import { ACommentFactory } from './factory';
 import { ICommentRegistry } from './registry';
 import { YDocument } from '@jupyterlab/shared-models';
 import * as Y from 'yjs';
@@ -97,7 +97,7 @@ export class CommentFileModel {
    * Create a reply from an `IReplyOptions` object.
    */
   createReply(options: Exclude<IReplyOptions, 'parentID'>): IReply {
-    return CommentFactory.createReply(options);
+    return ACommentFactory.createReply(options);
   }
 
   /**

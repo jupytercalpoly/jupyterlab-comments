@@ -13,7 +13,7 @@ import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
 import { ISelection } from './commentformat';
 import { ICommentRegistry } from './registry';
-import { CommentFactory } from './factory';
+import { ACommentFactory } from './factory';
 import { PanelHeader } from './panelHeaderWidget';
 import { ILabShell } from '@jupyterlab/application';
 
@@ -105,9 +105,9 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
       let t1: string = '';
       let t2: string = '';
-      let f1: CommentFactory | undefined;
-      let f2: CommentFactory | undefined;
-      let factory: CommentFactory | undefined;
+      let f1: ACommentFactory | undefined;
+      let f2: ACommentFactory | undefined;
+      let factory: ACommentFactory | undefined;
 
       let selections = [];
 
