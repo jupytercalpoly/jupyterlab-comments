@@ -228,7 +228,6 @@ function addCommands(
           const comment = cellCommentFactory.createComment({
             target: cell,
             identity: getIdentity(getAwareness()!),
-            awareness: getAwareness()!,
             text: value.value
           });
 
@@ -296,7 +295,6 @@ namespace Private {
           id: UUID.uuid4(),
           type: 'cell-selection',
           identity: getIdentity(panel.awareness!),
-          awareness: panel.awareness!,
           replies: [],
           text: value.value,
           time: getCommentTimeString(),
