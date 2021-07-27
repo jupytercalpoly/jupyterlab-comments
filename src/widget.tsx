@@ -672,11 +672,10 @@ export class CommentWidget2<T> extends ReactWidget {
   constructor(options: CommentWidget2.IOptions<T>) {
     super();
 
-    const { id, target, model, menu, factory } = options;
+    const { id, target, model, factory } = options;
     this._commentID = id;
     this._activeID = id;
     this._target = target;
-    this._menu = menu;
     this._factory = factory;
     this._model = model;
 
@@ -746,7 +745,10 @@ export class CommentWidget2<T> extends ReactWidget {
    */
   private _handleDropdownClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
-    this._menu.open(event.pageX, event.pageY);
+    const menu = this.menu;
+    if (menu != null) {
+      menu.open(event.pageX, event.pageY);
+    }
   }
 
   /**
@@ -1052,11 +1054,14 @@ export class CommentWidget2<T> extends ReactWidget {
     return this._factory;
   }
 
+  get menu(): Menu | undefined {
+    return this.model.commentMenu;
+  }
+
   private _model: CommentFileModel;
   private _commentID: string;
   private _target: T;
   private _activeID: string;
-  private _menu: Menu;
   private _replyAreaHidden: boolean = true;
   private _editID: string = '';
   private _factory: ACommentFactory;
@@ -1072,8 +1077,6 @@ export namespace CommentWidget2 {
     model: CommentFileModel;
 
     target: T;
-
-    menu: Menu;
 
     factory: ACommentFactory;
   }
@@ -1222,18 +1225,7 @@ export class CommentFileWidget extends Panel {
         return;
       }
 
-      let widget;
-      if (comment.type === 'test') {
-        widget = new CommentWidget2<null>({
-          id: comment.id,
-          target: null,
-          menu: this.model.commentMenu!,
-          factory,
-          model: this.model
-        });
-      } else {
-        widget = factory.createWidget(comment);
-      }
+      const widget = factory.createWidget(comment, this.model);
 
       if (widget != null) {
         this.addComment(widget);

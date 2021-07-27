@@ -6,7 +6,7 @@ import { listIcon } from '@jupyterlab/ui-components';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { CommentFileWidget, CommentWidget } from './widget';
 import { getComments } from './comments';
-import { ICellModel } from '@jupyterlab/cells';
+import { Cell } from '@jupyterlab/cells';
 import { YDocument } from '@jupyterlab/shared-models';
 import { ISignal, Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
@@ -99,8 +99,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
       this.widgets[1].dispose();
     }
 
-    each(model.cells, cell => {
-      const sharedModel = cell.sharedModel;
+    each(tracker.currentWidget!.content.widgets, cell => {
+      const sharedModel = cell.model.sharedModel;
       const comments = getComments(sharedModel);
       if (comments == null) {
         return;
@@ -138,7 +138,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
           continue;
         }
 
-        const widget = new CommentWidget<ICellModel>({
+        const widget = new CommentWidget<Cell>({
           awareness,
           id: comment.id,
           target: cell,
@@ -164,7 +164,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
           });
         }
       }
-      cell.selections.set(cell.id, selections);
+      cell.model.selections.set(cell.model.id, selections);
     });
   }
 
@@ -284,6 +284,7 @@ export class CommentPanel2 extends CommentPanel {
 
     const awareness = this.awareness;
     if (awareness != null) {
+      console.log('new awareness', awareness);
       this.panelHeader.awareness = awareness;
     }
     this._fileWidget.update();

@@ -113,8 +113,8 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<CommentTracker> = {
       namespace: 'comment-widgets'
     });
 
-    void registry.addFactory(new CellCommentFactory());
-    void registry.addFactory(new CellSelectionCommentFactory());
+    void registry.addFactory(new CellCommentFactory(nbTracker));
+    void registry.addFactory(new CellSelectionCommentFactory(nbTracker));
     void registry.addFactory(new TestCommentFactory());
 
     let currAwareness: Awareness | null = null;
@@ -271,9 +271,15 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<void> = {
 
     panel.revealed.connect(() => panel.update());
     shell.currentChanged.connect((_, args) => {
-      if (args.newValue && args.newValue instanceof DocumentWidget) {
+      if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
-        void panel.loadModel(docWidget.context.path);
+        const path = docWidget.context.path;
+        if (path !== '') {
+          console.log('path', path);
+          void panel.loadModel(docWidget.context.path);
+        } else {
+          console.log('empty context path');
+        }
       }
     });
 

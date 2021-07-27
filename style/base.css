@@ -197,7 +197,7 @@
   opacity: 1;
 }
 
-.jc-panelHeader-filename{
+.jc-panelHeader-filename {
   font-size: var(--jp-ui-font-size1);
   color: var(--jp-ui-font-color0);
 }
@@ -232,4 +232,3 @@
   color: var(--jp-ui-font-color3);
   word-break: break-word;
 }
-

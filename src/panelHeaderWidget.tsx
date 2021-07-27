@@ -87,8 +87,15 @@ function DocumentName(props: DocumentProps): JSX.Element {
   const [Filename, setFilename] = React.useState('');
   const { Shell } = props;
   Shell.currentChanged.connect((_, args) => {
+    if (args.newValue == null || !(args.newValue instanceof DocumentWidget)) {
+      console.log('no new document name');
+      return;
+    }
     const docWidget = args.newValue as DocumentWidget;
-    setFilename(docWidget.context.path);
+    const path = docWidget.context.path;
+    if (path !== '') {
+      setFilename(docWidget.context.path);
+    }
   });
   return <p className="jc-panelHeader-filename">{Filename}</p>;
 }
