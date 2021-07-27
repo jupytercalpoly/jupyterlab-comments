@@ -59,7 +59,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.title.icon = listIcon;
     this.addClass('jc-CommentPanel');
 
-    const panelHeader: PanelHeader = new PanelHeader({ shell: options.shell});
+    const panelHeader: PanelHeader = new PanelHeader({ shell: options.shell, tracker: this._tracker});
 
     this.addWidget(panelHeader as Widget);
 

@@ -225,8 +225,6 @@ function addCommands(
         title: 'Enter Comment'
       }).then(value => {
         if (value.value != null) {
-          let iden = getIdentity(getAwareness()!);
-          let userMap = {iden.id : iden.name}
           const comment = cellCommentFactory.createComment({
             target: cell,
             identity: getIdentity(getAwareness()!),
