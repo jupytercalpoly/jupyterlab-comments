@@ -1,5 +1,6 @@
 import { CodeEditor } from '@jupyterlab/codeeditor';
 import { PartialJSONValue } from '@lumino/coreutils';
+import { Awareness } from 'y-protocols/awareness';
 
 /**
  * A type for the identity of a commentor.
@@ -22,6 +23,7 @@ export interface IBaseComment {
   id: string;
   type: string;
   identity: IIdentity;
+  awareness: Awareness;
   text: string;
   time: string;
 }

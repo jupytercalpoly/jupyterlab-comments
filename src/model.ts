@@ -352,6 +352,7 @@ export namespace CommentFileModel {
 export interface ICommentOptions {
   text: string;
   identity: IIdentity;
+  awareness: Awareness;
   type: string;
   target: any;
   replies?: IReply[];
@@ -364,5 +365,6 @@ export interface ICommentOptions {
 export interface IReplyOptions {
   text: string;
   identity: IIdentity;
+  awareness: Awareness;
   id?: string; // defaults to UUID.uuid4()
 }

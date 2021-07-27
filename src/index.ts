@@ -225,9 +225,12 @@ function addCommands(
         title: 'Enter Comment'
       }).then(value => {
         if (value.value != null) {
+          let iden = getIdentity(getAwareness()!);
+          let userMap = {iden.id : iden.name}
           const comment = cellCommentFactory.createComment({
             target: cell,
             identity: getIdentity(getAwareness()!),
+            awareness: getAwareness()!,
             text: value.value
           });
 
@@ -295,6 +298,7 @@ namespace Private {
           id: UUID.uuid4(),
           type: 'cell-selection',
           identity: getIdentity(panel.awareness!),
+          awareness: panel.awareness!,
           replies: [],
           text: value.value,
           time: getCommentTimeString(),

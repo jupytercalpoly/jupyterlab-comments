@@ -428,6 +428,7 @@ export class CommentWidget<T = any> extends ReactWidget {
 
     const reply = ACommentFactory.createReply({
       identity: getIdentity(this._awareness),
+      awareness: this._awareness,
       text: target.innerText
     });
 

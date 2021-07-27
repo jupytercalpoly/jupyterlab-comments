@@ -5,8 +5,9 @@ import {
   IReply
 } from './commentformat';
 import { PartialJSONValue, UUID } from '@lumino/coreutils';
-import { getCommentTimeString } from './utils';
+import { getCommentTimeString, getIdentity } from './utils';
 import { Cell, ICellModel } from '@jupyterlab/cells';
+import { Awareness } from 'y-protocols/awareness';
 
 export abstract class ACommentFactory<T = any> {
   abstract getPreviewText(comment: IComment, target: T): string;
@@ -18,10 +19,11 @@ export abstract class ACommentFactory<T = any> {
   abstract targetToJSON(target: T): PartialJSONValue;
 
   createComment(options: ACommentFactory.ICommentOptions<T>): IComment {
-    const { target, text, identity, replies, id } = options;
+    const { target, text, awareness, replies, id } = options;
     return {
       text,
-      identity,
+      identity: getIdentity(awareness),
+      awareness,
       type: this.type,
       id: id ?? UUID.uuid4(),
       replies: replies ?? [],
@@ -33,11 +35,13 @@ export abstract class ACommentFactory<T = any> {
     options: Exclude<ACommentFactory.ICommentOptions<T>, 'target'>,
     target: PartialJSONValue
   ): IComment {
-    const { text, identity, replies, id } = options;
+    const { text, awareness, replies, id } = options;
 
     return {
       text,
-      identity,
+      // identity,
+      identity: getIdentity(awareness),
+      awareness,
       type: this.type,
       id: id ?? UUID.uuid4(),
       replies: replies ?? [],
@@ -46,11 +50,13 @@ export abstract class ACommentFactory<T = any> {
     };
   }
   static createReply(options: ACommentFactory.IReplyOptions): IReply {
-    const { text, identity, id } = options;
+    const { text, awareness, id } = options;
 
     return {
       text,
-      identity,
+      // identity,
+      identity: getIdentity(awareness),
+      awareness,
       id: id ?? UUID.uuid4(),
       time: getCommentTimeString(),
       type: 'reply'
@@ -116,6 +122,7 @@ export namespace ACommentFactory {
   export interface IReplyOptions {
     text: string;
     identity: IIdentity;
+    awareness: Awareness;
     id?: string;
   }
 
