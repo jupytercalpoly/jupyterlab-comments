@@ -50,6 +50,11 @@ function updateCommentIdentities(newName: string, oldName: string, tracker: INot
         if (comment.identity.name == oldName){
           comment.identity.name = newName
         }
+        for (let reply of comment.replies){
+          if (reply.identity.name == oldName){
+            reply.identity.name = newName
+          }
+        }
       }
       setComments(sharedModel, comments)
     });
