@@ -21,7 +21,7 @@ export abstract class ACommentFactory<T = any> {
     const { target, text, identity, replies, id } = options;
     return {
       text,
-      identity,
+      identity ,
       type: this.type,
       id: id ?? UUID.uuid4(),
       replies: replies ?? [],

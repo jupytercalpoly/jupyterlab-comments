@@ -52,6 +52,15 @@ export function getComments(
   return _getComments(metadata, verify);
 }
 
+export function setComments(
+  model: IMetadated,
+  newComments: comments.IComment[],
+): void {
+  let newMetadata = model.getMetadata()
+  newMetadata['comments'] = newComments as any
+  model.setMetadata(newMetadata);
+}
+
 export function getCommentByID(
   model: IMetadated,
   id: string
