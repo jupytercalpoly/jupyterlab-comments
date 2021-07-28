@@ -51,6 +51,8 @@ export interface ICommentPanel extends Panel {
   awareness: Awareness | undefined;
 
   nbTracker: INotebookTracker;
+
+  model: CommentFileModel | undefined;
 }
 
 export class CommentPanel extends Panel implements ICommentPanel {
@@ -244,6 +246,10 @@ export class CommentPanel extends Panel implements ICommentPanel {
     return this._registry;
   }
 
+  get model(): CommentFileModel | undefined {
+    return;
+  }
+
   private _tracker: INotebookTracker;
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
   private _revealed = new Signal<this, undefined>(this);
@@ -328,7 +334,9 @@ export class CommentPanel2 extends CommentPanel {
 
   async loadModel(sourcePath: string): Promise<void> {
     if (this._fileWidget != null) {
-      this._fileWidget.dispose();
+      const oldWidget = this._fileWidget;
+      void (await oldWidget.context.save());
+      oldWidget.dispose();
     }
 
     const path = hashString(sourcePath).toString() + '.comment';
@@ -336,11 +344,14 @@ export class CommentPanel2 extends CommentPanel {
     const content = new CommentFileWidget({ context });
 
     this._fileWidget = content;
-    this.currentModel!.comments.observeDeep(this._onChange.bind(this));
+    this.model!.comments.observeDeep(this._onChange.bind(this));
 
     this.addWidget(content);
-    this._modelChanged.emit(content);
-    this.update();
+
+    void context.ready.then(() => {
+      this._modelChanged.emit(content);
+      this.update();
+    });
   }
 
   private _onChange(changes: Y.YEvent[]): void {
@@ -354,7 +365,7 @@ export class CommentPanel2 extends CommentPanel {
     return this._fileWidget.context.model.sharedModel as YDocument<any>;
   }
 
-  get currentModel(): CommentFileModel | undefined {
+  get model(): CommentFileModel | undefined {
     const docWidget = this._fileWidget;
     if (docWidget == null) {
       return;
@@ -371,7 +382,7 @@ export class CommentPanel2 extends CommentPanel {
   }
 
   get awareness(): Awareness | undefined {
-    const currentModel = this.currentModel;
+    const currentModel = this.model;
     if (currentModel == null) {
       return;
     }

@@ -15,7 +15,6 @@ import { getIdentity } from './utils';
 import { Menu, Panel } from '@lumino/widgets';
 import { ISignal, Signal } from '@lumino/signaling';
 import { INotebookTracker } from '@jupyterlab/notebook';
-import { ICellModel } from '@jupyterlab/cells';
 import { ACommentFactory } from './factory';
 import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
@@ -256,15 +255,13 @@ export class CommentWidget<T = any> extends ReactWidget {
   constructor(options: CommentWidget.IOptions<T>) {
     super();
 
-    const { awareness, id, target, sharedModel, menu, nbTracker, factory } =
-      options;
+    const { awareness, id, target, sharedModel, menu, factory } = options;
     this._awareness = awareness;
     this._commentID = id;
     this._activeID = id;
     this._target = target;
     this._sharedModel = sharedModel;
     this._menu = menu;
-    this._tracker = nbTracker;
     this._factory = factory;
 
     this.addClass('jc-CommentWidget');
@@ -327,15 +324,9 @@ export class CommentWidget<T = any> extends ReactWidget {
       this.node.focus();
     }
 
-    const cellModel = this.target as any as ICellModel;
-    const notebook = this._tracker.currentWidget?.content;
-    if (notebook == null) {
-      return;
-    }
-
-    const cell = notebook.widgets.find(cell => cell.model.id === cellModel.id);
-    if (cell != null) {
-      cell.node.scrollIntoView({ behavior: 'smooth' });
+    const node = this.factory.getElement(this.target);
+    if (node != null) {
+      node.scrollIntoView({ behavior: 'smooth' });
     }
   }
 
@@ -661,7 +652,6 @@ export class CommentWidget<T = any> extends ReactWidget {
   private _menu: Menu;
   private _replyAreaHidden: boolean = true;
   private _editID: string = '';
-  private _tracker: INotebookTracker;
   private _factory: ACommentFactory;
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this

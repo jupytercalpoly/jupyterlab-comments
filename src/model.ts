@@ -93,6 +93,10 @@ export class CommentFileModel implements DocumentRegistry.IModel {
       return;
     }
 
+    if ('target' in options) {
+      return factory.createComment(options, options.target);
+    }
+
     return factory.createComment(options);
   }
 
@@ -463,14 +467,16 @@ export namespace CommentFileModelFactory {
 /**
  * Options object for creating a comment.
  */
-export interface ICommentOptions {
+export interface ICommentOptionsBase {
   text: string;
   identity: IIdentity;
   type: string;
-  target: any;
   replies?: IReply[];
-  id?: string; // defaults to UUID.uuid4()
+  id?: string; // defaults to UUID.uuid4();
 }
+
+export type ICommentOptions = ({ target: PartialJSONValue } | { source: any }) &
+  ICommentOptionsBase;
 
 /**
  * Options object for creating a reply.

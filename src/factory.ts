@@ -51,7 +51,7 @@ export abstract class ACommentFactory<T = any> {
       id: id ?? UUID.uuid4(),
       replies: replies ?? [],
       time: getCommentTimeString(),
-      target: target ?? this.targetToJSON(options.target)
+      target: target ?? this.targetToJSON(options.source!)
     };
   }
 
@@ -142,7 +142,7 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
     }
 
     // Add the selection to the cell's selections map.
-    const selections = cell!.model.selections.get(cell!.model.id);
+    const selections = cell!.model.selections.get(cell!.model.id) ?? [];
     const { start, end } = comment.target as any as ISelection;
     selections!.push({
       start,
@@ -154,6 +154,7 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
       },
       uuid: comment.id
     });
+    cell!.model.selections.set(cell!.model.id, selections);
 
     return super.createWidget(comment, model, cell);
   }
@@ -169,16 +170,22 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
 
   targetFromJSON(json: PartialJSONValue): Cell | undefined {
     if (!(json instanceof Object && 'cellID' in json)) {
+      console.log('fail 1');
       return;
     }
 
     const notebook = this._tracker.currentWidget;
     if (notebook == null) {
+      console.log('fail 2');
       return;
     }
 
     const cellID = json['cellID'];
-    return notebook.content.widgets.find(w => w.model.id === cellID);
+    const cell = notebook.content.widgets.find(w => w.model.id === cellID);
+    if (cell == null) {
+      console.log('fail 3');
+    }
+    return cell;
   }
 
   getPreviewText(comment: IComment, target?: Cell): string {
@@ -266,7 +273,7 @@ export namespace ACommentFactory {
   }
 
   export interface ICommentOptions<T> extends IReplyOptions {
-    target: T;
+    source?: T;
     replies?: IReply[];
   }
 }
