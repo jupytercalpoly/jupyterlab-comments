@@ -66,7 +66,6 @@ function Jspan(props: any): JSX.Element {
 function JCPreview(props: PreviewProps): JSX.Element {
   const { comment, target, factory } = props;
 
-  // Assuming factory is the proper cellfactory or cellselectionfactory;
   let previewText = factory.getPreviewText(comment, target);
 
   return (

@@ -125,11 +125,6 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
       currAwareness.on('change', awarenessHandler);
     });
 
-    // Add entries to the drop-down menu for comments
-    panel.commentMenu.addItem({ command: CommandIDs.deleteComment });
-    panel.commentMenu.addItem({ command: CommandIDs.editComment });
-    panel.commentMenu.addItem({ command: CommandIDs.replyToComment });
-
     app.commands.addCommand(CommandIDs.addNotebookComment, {
       label: 'Add Cell Comment',
       execute: () => {
@@ -192,6 +187,30 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     void registry.addFactory(new TestCommentFactory());
 
+    const panel = new CommentPanel({
+      commands: app.commands,
+      registry,
+      docManager,
+      shell
+    });
+
+    // Create the directory holding the comments.
+    void panel.pathExists(panel.pathPrefix).then(exists => {
+      const contents = docManager.services.contents;
+      if (!exists) {
+        void contents
+          .newUntitled({
+            path: '/',
+            type: 'directory'
+          })
+          .then(model => {
+            void contents.rename(model.path, panel.pathPrefix);
+          });
+      }
+    });
+
+    addCommands(app, commentTracker, panel);
+
     const commentMenu = new Menu({ commands: app.commands });
     commentMenu.addItem({ command: CommandIDs.deleteComment });
     commentMenu.addItem({ command: CommandIDs.editComment });
@@ -204,15 +223,6 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     app.docRegistry.addFileType(filetype);
     app.docRegistry.addModelFactory(modelFactory);
-
-    const panel = new CommentPanel({
-      commands: app.commands,
-      registry,
-      docManager,
-      shell
-    });
-
-    addCommands(app, commentTracker, panel);
 
     // Add the panel to the shell's right area.
     shell.add(panel, 'right', { rank: 600 });

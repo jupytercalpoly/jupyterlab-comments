@@ -131,7 +131,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
       oldWidget.dispose();
     }
 
-    const path = hashString(sourcePath).toString() + '.comment';
+    const path =
+      this.pathPrefix + hashString(sourcePath).toString() + '.comment';
     const context = await this.getContext(path);
     const content = new CommentFileWidget({ context });
 
@@ -241,6 +242,13 @@ export class CommentPanel extends Panel implements ICommentPanel {
     return this._registry;
   }
 
+  get pathPrefix(): string {
+    return this._pathPrefix;
+  }
+  set pathPrefix(newValue: string) {
+    this._pathPrefix = newValue;
+  }
+
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
   private _revealed = new Signal<this, undefined>(this);
   private _commentMenu: Menu;
@@ -249,6 +257,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
   private _fileWidget: CommentFileWidget | undefined = undefined;
   private _docManager: IDocumentManager;
   private _modelChanged = new Signal<this, CommentFileWidget | undefined>(this);
+  private _pathPrefix: string = 'comments/';
 }
 
 export namespace CommentPanel2 {
