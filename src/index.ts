@@ -176,9 +176,9 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       contentType: 'file',
       displayName: 'comment',
       extensions: ['.comment'],
-      fileFormat: 'text',
+      fileFormat: 'json',
       name: 'comment',
-      mimeTypes: ['text/plain']
+      mimeTypes: ['application/json']
     };
 
     const commentTracker = new WidgetTracker<CommentWidget<any>>({
@@ -227,7 +227,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     // Add the panel to the shell's right area.
     shell.add(panel, 'right', { rank: 600 });
 
-    panel.revealed.connect(() => panel.update());
+    // panel.revealed.connect(() => panel.update());
     shell.currentChanged.connect((_, args) => {
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;

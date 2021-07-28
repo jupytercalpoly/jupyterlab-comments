@@ -24,10 +24,6 @@ type IdentityProps = {
   awareness: Awareness | undefined;
 };
 
-type DocumentProps = {
-  Shell: ILabShell;
-};
-
 function UserIdentity(props: IdentityProps): JSX.Element {
   const { awareness } = props;
   const handleClick = () => {
@@ -83,23 +79,6 @@ function UserIdentity(props: IdentityProps): JSX.Element {
   );
 }
 
-function DocumentName(props: DocumentProps): JSX.Element {
-  const [Filename, setFilename] = React.useState('');
-  const { Shell } = props;
-  Shell.currentChanged.connect((_, args) => {
-    if (args.newValue == null || !(args.newValue instanceof DocumentWidget)) {
-      console.log('no new document name');
-      return;
-    }
-    const docWidget = args.newValue as DocumentWidget;
-    const path = docWidget.context.path;
-    if (path !== '') {
-      setFilename(docWidget.context.path);
-    }
-  });
-  return <p className="jc-panelHeader-filename">{Filename}</p>;
-}
-
 export class PanelHeader extends ReactWidget {
   constructor(options: PanelHeader.IOptions) {
     super();
@@ -114,7 +93,17 @@ export class PanelHeader extends ReactWidget {
           <UseSignal signal={this._renderNeeded}>
             {() => <UserIdentity awareness={this._awareness} />}
           </UseSignal>
-          <DocumentName Shell={this._shell} />
+          <UseSignal signal={this._shell.currentChanged}>
+            {(_, change) => {
+              const docWidget = change?.newValue;
+              const text =
+                docWidget instanceof DocumentWidget
+                  ? docWidget.context.path
+                  : '';
+
+              return <p className="jc-panelHeader-filename">{text}</p>;
+            }}
+          </UseSignal>
         </div>
 
         <div className="jc-panelHeader-right">

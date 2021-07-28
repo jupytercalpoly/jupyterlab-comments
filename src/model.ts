@@ -65,7 +65,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * Serialize the model to a string.
    */
   toString(): string {
-    return JSON.stringify(this.toJSON());
+    return JSON.stringify(this.toJSON(), undefined, 2);
   }
 
   /**

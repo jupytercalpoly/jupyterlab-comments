@@ -81,7 +81,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
     }
 
     const awareness = this.awareness;
-    if (awareness != null) {
+    if (awareness != null && awareness !== this.panelHeader.awareness) {
       this.panelHeader.awareness = awareness;
     }
 
