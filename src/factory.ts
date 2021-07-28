@@ -9,7 +9,7 @@ import { PartialJSONValue, UUID } from '@lumino/coreutils';
 import { getCommentTimeString } from './utils';
 import { Cell } from '@jupyterlab/cells';
 import { CommentFileModel } from './model';
-import { CommentWidget2 } from './widget';
+import { CommentWidget } from './widget';
 import { INotebookTracker } from '@jupyterlab/notebook';
 
 export abstract class ACommentFactory<T = any> {
@@ -30,8 +30,8 @@ export abstract class ACommentFactory<T = any> {
     comment: IComment,
     model: CommentFileModel,
     target?: T
-  ): CommentWidget2<any> {
-    return new CommentWidget2({
+  ): CommentWidget<any> {
+    return new CommentWidget({
       model,
       id: comment.id,
       target: target ?? this.targetFromJSON(comment.target),
@@ -135,7 +135,7 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
     comment: IComment,
     model: CommentFileModel,
     target?: Cell
-  ): CommentWidget2<Cell> {
+  ): CommentWidget<Cell> {
     const cell = target ?? this.targetFromJSON(comment.target);
     if (cell == null) {
       console.warn('no cell found for cell selection comment', comment);
@@ -170,22 +170,16 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
 
   targetFromJSON(json: PartialJSONValue): Cell | undefined {
     if (!(json instanceof Object && 'cellID' in json)) {
-      console.log('fail 1');
       return;
     }
 
     const notebook = this._tracker.currentWidget;
     if (notebook == null) {
-      console.log('fail 2');
       return;
     }
 
     const cellID = json['cellID'];
-    const cell = notebook.content.widgets.find(w => w.model.id === cellID);
-    if (cell == null) {
-      console.log('fail 3');
-    }
-    return cell;
+    return notebook.content.widgets.find(w => w.model.id === cellID);
   }
 
   getPreviewText(comment: IComment, target?: Cell): string {

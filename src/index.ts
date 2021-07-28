@@ -10,8 +10,8 @@ import { PartialJSONValue, Token, UUID } from '@lumino/coreutils';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
 import { getIdentity, randomIdentity } from './utils';
-import { CommentPanel2, ICommentPanel } from './panel';
-import { CommentWidget, CommentWidget2 } from './widget';
+import { CommentPanel, ICommentPanel } from './panel';
+import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
 import { CommentRegistry, ICommentRegistry } from './registry';
 import { IDocumentManager } from '@jupyterlab/docmanager';
@@ -37,6 +37,8 @@ const ICommentRegistry = new Token<ICommentRegistry>(
   'jupyterlab-comments:comment-registry'
 );
 
+export type CommentTracker = WidgetTracker<CommentWidget<any>>;
+
 /**
  * A plugin that provides a `CommentRegistry`
  */
@@ -52,8 +54,6 @@ export const commentRegistryPlugin: JupyterFrontEndPlugin<ICommentRegistry> = {
 const ICommentPanel = new Token<ICommentPanel>(
   'jupyterlab-comments:comment-panel'
 );
-
-type CommentTracker = WidgetTracker<CommentWidget<any> | CommentWidget2<any>>;
 
 // const ICommentTracker = new Token<CommentTracker>(
 //   'jupyterlab-comments:comment-tracker'
@@ -77,7 +77,7 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
 
     let currAwareness: Awareness | null = null;
 
-    const indicator = Private.createIndicator(panel);
+    const indicator = Private.createIndicator(panel, nbTracker);
 
     // This updates the indicator and scrolls to the comments of the selected cell
     // when the active cell changes.
@@ -169,15 +169,14 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
 export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
   id: 'jupyterlab-comments:commenting-api',
   autoStart: true,
-  requires: [ICommentRegistry, ILabShell, IDocumentManager, INotebookTracker],
+  requires: [ICommentRegistry, ILabShell, IDocumentManager],
   provides: ICommentPanel,
   activate: (
     app: JupyterFrontEnd,
     registry: ICommentRegistry,
     shell: ILabShell,
-    docManager: IDocumentManager,
-    tracker: INotebookTracker
-  ): CommentPanel2 => {
+    docManager: IDocumentManager
+  ): CommentPanel => {
     const filetype: DocumentRegistry.IFileType = {
       contentType: 'file',
       displayName: 'comment',
@@ -187,7 +186,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       mimeTypes: ['text/plain']
     };
 
-    const commentTracker = new WidgetTracker<CommentWidget2<any>>({
+    const commentTracker = new WidgetTracker<CommentWidget<any>>({
       namespace: 'comment-widgets'
     });
 
@@ -206,11 +205,10 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     app.docRegistry.addFileType(filetype);
     app.docRegistry.addModelFactory(modelFactory);
 
-    const panel = new CommentPanel2({
+    const panel = new CommentPanel({
       commands: app.commands,
       registry,
       docManager,
-      tracker,
       shell
     });
 
@@ -357,9 +355,10 @@ function addCommands(
 }
 
 namespace Private {
-  export function createIndicator(panel: ICommentPanel): HTMLElement {
-    const nbTracker = panel.nbTracker;
-
+  export function createIndicator(
+    panel: ICommentPanel,
+    nbTracker: INotebookTracker
+  ): HTMLElement {
     const indicator = document.createElement('div');
     indicator.className = 'jc-Indicator';
 
