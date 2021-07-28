@@ -5,30 +5,39 @@ import {
 } from '@jupyterlab/application';
 
 import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
-import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
-import { addComment, getComments } from './comments';
-import { Token, UUID } from '@lumino/coreutils';
-import { IComment } from './commentformat';
+import { INotebookTracker } from '@jupyterlab/notebook';
+import { PartialJSONValue, Token, UUID } from '@lumino/coreutils';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
-import { getCommentTimeString, getIdentity } from './utils';
+import { getIdentity, randomIdentity } from './utils';
 import { CommentPanel, ICommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
 import { CommentRegistry, ICommentRegistry } from './registry';
-import * as Y from 'yjs';
-import { CellCommentFactory, CellSelectionCommentFactory  } from './factory';
+import { IDocumentManager } from '@jupyterlab/docmanager';
+import { DocumentRegistry, DocumentWidget } from '@jupyterlab/docregistry';
+import {
+  CellCommentFactory,
+  CellSelectionCommentFactory,
+  TestCommentFactory
+} from './factory';
+import { Menu } from '@lumino/widgets';
+import { CommentFileModelFactory, ICommentOptions } from './model';
+import { ICellComment } from './commentformat';
 
 namespace CommandIDs {
   export const addComment = 'jl-comments:add-comment';
   export const deleteComment = 'jl-comments:delete-comment';
   export const editComment = 'jl-comments:edit-comment';
   export const replyToComment = 'jl-comments:reply-to-comment';
+  export const addNotebookComment = 'jl-comments:add-notebook-comment';
 }
 
 const ICommentRegistry = new Token<ICommentRegistry>(
   'jupyterlab-comments:comment-registry'
 );
+
+export type CommentTracker = WidgetTracker<CommentWidget<any>>;
 
 /**
  * A plugin that provides a `CommentRegistry`
@@ -46,38 +55,9 @@ const ICommentPanel = new Token<ICommentPanel>(
   'jupyterlab-comments:comment-panel'
 );
 
-/**
- * A plugin that provides a `CommentPanel`
- */
-export const panelPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
-  id: 'jupyterlab-comments:panel',
-  autoStart: true,
-  requires: [INotebookTracker, ICommentRegistry, ILabShell],
-  provides: ICommentPanel,
-  activate: (
-    app: JupyterFrontEnd,
-    tracker: INotebookTracker,
-    registry: ICommentRegistry,
-    shell: ILabShell
-  ) => {
-    // Create the singleton `CommentPanel`
-    const panel = new CommentPanel({
-      tracker: tracker,
-      commands: app.commands,
-      registry: registry,
-      shell: shell
-    });
-
-    // Add the panel to the shell's right area.
-    shell.add(panel, 'right', { rank: 500 });
-
-    // Attach listeners to update the panel when it's revealed or the current document changes.
-    panel.revealed.connect(() => panel.update());
-    shell.currentChanged.connect(() => panel.update());
-
-    return panel;
-  }
-};
+// const ICommentTracker = new Token<CommentTracker>(
+//   'jupyterlab-comments:comment-tracker'
+// );
 
 /**
  * A plugin that allows notebooks to be commented on.
@@ -85,25 +65,19 @@ export const panelPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-comments:plugin',
   autoStart: true,
-  requires: [INotebookTracker, ILabShell, ICommentPanel, ICommentRegistry],
+  requires: [INotebookTracker, ICommentPanel, ICommentRegistry],
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
-    shell: ILabShell,
     panel: ICommentPanel,
     registry: ICommentRegistry
   ) => {
-    // A widget tracker for comment widgets
-    const commentTracker = new WidgetTracker<CommentWidget<any>>({
-      namespace: 'comment-widgets'
-    });
-
-    void registry.addFactory(new CellCommentFactory());
-    void registry.addFactory(new CellSelectionCommentFactory());
+    void registry.addFactory(new CellCommentFactory(nbTracker));
+    void registry.addFactory(new CellSelectionCommentFactory(nbTracker));
 
     let currAwareness: Awareness | null = null;
 
-    const indicator = Private.createIndicator(panel);
+    const indicator = Private.createIndicator(panel, nbTracker);
 
     // This updates the indicator and scrolls to the comments of the selected cell
     // when the active cell changes.
@@ -115,9 +89,19 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
         return;
       }
 
-      const comments = getComments(cell.model.sharedModel);
-      if (comments != null && comments.length !== 0) {
-        panel.scrollToComment(comments[0].id);
+      const model = panel.model;
+      if (model == null) {
+        return;
+      }
+
+      for (let comment of model.comments) {
+        if (comment.type === 'cell' || comment.type === 'cell-selection') {
+          const cellComment = comment as ICellComment;
+          if (cellComment.target.cellID === cell.model.id) {
+            panel.scrollToComment(cellComment.id);
+            break;
+          }
+        }
       }
 
       const awarenessHandler = (): void => {
@@ -141,83 +125,177 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
       currAwareness.on('change', awarenessHandler);
     });
 
-    // Automatically add the comment widgets to the tracker as
-    // they're added to the panel
-    panel.commentAdded.connect(
-      (_, comment) => void commentTracker.add(comment)
-    );
-
-    // Looks for changes to metadata on cells and updates the panel as they occur.
-    // This is what allows comments to be real-time.
-    //
-    // `events` and `t` are currently `any` because of a bug when importing `yjs`
-    // Build fails for some people so for now the yjs types aren't being used directly.
-    const handleCellChanges = (events: Y.YEvent[], t: unknown): void => {
-      for (let e of events) {
-        if (
-          e.target instanceof Y.Map &&
-          (e as Y.YMapEvent<any>).keysChanged.has('metadata')
-        ) {
-          panel.update();
+    app.commands.addCommand(CommandIDs.addNotebookComment, {
+      label: 'Add Cell Comment',
+      execute: () => {
+        const cell = nbTracker.activeCell;
+        if (cell == null) {
           return;
         }
+
+        void InputDialog.getText({
+          title: 'Enter Comment'
+        }).then(value => {
+          if (value.value == null) {
+            return;
+          }
+
+          const model = panel.model!;
+          model.addComment({
+            source: cell,
+            text: value.value,
+            identity: getIdentity(model.awareness),
+            type: 'cell'
+          });
+
+          panel.update();
+        });
       }
-    };
-
-    let currPanel: NotebookPanel | null = null;
-    // Attaches an observer to the current notebook's collaborative cells model
-    const onNotebookChanged = (_: any, panel: NotebookPanel | null): void => {
-      if (panel == null) {
-        return;
-      }
-
-      let model: YNotebook;
-
-      if (currPanel != null) {
-        model = currPanel.model!.sharedModel as YNotebook;
-        model.ycells.unobserveDeep(handleCellChanges);
-      }
-
-      model = panel.model!.sharedModel as YNotebook;
-      model.ycells.observeDeep(handleCellChanges);
-      currPanel = panel;
-    };
-
-    nbTracker.currentChanged.connect(onNotebookChanged);
-
-    addCommands(app, nbTracker, commentTracker, panel, registry);
-
-    // Add entries to the drop-down menu for comments
-    panel.commentMenu.addItem({ command: CommandIDs.deleteComment });
-    panel.commentMenu.addItem({ command: CommandIDs.editComment });
-    panel.commentMenu.addItem({ command: CommandIDs.replyToComment });
+    });
 
     app.contextMenu.addItem({
-      command: CommandIDs.addComment,
+      command: CommandIDs.addNotebookComment,
       selector: '.jp-Notebook .jp-Cell',
       rank: 13
     });
   }
 };
 
+export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
+  id: 'jupyterlab-comments:commenting-api',
+  autoStart: true,
+  requires: [ICommentRegistry, ILabShell, IDocumentManager],
+  provides: ICommentPanel,
+  activate: (
+    app: JupyterFrontEnd,
+    registry: ICommentRegistry,
+    shell: ILabShell,
+    docManager: IDocumentManager
+  ): CommentPanel => {
+    const filetype: DocumentRegistry.IFileType = {
+      contentType: 'file',
+      displayName: 'comment',
+      extensions: ['.comment'],
+      fileFormat: 'json',
+      name: 'comment',
+      mimeTypes: ['application/json']
+    };
+
+    const commentTracker = new WidgetTracker<CommentWidget<any>>({
+      namespace: 'comment-widgets'
+    });
+
+    void registry.addFactory(new TestCommentFactory());
+
+    const panel = new CommentPanel({
+      commands: app.commands,
+      registry,
+      docManager,
+      shell
+    });
+
+    // Create the directory holding the comments.
+    void panel.pathExists(panel.pathPrefix).then(exists => {
+      const contents = docManager.services.contents;
+      if (!exists) {
+        void contents
+          .newUntitled({
+            path: '/',
+            type: 'directory'
+          })
+          .then(model => {
+            void contents.rename(model.path, panel.pathPrefix);
+          });
+      }
+    });
+
+    addCommands(app, commentTracker, panel);
+
+    const commentMenu = new Menu({ commands: app.commands });
+    commentMenu.addItem({ command: CommandIDs.deleteComment });
+    commentMenu.addItem({ command: CommandIDs.editComment });
+    commentMenu.addItem({ command: CommandIDs.replyToComment });
+
+    const modelFactory = new CommentFileModelFactory({
+      registry,
+      commentMenu
+    });
+
+    app.docRegistry.addFileType(filetype);
+    app.docRegistry.addModelFactory(modelFactory);
+
+    // Add the panel to the shell's right area.
+    shell.add(panel, 'right', { rank: 600 });
+
+    // panel.revealed.connect(() => panel.update());
+    shell.currentChanged.connect((_, args) => {
+      if (args.newValue != null && args.newValue instanceof DocumentWidget) {
+        const docWidget = args.newValue as DocumentWidget;
+        const path = docWidget.context.path;
+        if (path !== '') {
+          void panel.loadModel(docWidget.context.path);
+        }
+      }
+    });
+
+    panel.modelChanged.connect((_, fileWidget) => {
+      if (fileWidget != null) {
+        fileWidget.commentAdded.connect(
+          (_, commentWidget) => void commentTracker.add(commentWidget)
+        );
+      }
+    });
+
+    app.commands.addCommand('addComment', {
+      label: 'Add Document Comment',
+      execute: () => {
+        const model = panel.model!;
+        model.addComment({
+          text: UUID.uuid4(),
+          type: 'test',
+          target: null,
+          identity: randomIdentity()
+        });
+        panel.update();
+      },
+      isEnabled: () => panel.model != null
+    });
+
+    app.commands.addCommand('saveCommentFile', {
+      label: 'Save Comment File',
+      execute: () => void panel.fileWidget!.context.save(),
+      isEnabled: () => panel.model != null
+    });
+
+    app.contextMenu.addItem({
+      command: 'addComment',
+      selector: '.lm-Widget',
+      rank: 0
+    });
+
+    app.contextMenu.addItem({
+      command: 'saveCommentFile',
+      selector: '.lm-Widget',
+      rank: 1
+    });
+
+    return panel;
+  }
+};
+
 function addCommands(
   app: JupyterFrontEnd,
-  nbTracker: INotebookTracker,
-  commentTracker: WidgetTracker<CommentWidget<any>>,
-  panel: ICommentPanel,
-  registry: ICommentRegistry
+  commentTracker: CommentTracker,
+  panel: ICommentPanel
 ): void {
-  const getAwareness = (): Awareness | undefined => {
-    return (nbTracker.currentWidget?.model?.sharedModel as YNotebook).awareness;
-  };
-
-  const cellCommentFactory = registry.getFactory('cell')!;
-
   app.commands.addCommand(CommandIDs.addComment, {
     label: 'Add Comment',
-    execute: async () => {
-      const cell = nbTracker.currentWidget?.content.activeCell;
-      if (cell == null) {
+    execute: async args => {
+      const model = panel.model;
+      if (model == null) {
+        return;
+      }
+      if (!('target' in args && args.target != null)) {
         return;
       }
 
@@ -225,13 +303,28 @@ function addCommands(
         title: 'Enter Comment'
       }).then(value => {
         if (value.value != null) {
-          const comment = cellCommentFactory.createComment({
-            target: cell,
-            identity: getIdentity(getAwareness()!),
-            text: value.value
-          });
+          const { target, type, source } = args;
 
-          addComment(cell.model.sharedModel, comment);
+          let comment: ICommentOptions;
+          if (source != null) {
+            comment = {
+              type: type as string,
+              text: value.value,
+              identity: getIdentity(model.awareness),
+              source
+            };
+          } else if (target != null) {
+            comment = {
+              type: type as string,
+              text: value.value,
+              identity: getIdentity(model.awareness),
+              target: target as PartialJSONValue
+            };
+          } else {
+            return;
+          }
+
+          model.addComment(comment);
 
           panel.update();
         }
@@ -255,7 +348,7 @@ function addCommands(
     execute: () => {
       const currentComment = commentTracker.currentWidget;
       if (currentComment != null) {
-        currentComment.editActive();
+        currentComment.openEditActive();
       }
     }
   });
@@ -272,42 +365,35 @@ function addCommands(
 }
 
 namespace Private {
-  export function createIndicator(panel: ICommentPanel): HTMLElement {
-    const nbTracker = panel.nbTracker;
-
+  export function createIndicator(
+    panel: ICommentPanel,
+    nbTracker: INotebookTracker
+  ): HTMLElement {
     const indicator = document.createElement('div');
     indicator.className = 'jc-Indicator';
 
     indicator.onclick = () => {
-      const cell = panel.nbTracker.activeCell;
+      const cell = nbTracker.activeCell;
       if (cell == null) {
         return;
       }
-
-      const range = cell.editor.getSelection();
 
       void InputDialog.getText({ title: 'Add Comment' }).then(value => {
         if (value.value == null) {
           return;
         }
 
-        const comment: IComment = {
-          id: UUID.uuid4(),
-          type: 'cell-selection',
-          identity: getIdentity(panel.awareness!),
-          replies: [],
-          text: value.value,
-          time: getCommentTimeString(),
-          target: {
-            cellID: cell.model.id,
-            start: range.start,
-            end: range.end
-          }
-        };
-
-        if (nbTracker.activeCell != null) {
-          addComment(cell.model.sharedModel, comment);
+        const model = panel.model;
+        if (model == null) {
+          return;
         }
+
+        model.addComment({
+          type: 'cell-selection',
+          text: value.value,
+          source: cell,
+          identity: getIdentity(model.awareness)
+        });
 
         panel.update();
       });
@@ -318,8 +404,8 @@ namespace Private {
 }
 
 const plugins: JupyterFrontEndPlugin<any>[] = [
-  panelPlugin,
   notebookCommentsPlugin,
-  commentRegistryPlugin
+  commentRegistryPlugin,
+  jupyterCommentingPlugin
 ];
 export default plugins;
