@@ -6,10 +6,10 @@ import {
 
 import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
 import { INotebookTracker } from '@jupyterlab/notebook';
-import { PartialJSONValue, Token, UUID } from '@lumino/coreutils';
+import { PartialJSONValue, Token } from '@lumino/coreutils';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
-import { getIdentity, randomIdentity } from './utils';
+import { getIdentity } from './utils';
 import { CommentPanel, ICommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
@@ -246,38 +246,38 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       }
     });
 
-    app.commands.addCommand('addComment', {
-      label: 'Add Document Comment',
-      execute: () => {
-        const model = panel.model!;
-        model.addComment({
-          text: UUID.uuid4(),
-          type: 'test',
-          target: null,
-          identity: randomIdentity()
-        });
-        panel.update();
-      },
-      isEnabled: () => panel.model != null
-    });
+    // app.commands.addCommand('addComment', {
+    //   label: 'Add Document Comment',
+    //   execute: () => {
+    //     const model = panel.model!;
+    //     model.addComment({
+    //       text: UUID.uuid4(),
+    //       type: 'test',
+    //       target: null,
+    //       identity: randomIdentity()
+    //     });
+    //     panel.update();
+    //   },
+    //   isEnabled: () => panel.model != null
+    // });
 
-    app.commands.addCommand('saveCommentFile', {
-      label: 'Save Comment File',
-      execute: () => void panel.fileWidget!.context.save(),
-      isEnabled: () => panel.model != null
-    });
+    // app.commands.addCommand('saveCommentFile', {
+    //   label: 'Save Comment File',
+    //   execute: () => void panel.fileWidget!.context.save(),
+    //   isEnabled: () => panel.model != null
+    // });
 
-    app.contextMenu.addItem({
-      command: 'addComment',
-      selector: '.lm-Widget',
-      rank: 0
-    });
+    // app.contextMenu.addItem({
+    //   command: 'addComment',
+    //   selector: '.lm-Widget',
+    //   rank: 0
+    // });
 
-    app.contextMenu.addItem({
-      command: 'saveCommentFile',
-      selector: '.lm-Widget',
-      rank: 1
-    });
+    // app.contextMenu.addItem({
+    //   command: 'saveCommentFile',
+    //   selector: '.lm-Widget',
+    //   rank: 1
+    // });
 
     return panel;
   }
