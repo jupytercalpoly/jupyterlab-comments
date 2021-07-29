@@ -9,13 +9,11 @@ import { Awareness } from 'y-protocols/awareness';
 import { CommentsHubIcon, CreateCommentIcon } from './icons';
 
 import { caretDownEmptyThinIcon, editIcon } from '@jupyterlab/ui-components';
-import { each } from '@lumino/algorithm';
 
-import { Signal } from '@lumino/signaling';
+import { ISignal, Signal } from '@lumino/signaling';
 import { ILabShell } from '@jupyterlab/application';
 import { DocumentWidget } from '@jupyterlab/docregistry';
-import { getComments, setComments } from './comments';
-import { INotebookTracker } from '@jupyterlab/notebook';
+import { CommentPanel } from './panel';
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
  */
@@ -25,43 +23,11 @@ type ReactRenderElement =
 
 type IdentityProps = {
   awareness: Awareness | undefined;
-  tracker: INotebookTracker;
+  panel: CommentPanel;
 };
-
-type DocumentProps = {
-  Shell: ILabShell;
-};
-
-function updateCommentIdentities(newName: string, oldName: string, tracker: INotebookTracker): void {
-    const model = tracker.currentWidget?.model;
-    if (model == null) {
-      console.warn(
-        'Either no current widget or no widget model; aborting identities update'
-      );
-      return;
-    }
-    each(model.cells, cell => {
-      const sharedModel = cell.sharedModel;
-      const comments = getComments(sharedModel);
-      if (comments == null) {
-        return;
-      }
-      for (let comment of comments){
-        if (comment.identity.name == oldName){
-          comment.identity.name = newName
-        }
-        for (let reply of comment.replies){
-          if (reply.identity.name == oldName){
-            reply.identity.name = newName
-          }
-        }
-      }
-      setComments(sharedModel, comments)
-    });
-  }
 
 function UserIdentity(props: IdentityProps): JSX.Element {
-  const { awareness, tracker } = props;
+  const { awareness, panel } = props;
   const handleClick = () => {
     SetEditable(true);
   };
@@ -97,12 +63,12 @@ function UserIdentity(props: IdentityProps): JSX.Element {
     event.stopPropagation();
 
     if (awareness != null) {
-      if (target.textContent == '' || target.textContent == null) {
+      const newName = target.textContent;
+      if (newName == null || newName === '') {
         target.textContent = getIdentity(awareness).name;
-      } else if (target.textContent) {
-        let old_name = awareness.getLocalState()!['user']['name'];
-        setIdentityName(awareness, target.textContent);
-        updateCommentIdentities(target.textContent, old_name, tracker);
+      } else {
+        setIdentityName(awareness, newName);
+        panel.updateIdentity(awareness.clientID, newName);
       }
     }
     SetEditable(false);
@@ -117,28 +83,13 @@ function UserIdentity(props: IdentityProps): JSX.Element {
   );
 }
 
-function DocumentName(props: DocumentProps): JSX.Element {
-  const [Filename, setFilename] = React.useState('');
-  const { Shell } = props;
-  Shell.currentChanged.connect((_, args) => {
-    const docWidget = args.newValue as DocumentWidget;
-    setFilename(docWidget.context.path);
-  });
-  return <p className="jc-panelHeader-filename">{Filename}</p>;
-}
-
 export class PanelHeader extends ReactWidget {
   constructor(options: PanelHeader.IOptions) {
     super();
-    const { shell, tracker } = options;
+    const { shell, panel } = options;
     this._shell = shell;
-    this._tracker = tracker;
-    this._renderNeeded.connect((_, aware) => {
-      this._awareness = aware;
-    });
+    this._panel = panel;
   }
-
-  
 
   render(): ReactRenderElement {
     return (
@@ -146,13 +97,20 @@ export class PanelHeader extends ReactWidget {
         <div className="jc-panelHeader-left">
           <UseSignal signal={this._renderNeeded}>
             {() => (
-              <UserIdentity
-                awareness={this._awareness}
-                tracker={this._tracker}
-              />
+              <UserIdentity awareness={this._awareness} panel={this._panel} />
             )}
           </UseSignal>
-          <DocumentName Shell={this._shell} />
+          <UseSignal signal={this._shell.currentChanged}>
+            {(_, change) => {
+              const docWidget = change?.newValue;
+              const text =
+                docWidget instanceof DocumentWidget
+                  ? docWidget.context.path
+                  : '';
+
+              return <p className="jc-panelHeader-filename">{text}</p>;
+            }}
+          </UseSignal>
         </div>
 
         <div className="jc-panelHeader-right">
@@ -176,24 +134,27 @@ export class PanelHeader extends ReactWidget {
   /**
    * A signal emitted when a React re-render is required.
    */
-  get renderNeeded(): Signal<this, Awareness> {
+  get renderNeeded(): ISignal<this, void> {
     return this._renderNeeded;
   }
 
-  get tracker(): INotebookTracker {
-    return this._tracker;
+  get awareness(): Awareness | undefined {
+    return this._awareness;
   }
+  set awareness(newValue: Awareness | undefined) {
+    this._awareness = newValue;
+    this._renderNeeded.emit(undefined);
+  }
+
   private _awareness: Awareness | undefined;
   private _shell: ILabShell;
-  private _tracker: INotebookTracker;
-  private _renderNeeded: Signal<this, Awareness> = new Signal<this, Awareness>(
-    this
-  );
+  private _panel: CommentPanel;
+  private _renderNeeded = new Signal<this, void>(this);
 }
 
 export namespace PanelHeader {
   export interface IOptions {
     shell: ILabShell;
-    tracker: INotebookTracker;
+    panel: CommentPanel;
   }
 }
