@@ -24,6 +24,7 @@ import {
 import { Menu } from '@lumino/widgets';
 import { CommentFileModelFactory, ICommentOptions } from './model';
 import { ICellComment } from './commentformat';
+import { CreateCommentIcon } from './icons';
 
 namespace CommandIDs {
   export const addComment = 'jl-comments:add-comment';
@@ -371,6 +372,8 @@ namespace Private {
   ): HTMLElement {
     const indicator = document.createElement('div');
     indicator.className = 'jc-Indicator';
+    const icon = CreateCommentIcon.element();
+    indicator.appendChild(icon);
 
     indicator.onclick = () => {
       const cell = nbTracker.activeCell;

@@ -23,7 +23,14 @@
 .jc-CommentPanel {
   background-color: var(--jc-panel-background-color);
   color: var(--jc-comment-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.jc-CommentFileWidget {
   overflow: auto;
+  flex-grow: 1;
+  padding-top: 12px;
 }
 
 .jc-Comment {
@@ -73,23 +80,18 @@
 }
 
 .jc-Indicator {
-  width: 10px;
-  height: 10px;
-  background-color: orangered;
+  width: 20px;
+  height: 20px;
   float: right;
   /*margin-top: -20px;*/
   text-align: center;
   margin: auto auto;
-  border-radius: 5px;
-  padding: 5px;
   z-index: 5;
 }
 
-.jc-Indicator:hover {
-  background-color: orange;
-  width: 12px;
-  width: 12px;
-}
+/* .jc-Indicator:hover {
+
+} */
 
 .jc-ProfilePic {
   display: block;
@@ -174,11 +176,14 @@
 
 .jc-panelHeader {
   display: flex;
+  flex-shrink: 0;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
   /* padding: 10px 10px 10px 10px; */
   padding: 10px;
+  box-shadow: var(--jp-elevation-z1);
+  z-index: 2;
 }
 .jc-panelHeader-identity-container {
   color: var(--jp-ui-font-color2);

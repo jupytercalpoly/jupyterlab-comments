@@ -1,7 +1,6 @@
 import { Menu, Panel, Widget } from '@lumino/widgets';
 import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
-import { listIcon } from '@jupyterlab/ui-components';
 import { CommentFileWidget, CommentWidget } from './widget';
 import { YDocument } from '@jupyterlab/shared-models';
 import { ISignal, Signal } from '@lumino/signaling';
@@ -14,6 +13,7 @@ import { IDocumentManager } from '@jupyterlab/docmanager';
 import { Context } from '@jupyterlab/docregistry';
 import { hashString } from './utils';
 import { CommentFileModel } from './model';
+import { CommentsPanelIcon } from './icons';
 import * as Y from 'yjs';
 
 export interface ICommentPanel extends Panel {
@@ -58,7 +58,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
     super();
 
     this.id = `CommentPanel-${UUID.uuid4()}`;
-    this.title.icon = listIcon;
+    this.title.icon = CommentsPanelIcon;
     this.addClass('jc-CommentPanel');
 
     const { docManager, registry } = options;
@@ -75,6 +75,14 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.addWidget(panelHeader as Widget);
 
     this._panelHeader = panelHeader;
+  }
+
+  handleEvent(event: Event): void {
+    switch (event.type) {
+      case 'scroll':
+        break;
+      // this._panelHeader.addClass('jc-HeaderScroll');
+    }
   }
 
   onUpdateRequest(msg: Message): void {
@@ -130,6 +138,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
   async loadModel(sourcePath: string): Promise<void> {
     if (this._fileWidget != null) {
       const oldWidget = this._fileWidget;
+      oldWidget.node.removeEventListener('scroll', this);
       void (await oldWidget.context.save());
       oldWidget.dispose();
     }
@@ -141,6 +150,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
     this._fileWidget = content;
     this.model!.comments.observeDeep(this._onChange.bind(this));
+    content.node.addEventListener('scroll', this, { passive: true });
 
     this.addWidget(content);
 

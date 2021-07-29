@@ -714,6 +714,9 @@ export class CommentFileWidget extends Panel {
 
     this.id = `Comments-${context.path}`;
     this.addClass('jc-CommentFileWidget');
+
+    const content = new Panel();
+    content.addClass('jc-CommentFileWidgetChild');
   }
 
   onUpdateRequest(msg: Message): void {
