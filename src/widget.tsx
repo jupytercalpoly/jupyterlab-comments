@@ -28,6 +28,7 @@ type CommentProps = {
 type CommentWithRepliesProps = {
   comment: IComment;
   editID: string;
+  activeID: string;
   className?: string;
   target?: any;
   factory: ACommentFactory;
@@ -98,9 +99,9 @@ function JCComment(props: CommentProps): JSX.Element {
       id={comment.id}
       jcEventArea="other"
     >
-      <Jdiv className="jc-ProfilePicContainer">
+      <Jdiv className="jc-CommentProfilePicContainer">
         <Jdiv
-          className="jc-ProfilePic"
+          className="jc-CommentProfilePic"
           style={{ backgroundColor: comment.identity.color }}
           jcEventArea="user"
         />
@@ -143,9 +144,9 @@ function JCReply(props: ReplyProps): JSX.Element {
       id={reply.id}
       jcEventArea="other"
     >
-      <Jdiv className="jc-ProfilePicContainer">
+      <Jdiv className="jc-ReplyProfilePicContainer">
         <Jdiv
-          className="jc-ProfilePic"
+          className="jc-ReplyProfilePic"
           style={{ backgroundColor: reply.identity.color }}
           jcEventArea="user"
         />
@@ -177,27 +178,73 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
   const editID = props.editID;
+  const activeID = props.activeID;
   const target = props.target;
   const factory = props.factory;
+  const [open, SetOpen] = React.useState(false);
+
+  let RepliesComponent = (): JSX.Element => {
+    let idList = [comment.id];
+    for(let reply of comment.replies){
+      idList.push(reply.id)
+    }
+
+    if (!(activeID in idList)){
+      SetOpen(false)
+    }
+  
+
+    if ( comment.replies.length < 4 ) {
+    // if (isExpand){
+      return (
+        <div className={'jc-Replies'} >
+          {comment.replies.map(reply => (
+            <JCReply
+              reply={reply}
+              editable={editID === reply.id}
+              key={reply.id}
+            />
+          ))}
+        </div>
+      );
+    // } else if(open == false) {
+    } else {
+      return (
+        <div className={'jc-Replies'} >
+          <hr />
+          <Jdiv jcEventArea="expand-thread">expand thread</Jdiv>
+          {/* <div onClick={handleClick}>expand thread</div> */}
+          <div>...{comment.replies.length -1}</div>
+          <hr />
+          <JCReply
+            reply={comment.replies[comment.replies.length - 1]}
+            editable={editID === comment.replies[comment.replies.length - 1].id}
+            key={comment.replies[comment.replies.length - 1].id}
+          />
+        </div>
+      );
+    }
+ 
+  };
+
+  React.useEffect(()=>{
+    console.log(open)
+  }, [open])
+
+  // const handleClick = () => {
+  //   SetOpen(open => !open)
+  // }
 
   return (
-    <div className={'jc-CommentWithReplies ' + className}>
+    <Jdiv className={'jc-CommentWithReplies ' + className}>
       <JCComment
         comment={comment}
         editable={editID === comment.id}
         target={target}
         factory={factory}
       />
-      <div className={'jc-Replies'}>
-        {comment.replies.map(reply => (
-          <JCReply
-            reply={reply}
-            editable={editID === reply.id}
-            key={reply.id}
-          />
-        ))}
-      </div>
-    </div>
+      <RepliesComponent />
+    </Jdiv>
   );
 }
 
@@ -229,6 +276,8 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
       <JCCommentWithReplies
         comment={commentWidget.comment!}
         editID={commentWidget.editID}
+        activeID={commentWidget.activeID}
+
         target={commentWidget.target}
         factory={commentWidget.factory}
       />
@@ -286,6 +335,9 @@ export class CommentWidget<T> extends ReactWidget {
       case 'other':
         this._handleOtherClick(event);
         break;
+      case 'expand-thread':
+        this._handleExpandClick(event);
+        break;
       case 'none':
         break;
       default:
@@ -311,6 +363,14 @@ export class CommentWidget<T> extends ReactWidget {
       this.node.focus();
     }
   }
+
+  /**
+   * Handle a click on the dropdown (ellipses) area of a widget.
+   */
+  private _handleExpandClick(event: React.MouseEvent): void {
+    this._setClickFocus(event);
+  }
+
 
   /**
    * Handle a click on the dropdown (ellipses) area of a widget.
@@ -609,7 +669,7 @@ export class CommentWidget<T> extends ReactWidget {
     return this._renderNeeded;
   }
 
-  /**
+  /** 
    * The ID of the managed comment being edited, or the empty string if none.
    */
   get editID(): string {
@@ -662,13 +722,14 @@ export namespace CommentWidget {
     | 'user'
     | 'reply'
     | 'other'
-    | 'none';
+    | 'none'
+    | 'expand-thread';
 
   /**
    * Whether a string is a type of `EventArea`
    */
   export function isEventArea(input: string): input is EventArea {
-    return ['dropdown', 'body', 'user', 'reply', 'other', 'none'].includes(
+    return ['dropdown', 'body', 'user', 'reply', 'other', 'none', 'expand-thread'].includes(
       input
     );
   }
