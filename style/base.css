@@ -1,7 +1,8 @@
 :root {
   --jc-dropdown-size: 25px;
 
-  --jc-profile-pic-size: 32px;
+  --jc-comment-profile-pic-size: 32px;
+  --jc-reply-profile-pic-size: 26px;
 
   --jc-panel-background-color: var(--jp-layout-color0);
 
@@ -90,21 +91,35 @@
   z-index: 5;
 }
 
-/* .jc-Indicator:hover {
-
-} */
-
-.jc-ProfilePic {
+.jc-Indicator:hover {
+  background-color: orange;
+  width: 12px;
+  width: 12px;
+}
+.jc-CommentProfilePic {
   display: block;
   border-radius: 50%;
   top: 0;
   left: 0;
-  height: var(--jc-profile-pic-size);
-  width: var(--jc-profile-pic-size);
+  height: var(--jc-comment-profile-pic-size);
+  width: var(--jc-comment-profile-pic-size);
 }
-.jc-ProfilePicContainer {
+.jc-CommentProfilePicContainer {
   float: left;
-  width: var(--jc-profile-pic-size);
+  width: var(--jc-comment-profile-pic-size);
+}
+
+.jc-ReplyProfilePic {
+  display: block;
+  border-radius: 50%;
+  top: 0;
+  left: 0;
+  height: var(--jc-reply-profile-pic-size);
+  width: var(--jc-reply-profile-pic-size);
+}
+.jc-ReplyProfilePicContainer {
+  float: left;
+  width: var(--jc-reply-profile-pic-size);
 }
 
 .jc-CommentWidget {
