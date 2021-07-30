@@ -181,6 +181,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
   const editID = props.editID;
+  const activeID = props.activeID;
   const target = props.target;
   const factory = props.factory;
   const [open, SetOpen] = React.useState(false);
@@ -349,7 +350,6 @@ export class CommentWidget<T> extends ReactWidget {
       case 'other':
         this._handleOtherClick(event);
         break;
-
       case 'none':
         break;
       default:
@@ -395,6 +395,8 @@ export class CommentWidget<T> extends ReactWidget {
       this.node.focus();
     }
   }
+
+
 
 
   /**
