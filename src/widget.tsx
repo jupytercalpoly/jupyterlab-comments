@@ -221,11 +221,10 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   const commentWidget = props.commentWidget;
   const className = props.className || '';
 
-  const onClick = commentWidget.handleEvent.bind(commentWidget);
-  const onKeyDown = onClick;
+  const eventHandler = commentWidget.handleEvent.bind(commentWidget);
 
   return (
-    <div className={className} onClick={onClick} onKeyDown={onKeyDown}>
+    <div className={className} onClick={eventHandler} onKeyDown={eventHandler}>
       <JCCommentWithReplies
         comment={commentWidget.comment!}
         editID={commentWidget.editID}
@@ -255,7 +254,7 @@ export class CommentWidget<T> extends ReactWidget {
     this.node.tabIndex = 0;
   }
 
-  handleEvent(event: React.SyntheticEvent): void {
+  handleEvent(event: React.SyntheticEvent | Event): void {
     switch (event.type) {
       case 'click':
         this._handleClick(event as React.MouseEvent);

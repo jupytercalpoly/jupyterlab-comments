@@ -80,8 +80,9 @@
 }
 
 .jc-Indicator {
-  width: 20px;
-  height: 20px;
+  position: absolute;
+  height: fit-content;
+  width: fit-content;
   float: right;
   /*margin-top: -20px;*/
   text-align: center;
@@ -237,4 +238,9 @@
   border: var(--jc-comment-border);
   color: var(--jp-ui-font-color3);
   word-break: break-word;
+}
+
+.jc-IconShadow {
+  filter: drop-shadow(0px 2px 1px var(--jp-shadow-umbra-color));
+  cursor: pointer;
 }
