@@ -17,6 +17,7 @@ import { Signal } from '@lumino/signaling';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { ICellModel } from '@jupyterlab/cells';
 import { ACommentFactory } from './factory';
+import { Message } from '@lumino/messaging';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -188,63 +189,88 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
   const editID = props.editID;
-  const isExpand = props.isExpand;
-  const activeID = props.activeID;
+  let isExpand = props.isExpand;
   const target = props.target;
   const factory = props.factory;
   const [open, SetOpen] = React.useState(false);
 
   let RepliesComponent = (): JSX.Element => {
-    let idList = [comment.id];
-    for(let reply of comment.replies){
-      idList.push(reply.id)
-    }
-
-    if (!(activeID in idList)){
-      SetOpen(false)
-    }
-  
-
-    if (isExpand === true || comment.replies.length < 4 ) {
-    // if (isExpand){
-      return (
-        <div className={'jc-Replies'} >
-          {comment.replies.map(reply => (
-            <JCReply
-              reply={reply}
-              editable={editID === reply.id}
-              key={reply.id}
-            />
-          ))}
-        </div>
-      );
-    // } else if(open == false) {
-    } else {
-      return (
-        <div className={'jc-Replies'} >
-          <hr />
-          <Jdiv jcEventArea="expand-thread">expand thread</Jdiv>
-          {/* <div onClick={handleClick}>expand thread</div> */}
-          <div>...{comment.replies.length -1}</div>
-          <hr />
+    let full = (
+      <div className={'jc-Replies'}>
+        {comment.replies.map(reply => (
           <JCReply
-            reply={comment.replies[comment.replies.length - 1]}
-            editable={editID === comment.replies[comment.replies.length - 1].id}
-            key={comment.replies[comment.replies.length - 1].id}
+            reply={reply}
+            editable={editID === reply.id}
+            key={reply.id}
           />
-        </div>
-      );
+        ))}
+      </div>
+    );
+    let minified = (
+      <div className={'jc-Replies'}>
+        <hr />
+        <div onClick={handleClick}>expand thread</div>
+        <div>...{comment.replies.length - 1}</div>
+        <hr />
+        <JCReply
+          reply={comment.replies[comment.replies.length - 1]}
+          editable={editID === comment.replies[comment.replies.length - 1].id}
+          key={comment.replies[comment.replies.length - 1].id}
+        />
+      </div>
+    );
+
+    console.log(isExpand)
+    // parsing
+    if(comment.replies.length < 4){
+      SetOpen(true)
     }
- 
+
+    if (open === true ){
+      return full
+    } else {
+      return minified
+    }
+    
+    // else {
+    //   if (comment.replies.length < 4){
+    //     return full
+    //   }
+    //   else if (isExpand === false || comment.replies.length > 4) {
+    //     // return full 
+    //     return minified
+    //   }
+    //   else {
+    //     return <div> bleehhhhhh</div>
+    //   }
+    // }
+
+    // console.log(isExpand);
+    // if (isExpand === true) {
+    //   if (comment.replies && comment.replies.length < 4) {
+    //     return full;
+    //   } else {
+    //     return minified;
+    //   }
+    // } else {
+    //   if (open === true || (comment.replies &&comment.replies.length < 4)) {
+    //     return full;
+    //   } else if (open === false) {
+    //     return minified;
+    //   } else {
+    //     return <div>[dummy]</div>;
+    //   }
+    // }
   };
 
-  React.useEffect(()=>{
-    console.log(open)
-  }, [open])
+  React.useEffect(() => {
+    console.log(open);
 
-  // const handleClick = () => {
-  //   SetOpen(open => !open)
-  // }
+  }, [open]);
+
+  const handleClick = () => {
+    SetOpen(open => !open);
+  };
 
   return (
     <Jdiv className={'jc-CommentWithReplies ' + className}>
@@ -283,18 +309,17 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   const onKeyDown = onClick;
 
   return (
-    <div className={className} onClick={onClick} onKeyDown={onKeyDown}>
+    <Jdiv className={className} onClick={onClick} onKeyDown={onKeyDown}>
       <JCCommentWithReplies
         comment={commentWidget.comment!}
         editID={commentWidget.editID}
         activeID={commentWidget.activeID}
         isExpand={commentWidget.isExpand}
-
         target={commentWidget.target}
         factory={commentWidget.factory}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
-    </div>
+    </Jdiv>
   );
 }
 
@@ -315,19 +340,32 @@ export class CommentWidget<T = any> extends ReactWidget {
     this._menu = menu;
     this._tracker = nbTracker;
     this._factory = factory;
-    this._isExpand = true; 
+    this._isExpand = true;
 
     this.addClass('jc-CommentWidget');
     this.node.tabIndex = 0;
   }
 
-  handleEvent(event: React.SyntheticEvent): void {
+  protected onAfterAttach(msg: Message): void {
+    super.onAfterAttach(msg);
+    this.node.addEventListener('focusout', this);
+  }
+
+  protected onAfterDetach(msg: Message): void {
+    super.onAfterAttach(msg);
+    this.node.removeEventListener('focusout', this);
+  }
+
+  handleEvent(event: React.SyntheticEvent | Event): void {
     switch (event.type) {
       case 'click':
         this._handleClick(event as React.MouseEvent);
         break;
       case 'keydown':
         this._handleKeydown(event as React.KeyboardEvent);
+        break;
+      case 'focusout':
+        this._handleBlur(event as React.MouseEvent);
         break;
     }
   }
@@ -352,13 +390,32 @@ export class CommentWidget<T = any> extends ReactWidget {
       case 'other':
         this._handleOtherClick(event);
         break;
-      case 'expand-thread':
-        this._handleExpandClick(event);
-        break;
+
       case 'none':
         break;
       default:
         break;
+    }
+  }
+
+  private _handleBlur(event: React.MouseEvent): void {
+    const relatedTarget = event.relatedTarget;
+    if (relatedTarget == null) {
+      console.log(
+        'related target is null; no new focus target; collapse replies'
+      );
+      this._isExpand = false;
+      // this.renderNeeded.emit(undefined);
+    } else if (
+      this.node.contains(relatedTarget as HTMLElement) ||
+      this.node === relatedTarget
+    ) {
+      console.log("focus within; don't collapse replies");
+      this._isExpand = true;
+    } else {
+      console.log('lost focus entirely; collapse replies');
+      this._isExpand = false;
+      // this.renderNeeded.emit(undefined);
     }
   }
 
@@ -391,15 +448,6 @@ export class CommentWidget<T = any> extends ReactWidget {
       cell.node.scrollIntoView({ behavior: 'smooth' });
     }
   }
-
-  /**
-   * Handle a click on the dropdown (ellipses) area of a widget.
-   */
-  private _handleExpandClick(event: React.MouseEvent): void {
-    this._setClickFocus(event);
-    this._isExpand = true;
-  }
-
 
   /**
    * Handle a click on the dropdown (ellipses) area of a widget.
@@ -693,7 +741,7 @@ export class CommentWidget<T = any> extends ReactWidget {
     return this._renderNeeded;
   }
 
-  /** 
+  /**
    * The ID of the managed comment being edited, or the empty string if none.
    */
   get editID(): string {
@@ -706,16 +754,16 @@ export class CommentWidget<T = any> extends ReactWidget {
     }
   }
 
-  get factory(): ACommentFactory {
-    return this._factory;
-  }
-
   get isExpand(): boolean {
     return this._isExpand;
   }
 
-  set isExpand(value: boolean){
-    this._isExpand = value
+  set isExpand(value: boolean) {
+    this._isExpand = value;
+  }
+
+  get factory(): ACommentFactory {
+    return this._factory;
   }
 
   private _isExpand: boolean;
@@ -760,16 +808,22 @@ export namespace CommentWidget {
     | 'user'
     | 'reply'
     | 'other'
-    | 'none'
-    | 'expand-thread';
+    | 'blur'
+    | 'none';
 
   /**
    * Whether a string is a type of `EventArea`
    */
   export function isEventArea(input: string): input is EventArea {
-    return ['dropdown', 'body', 'user', 'reply', 'other', 'none', 'expand-thread'].includes(
-      input
-    );
+    return [
+      'dropdown',
+      'body',
+      'user',
+      'reply',
+      'other',
+      'none',
+      'blur'
+    ].includes(input);
   }
 
   /**
