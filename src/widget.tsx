@@ -284,7 +284,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
         collapseNeeded = {collapseNeeded}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
-    </div>
+    </Jdiv>
   );
 }
 
