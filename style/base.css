@@ -74,6 +74,10 @@
   white-space: pre-wrap;
 }
 
+.jc-Replies > hr{
+  border: 1px solid var(--jp-ui-font-color3);
+}
+
 .jc-CommentInput {
   width: 100%;
   min-height: 44px;
