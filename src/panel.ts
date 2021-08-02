@@ -82,14 +82,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this._panelHeader = panelHeader;
   }
 
-  handleEvent(event: Event): void {
-    switch (event.type) {
-      case 'scroll':
-        break;
-      // this._panelHeader.addClass('jc-HeaderScroll');
-    }
-  }
-
   onUpdateRequest(msg: Message): void {
     if (this._fileWidget == null) {
       console.log('this._fileWidget is null');
@@ -143,7 +135,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
   async loadModel(sourcePath: string): Promise<void> {
     if (this._fileWidget != null) {
       const oldWidget = this._fileWidget;
-      oldWidget.node.removeEventListener('scroll', this);
       void (await oldWidget.context.save());
       oldWidget.dispose();
     }
@@ -155,7 +146,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
     this._fileWidget = content;
     this.model!.comments.observeDeep(this._onChange.bind(this));
-    content.node.addEventListener('scroll', this, { passive: true });
 
     this.addWidget(content);
 
