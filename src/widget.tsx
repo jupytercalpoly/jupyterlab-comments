@@ -206,8 +206,8 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
     } else {
       return (
         <div className={'jc-Replies'}>
-          <div className="jc-Replies-breaker">
-            <div onClick={handleClick} className="jc-Replies-breaker-left">expand thread</div>
+          <div onClick={handleClick} className="jc-Replies-breaker">
+            <div className="jc-Replies-breaker-left">expand thread</div>
             <div className="jc-Replies-breaker-right">
               <div className="jc-Replies-breaker-number">
                 {comment.replies.length - 1}
