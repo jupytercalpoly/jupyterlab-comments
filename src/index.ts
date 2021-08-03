@@ -311,6 +311,9 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       }
     });
 
+    // Reveal the comment panel when a comment is added.
+    panel.commentAdded.connect(() => shell.activateById(panel.id));
+
     // app.commands.addCommand('addComment', {
     //   label: 'Add Document Comment',
     //   execute: () => {

@@ -18,11 +18,6 @@ import { NewCommentButton } from './button';
 
 export interface ICommentPanel extends Panel {
   /**
-   * Add a comment widget and emit the `commentAdded` signal.
-   */
-  addComment: (widget: CommentWidget<any>) => void;
-
-  /**
    * Scroll the comment with the given id into view.
    */
   scrollToComment: (id: string) => void;
@@ -160,6 +155,9 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.model!.changed.connect(this._boundOnChange);
 
     this.addWidget(content);
+    content.commentAdded.connect((_, widget) =>
+      this._commentAdded.emit(widget)
+    );
 
     void context.ready.then(() => {
       this._modelChanged.emit(content);
@@ -225,14 +223,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
   get modelChanged(): ISignal<this, CommentFileWidget | undefined> {
     return this._modelChanged;
-  }
-
-  /**
-   * Add a comment widget and emit the `commentAdded` signal.
-   */
-  addComment(widget: CommentWidget<any>): void {
-    this.addWidget(widget);
-    this._commentAdded.emit(widget);
   }
 
   /**
