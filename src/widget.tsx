@@ -9,6 +9,7 @@ import { ACommentFactory } from './factory';
 import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
+import { PartialJSONValue } from '@lumino/coreutils';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -34,7 +35,7 @@ type CommentWithRepliesProps = {
 };
 
 type CommentWrapperProps = {
-  commentWidget: CommentWidget<any>;
+  commentWidget: ICommentWidget<any>;
   className?: string;
 };
 
@@ -236,10 +237,31 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   );
 }
 
+export interface ICommentWidget<T> {
+  revealReply: () => void;
+  openEditActive: () => void;
+  editActive: (text: string) => void;
+  deleteActive: () => void;
+  comment: IComment | undefined;
+  target: T;
+  replies: IReply[] | undefined;
+  commentID: string;
+  identity: IIdentity | undefined;
+  text: string | undefined;
+  type: string | undefined;
+  menu: Menu | undefined;
+  replyAreaHidden: boolean;
+  activeID: string;
+  editID: string;
+  factory: ACommentFactory;
+  renderNeeded: ISignal<this, undefined>;
+  handleEvent: (event: React.SyntheticEvent | Event) => void;
+}
+
 /**
  * A React widget that can render a comment and its replies.
  */
-export class CommentWidget<T> extends ReactWidget {
+export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
   constructor(options: CommentWidget.IOptions<T>) {
     super();
 
@@ -268,7 +290,7 @@ export class CommentWidget<T> extends ReactWidget {
   /**
    * Handle `click` events on the widget.
    */
-  private _handleClick(event: React.MouseEvent): void {
+  protected _handleClick(event: React.MouseEvent): void {
     switch (CommentWidget.getEventArea(event)) {
       case 'body':
         this._handleBodyClick(event);
@@ -314,7 +336,7 @@ export class CommentWidget<T> extends ReactWidget {
   /**
    * Handle a click on the dropdown (ellipses) area of a widget.
    */
-  private _handleDropdownClick(event: React.MouseEvent): void {
+  protected _handleDropdownClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
     const menu = this.menu;
     if (menu != null) {
@@ -328,7 +350,7 @@ export class CommentWidget<T> extends ReactWidget {
    * ### Note
    * Currently just acts as an `other` click.
    */
-  private _handleUserClick(event: React.MouseEvent): void {
+  protected _handleUserClick(event: React.MouseEvent): void {
     console.log('clicked user photo!');
     this._setClickFocus(event);
   }
@@ -336,7 +358,7 @@ export class CommentWidget<T> extends ReactWidget {
   /**
    * Handle a click on the widget but not on a specific area.
    */
-  private _handleOtherClick(event: React.MouseEvent): void {
+  protected _handleOtherClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
 
     const target = event.target as HTMLElement;
@@ -357,14 +379,14 @@ export class CommentWidget<T> extends ReactWidget {
   /**
    * Handle a click on the widget's reply area.
    */
-  private _handleReplyClick(event: React.MouseEvent): void {
+  protected _handleReplyClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
   }
 
   /**
    * Handle a click on the widget's body.
    */
-  private _handleBodyClick(event: React.MouseEvent): void {
+  protected _handleBodyClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
     this.openEditActive();
   }
@@ -372,7 +394,7 @@ export class CommentWidget<T> extends ReactWidget {
   /**
    * Handle `keydown` events on the widget.
    */
-  private _handleKeydown(event: React.KeyboardEvent): void {
+  protected _handleKeydown(event: React.KeyboardEvent): void {
     switch (CommentWidget.getEventArea(event)) {
       case 'reply':
         this._handleReplyKeydown(event);
@@ -388,7 +410,7 @@ export class CommentWidget<T> extends ReactWidget {
   /**
    * Handle a keydown on the widget's reply area.
    */
-  private _handleReplyKeydown(event: React.KeyboardEvent): void {
+  protected _handleReplyKeydown(event: React.KeyboardEvent): void {
     if (event.key === 'Escape') {
       this.replyAreaHidden = true;
       return;
@@ -417,7 +439,7 @@ export class CommentWidget<T> extends ReactWidget {
   /**
    * Handle a keydown on the widget's body.
    */
-  private _handleBodyKeydown(event: React.KeyboardEvent): void {
+  protected _handleBodyKeydown(event: React.KeyboardEvent): void {
     if (this.editID === '') {
       return;
     }
@@ -526,7 +548,7 @@ export class CommentWidget<T> extends ReactWidget {
    * The comment object being rendered by the widget.
    */
   get comment(): IComment | undefined {
-    return this.model.getComment(this.commentID);
+    return this.model.getComment(this.commentID)?.comment;
   }
 
   /**
@@ -700,6 +722,103 @@ export namespace CommentWidget {
   }
 }
 
+export namespace MockCommentWidget {
+  export interface IOptions<T> {
+    model: CommentFileModel;
+    factory: ACommentFactory;
+    target: T;
+    comment: IComment;
+  }
+}
+
+export class MockCommentWidget<T> extends CommentWidget<T> {
+  constructor(options: MockCommentWidget.IOptions<T>) {
+    super({ ...options, id: options.comment.id });
+
+    const comment = options.comment;
+
+    this._comment = comment;
+
+    const commands = this.model.commentMenu?.commands;
+    if (commands == null) {
+      return;
+    }
+
+    this._menu = new Menu({ commands });
+  }
+
+  protected onAfterAttach(msg: Message): void {
+    super.onAfterAttach(msg);
+    this.openEditActive();
+  }
+
+  protected onAfterDetach(msg: Message): void {
+    super.onAfterDetach(msg);
+  }
+
+  populate(text: string): void {
+    let index = 0;
+    let node = this.node as ChildNode;
+    while (node.previousSibling != null) {
+      index++;
+      node = node.previousSibling;
+    }
+
+    this.hide();
+
+    const { target, identity, type } = this.comment;
+
+    this.model.insertComment(
+      {
+        text,
+        identity,
+        type,
+        target
+      },
+      index
+    );
+
+    this.dispose();
+  }
+
+  protected _handleBodyKeydown(event: React.KeyboardEvent): void {
+    if (this.editID === '') {
+      return;
+    }
+
+    const target = event.target as HTMLDivElement;
+
+    switch (event.key) {
+      case 'Escape':
+        this.dispose();
+        break;
+      case 'Enter':
+        if (event.shiftKey) {
+          break;
+        }
+        if (target.innerText === '') {
+          this.dispose();
+        } else {
+          this.populate(target.innerText);
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  get comment(): IComment {
+    return this._comment;
+  }
+
+  get menu(): Menu | undefined {
+    return this._menu;
+  }
+
+  private _comment: IComment;
+  private _menu: Menu | undefined;
+}
+
 /**
  * A widget that hosts and displays a list of `CommentWidget`s
  */
@@ -718,32 +837,44 @@ export class CommentFileWidget extends Panel {
     content.addClass('jc-CommentFileWidgetChild');
   }
 
+  insertComment(comment: IComment, index: number): void {
+    const factory = this.model.registry.getFactory(comment.type);
+    if (factory == null) {
+      return;
+    }
+
+    const widget = factory.createWidget(comment, this.model);
+
+    if (widget != null) {
+      this.insertWidget(index, widget);
+      this._commentAdded.emit(widget);
+      console.log('insertComment', widget);
+    }
+  }
+
   onUpdateRequest(msg: Message): void {
     super.onUpdateRequest(msg);
-
-    const { comments, registry } = this.model;
 
     while (this.widgets.length > 0) {
       this.widgets[0].dispose();
     }
 
-    comments.forEach(comment => {
-      const factory = registry.getFactory(comment.type);
-      if (factory == null) {
-        return;
-      }
-
-      const widget = factory.createWidget(comment, this.model);
-
-      if (widget != null) {
-        this.addComment(widget);
-      }
-    });
+    this.model.comments.forEach(comment => this.addComment(comment));
   }
 
-  addComment(widget: CommentWidget<any>) {
-    this.addWidget(widget);
-    this._commentAdded.emit(widget);
+  addComment(comment: IComment) {
+    const factory = this.model.registry.getFactory(comment.type);
+    if (factory == null) {
+      return;
+    }
+
+    const widget = factory.createWidget(comment, this.model);
+
+    if (widget != null) {
+      this.addWidget(widget);
+      this._commentAdded.emit(widget);
+      console.log('addComment', widget);
+    }
   }
 
   get model(): CommentFileModel {
@@ -767,6 +898,17 @@ export namespace CommentFileWidget {
   export interface IOptions {
     context: Context;
   }
+
+  export interface IBaseMockCommentOptions {
+    identity: IIdentity;
+    type: string;
+  }
+
+  export type IMockCommentOptions = (
+    | { target: PartialJSONValue }
+    | { source: any }
+  ) &
+    IBaseMockCommentOptions;
 }
 
 export namespace Private {

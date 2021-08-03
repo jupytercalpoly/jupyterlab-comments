@@ -38,6 +38,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     }
 
     this._isDisposed = true;
+    console.log('disposed old model');
     this.comments.unobserveDeep(this._commentsObserver);
   }
 
@@ -75,11 +76,33 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     this.fromJSON(JSON.parse(value !== '' ? value : '[]'));
   }
 
-  private _commentsObserver = (event: Y.YEvent[]): void => {
-    // In the future, this should emit a signal describing changes made to the comments.
-    // I don't understand YArrayEvent well enough yet so I'm just logging it here.
-    console.log('changes', event as Y.YEvent[]);
+  private _commentsObserver = (events: Y.YEvent[]): void => {
+    console.log('comment change');
+    // const f = (_: this, e: CommentFileModel.IChange[]): void => console.log('delta', e);
+    for (let event of events) {
+      // this.changed.connect(f);
+      this._changed.emit(event.delta as any);
+      // this.changed.disconnect(f);
+    }
   };
+
+  // private _emitUpdate(index: number): void {
+  //   this._changed.emit([
+  //     { retain: index },
+  //     { update: 1 }
+  //   ]);
+
+  //   this._contentChanged.emit();
+  // }
+
+  private _updateComment(comment: IComment, index: number): void {
+    const comments = this.comments;
+    this.ymodel.ydoc.transact(() => {
+      comments.delete(index);
+      comments.insert(index, [comment]);
+    });
+    this._contentChanged.emit();
+  }
 
   /**
    * Create a comment from an `ICommentOptions` object.
@@ -117,6 +140,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     }
 
     this.comments.insert(index, [comment]);
+    // Delta emitted by listener
     this._contentChanged.emit();
   }
 
@@ -130,6 +154,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     }
 
     this.comments.push([comment]);
+    // Delta emitted by listener
     this._contentChanged.emit();
   }
 
@@ -138,14 +163,15 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * with id `parentID` at `index`.
    */
   insertReply(options: IReplyOptions, parentID: string, index: number): void {
-    const parentComment = this.getComment(parentID);
-    if (parentComment == null) {
+    const loc = this.getComment(parentID);
+    if (loc == null) {
       return;
     }
 
     const reply = this.createReply(options);
-    parentComment.replies.splice(index, 0, reply);
-    this._contentChanged.emit();
+    const newComment = { ...loc.comment };
+    newComment.replies.splice(index, 0, reply);
+    this._updateComment(newComment, loc.index);
   }
 
   /**
@@ -153,29 +179,29 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * with id `parentID`.
    */
   addReply(options: IReplyOptions, parentID: string): void {
-    const parentComment = this.getComment(parentID);
-    if (parentComment == null) {
+    const loc = this.getComment(parentID);
+    if (loc == null) {
       return;
     }
 
     const reply = this.createReply(options);
-    parentComment.replies.push(reply);
-    this._contentChanged.emit();
+    const newComment = { ...loc.comment };
+    newComment.replies.push(reply);
+    this._updateComment(newComment, loc.index);
   }
 
   /**
    * Deletes the comment with id `id` from `this.comments`.
    */
   deleteComment(id: string): void {
-    const comments = this.comments;
-    for (let i = 0; i < comments.length; i++) {
-      const comment = comments.get(i);
-      if (comment.id === id) {
-        comments.delete(i);
-        this._contentChanged.emit();
-        return;
-      }
+    const loc = this.getComment(id);
+    if (loc == null) {
+      return;
     }
+
+    this.comments.delete(loc.index);
+    // Delta emitted by listener
+    this._contentChanged.emit();
   }
 
   /**
@@ -185,29 +211,14 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * Otherwise, all comments will be searched for the reply with the given id.
    */
   deleteReply(id: string, parentID?: string): void {
-    if (parentID != null) {
-      const comment = this.getComment(parentID);
-      if (comment == null) {
-        return;
-      }
-
-      const replyIndex = comment.replies.findIndex(reply => reply.id === id);
-      if (replyIndex !== -1) {
-        comment.replies.splice(replyIndex, 1);
-        this._contentChanged.emit();
-      }
+    const loc = this.getReply(id, parentID);
+    if (loc == null) {
       return;
     }
 
-    const comments = this.comments;
-    for (let comment of comments) {
-      const replyIndex = comment.replies.findIndex(reply => reply.id === id);
-      if (replyIndex !== -1) {
-        comment.replies.splice(replyIndex, 1);
-        this._contentChanged.emit();
-        return;
-      }
-    }
+    const newComment = { ...loc.parent };
+    newComment.replies.splice(loc.index, 1);
+    this._updateComment(newComment, loc.parentIndex);
   }
 
   /**
@@ -217,13 +228,13 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     options: Partial<Exclude<ICommentOptions, 'id'>>,
     id: string
   ): void {
-    const comment = this.getComment(id);
-    if (comment == null) {
+    const loc = this.getComment(id);
+    if (loc == null) {
       return;
     }
 
-    Object.assign(comment, comment, options);
-    this._contentChanged.emit();
+    const newComment = { ...loc.comment, ...options };
+    this._updateComment(newComment, loc.index);
   }
 
   /**
@@ -237,23 +248,28 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     id: string,
     parentID?: string
   ): void {
-    const reply = this.getReply(id, parentID);
-    if (reply == null) {
+    const loc = this.getReply(id, parentID);
+    if (loc == null) {
       return;
     }
 
-    Object.assign(reply, reply, options);
-    this._contentChanged.emit();
+    Object.assign(loc.reply, loc.reply, options);
+    const newComment = { ...loc.parent };
+    this._updateComment(newComment, loc.parentIndex);
   }
 
   /**
    * Get the comment with id `id`. Returns undefined if not found.
    */
-  getComment(id: string): IComment | undefined {
+  getComment(id: string): CommentFileModel.ICommentLocation | undefined {
     const comments = this.comments;
-    for (let comment of comments) {
+    for (let i = 0; i < comments.length; i++) {
+      const comment = comments.get(i);
       if (comment.id === id) {
-        return comment;
+        return {
+          index: i,
+          comment
+        };
       }
     }
 
@@ -261,26 +277,55 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   }
 
   /**
-   * The the reply with id `id`. Returns undefined if not found.
+   * Returns the reply with id `id`. Returns undefined if not found.
    *
    * If a `parentID` is given, it will be used to locate the parent comment.
    * Otherwise, all comments will be searched for the reply with the given id.
    */
-  getReply(id: string, parentID?: string): IReply | undefined {
+  getReply(
+    id: string,
+    parentID?: string
+  ): CommentFileModel.IReplyLocation | undefined {
+    let parentIndex: number;
+    let parent: IComment;
+
     if (parentID != null) {
-      const comment = this.getComment(parentID);
-      if (comment == null) {
+      const parentLocation = this.getComment(parentID);
+      if (parentLocation == null) {
         return;
       }
 
-      return comment.replies.find(reply => reply.id === id);
+      parentIndex = parentLocation.index;
+      parent = parentLocation.comment;
+
+      for (let i = 0; i < parent.replies.length; i++) {
+        const reply = parent.replies[i];
+        if (reply.id === id) {
+          return {
+            parentIndex,
+            parent,
+            reply,
+            index: i
+          };
+        }
+      }
+
+      return;
     }
 
     const comments = this.comments;
-    for (let comment of comments) {
-      const reply = comment.replies.find(reply => reply.id === id);
-      if (reply != null) {
-        return reply;
+    for (let i = 0; i < comments.length; i++) {
+      const parent = comments.get(i);
+      for (let j = 0; i < parent.replies.length; i++) {
+        const reply = parent.replies[j];
+        if (reply.id === id) {
+          return {
+            parentIndex: i,
+            parent,
+            reply,
+            index: j
+          };
+        }
       }
     }
 
@@ -327,7 +372,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * TODO: A signal emitted when the model is changed.
    * See the notes on `CommentFileModel.IChange` below.
    */
-  get changed(): ISignal<this, CommentFileModel.IChange> {
+  get changed(): ISignal<this, CommentFileModel.IChange[]> {
     return this._changed;
   }
 
@@ -391,7 +436,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   private _readOnly: boolean = false;
   private _isDisposed: boolean = false;
   private _commentMenu: Menu | undefined;
-  private _changed = new Signal<this, CommentFileModel.IChange>(this);
+  private _changed = new Signal<this, CommentFileModel.IChange[]>(this);
   private _stateChanged = new Signal<this, IChangedArgs<any>>(this);
   private _contentChanged = new Signal<this, void>(this);
 }
@@ -408,7 +453,22 @@ export namespace CommentFileModel {
    * This will be filled out once `YArrayEvent` is better understood.
    */
   export interface IChange {
-    commentChange: any;
+    insert?: IComment[];
+    retain?: number;
+    delete?: number;
+    update?: number;
+  }
+
+  export interface ICommentLocation {
+    index: number;
+    comment: IComment;
+  }
+
+  export interface IReplyLocation {
+    parentIndex: number;
+    index: number;
+    parent: IComment;
+    reply: IReply;
   }
 }
 

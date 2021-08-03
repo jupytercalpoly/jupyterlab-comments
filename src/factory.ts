@@ -30,7 +30,7 @@ export abstract class ACommentFactory<T = any> {
     comment: IComment,
     model: CommentFileModel,
     target?: T
-  ): CommentWidget<any> {
+  ): CommentWidget<any> | null {
     return new CommentWidget({
       model,
       id: comment.id,
@@ -135,16 +135,24 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
     comment: IComment,
     model: CommentFileModel,
     target?: Cell
-  ): CommentWidget<Cell> {
+  ): CommentWidget<Cell> | null {
     const cell = target ?? this.targetFromJSON(comment.target);
     if (cell == null) {
       console.warn('no cell found for cell selection comment', comment);
+      return null;
+    }
+
+    const widget = super.createWidget(comment, model, cell);
+    if (widget == null) {
+      return null;
     }
 
     // Add the selection to the cell's selections map.
-    const selections = cell!.model.selections.get(cell!.model.id) ?? [];
+    const selectionsMap = cell.model.selections;
+    const selections = selectionsMap.get(cell.model.id) ?? [];
     const { start, end } = comment.target as any as ISelection;
-    selections!.push({
+
+    selections.push({
       start,
       end,
       style: {
@@ -154,9 +162,17 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
       },
       uuid: comment.id
     });
-    cell!.model.selections.set(cell!.model.id, selections);
+    selectionsMap.set(cell.model.id, selections);
 
-    return super.createWidget(comment, model, cell);
+    // Remove selections when widget is disposed.
+    // Currently runs O(N^2) when all widgets are disposed at once.
+    widget.disposed.connect(() => {
+      const sels = selectionsMap.get(cell.model.id) ?? [];
+      const newSels = sels.filter(sel => sel.uuid !== comment.id);
+      selectionsMap.set(cell.model.id, newSels);
+    });
+
+    return widget;
   }
 
   targetToJSON(cell: Cell): PartialJSONValue {

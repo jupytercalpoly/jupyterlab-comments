@@ -1,7 +1,7 @@
 import { Menu, Panel, Widget } from '@lumino/widgets';
 import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
-import { CommentFileWidget, CommentWidget } from './widget';
+import { CommentFileWidget, CommentWidget, MockCommentWidget } from './widget';
 import { YDocument } from '@jupyterlab/shared-models';
 import { ISignal, Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
@@ -15,7 +15,6 @@ import { hashString } from './utils';
 import { CommentFileModel } from './model';
 import { CommentsPanelIcon } from './icons';
 import { NewCommentButton } from './button';
-import * as Y from 'yjs';
 
 export interface ICommentPanel extends Panel {
   /**
@@ -56,10 +55,15 @@ export interface ICommentPanel extends Panel {
   button: NewCommentButton;
 
   fileWidget: CommentFileWidget | undefined;
+
+  mockComment: (
+    options: CommentFileWidget.IMockCommentOptions,
+    index: number
+  ) => MockCommentWidget<any> | undefined;
 }
 
 export class CommentPanel extends Panel implements ICommentPanel {
-  constructor(options: CommentPanel2.IOptions) {
+  constructor(options: CommentPanel.IOptions) {
     super();
 
     this.id = `CommentPanel-${UUID.uuid4()}`;
@@ -80,9 +84,12 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.addWidget(panelHeader as Widget);
 
     this._panelHeader = panelHeader;
+
+    this._boundOnChange = this._onChange.bind(this);
   }
 
   onUpdateRequest(msg: Message): void {
+    console.log('panel update request');
     if (this._fileWidget == null) {
       console.log('this._fileWidget is null');
       return;
@@ -93,7 +100,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
       this.panelHeader.awareness = awareness;
     }
 
-    this._fileWidget.update();
+    // this._fileWidget.update();
   }
 
   async pathExists(path: string): Promise<boolean> {
@@ -133,10 +140,17 @@ export class CommentPanel extends Panel implements ICommentPanel {
   }
 
   async loadModel(sourcePath: string): Promise<void> {
+    // Lock to prevent multiple loads at the same time.
+    if (this._loadingModel) {
+      return;
+    }
+
+    this._loadingModel = true;
+
     if (this._fileWidget != null) {
+      this.model!.changed.disconnect(this._boundOnChange);
       const oldWidget = this._fileWidget;
-      void (await oldWidget.context.save());
-      oldWidget.dispose();
+      void oldWidget.context.save().then(() => oldWidget.dispose());
     }
 
     const path =
@@ -145,18 +159,51 @@ export class CommentPanel extends Panel implements ICommentPanel {
     const content = new CommentFileWidget({ context });
 
     this._fileWidget = content;
-    this.model!.comments.observeDeep(this._onChange.bind(this));
+    this.model!.changed.connect(this._boundOnChange);
 
     this.addWidget(content);
 
     void context.ready.then(() => {
       this._modelChanged.emit(content);
       this.update();
+      content.update();
     });
+
+    this._loadingModel = false;
   }
 
-  private _onChange(changes: Y.YEvent[]): void {
-    this.update();
+  private _onChange(
+    _: CommentFileModel,
+    changes: CommentFileModel.IChange[]
+  ): void {
+    const fileWidget = this.fileWidget;
+    if (fileWidget == null) {
+      return;
+    }
+
+    const widgets = fileWidget.widgets;
+    let index = 0;
+    const toDelete: Widget[] = [];
+
+    for (let change of changes) {
+      if (change.retain != null) {
+        index += change.retain;
+      } else if (change.insert != null) {
+        change.insert.forEach(comment =>
+          fileWidget.insertComment(comment, index++)
+        );
+      } else if (change.delete != null) {
+        toDelete.push(...widgets.slice(index, index + change.delete));
+
+        index += change.delete;
+      } else if (change.update != null) {
+        for (let i = 0; i < change.update; i++) {
+          widgets[index++].update();
+        }
+      }
+    }
+
+    toDelete.forEach(widget => widget.dispose());
   }
 
   get ymodel(): YDocument<any> | undefined {
@@ -257,6 +304,41 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this._pathPrefix = newValue;
   }
 
+  mockComment(
+    options: CommentFileWidget.IMockCommentOptions,
+    index: number
+  ): MockCommentWidget<any> | undefined {
+    const model = this.model;
+    if (model == null) {
+      return;
+    }
+
+    const factory = this.registry.getFactory(options.type);
+    if (factory == null) {
+      return;
+    }
+
+    let source;
+    let comment;
+    if ('target' in options) {
+      const target = options.target;
+      source = factory.targetFromJSON(target);
+      comment = factory.createComment({ ...options, text: '' }, target);
+    } else {
+      source = options.source;
+      comment = factory.createComment({ ...options, text: '' });
+    }
+
+    const widget = new MockCommentWidget({
+      comment,
+      factory,
+      model,
+      target: source
+    });
+
+    this.fileWidget!.insertWidget(index, widget);
+  }
+
   updateIdentity(id: number, newName: string): void {
     const model = this.model;
     if (model == null) {
@@ -292,9 +374,14 @@ export class CommentPanel extends Panel implements ICommentPanel {
   private _modelChanged = new Signal<this, CommentFileWidget | undefined>(this);
   private _pathPrefix: string = 'comments/';
   private _button = new NewCommentButton();
+  private _loadingModel = false;
+  private _boundOnChange: (
+    _: CommentFileModel,
+    changes: CommentFileModel.IChange[]
+  ) => void;
 }
 
-export namespace CommentPanel2 {
+export namespace CommentPanel {
   export interface IOptions {
     docManager: IDocumentManager;
     commands: CommandRegistry;
