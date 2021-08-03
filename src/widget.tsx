@@ -181,7 +181,6 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
   const editID = props.editID;
-  const activeID = props.activeID;
   const target = props.target;
   const factory = props.factory;
   const [open, SetOpen] = React.useState(false);
