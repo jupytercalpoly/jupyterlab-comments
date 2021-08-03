@@ -10,6 +10,7 @@ import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
 
+
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
  */
@@ -26,7 +27,7 @@ type CommentProps = {
 };
 
 type CommentWithRepliesProps = {
-  collapseNeeded: Signal<CommentWidget, boolean>;
+  collapseNeeded: Signal<CommentWidget<any>, boolean>;
   comment: IComment;
   editID: string;
   activeID: string;
@@ -37,7 +38,7 @@ type CommentWithRepliesProps = {
 
 type CommentWrapperProps = {
   commentWidget: CommentWidget<any>;
-  collapseNeeded: Signal<CommentWidget, boolean>;
+  collapseNeeded: Signal<CommentWidget<any>, boolean>;
   className?: string;
 };
 
@@ -180,7 +181,6 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
   const editID = props.editID;
-  const activeID = props.activeID;
   const target = props.target;
   const factory = props.factory;
   const [open, SetOpen] = React.useState(false);
@@ -396,13 +396,6 @@ export class CommentWidget<T> extends ReactWidget {
     if (oldActive == null || !this.node.contains(oldActive)) {
       this.node.focus();
     }
-  }
-
-  /**
-   * Handle a click on the dropdown (ellipses) area of a widget.
-   */
-  private _handleExpandClick(event: React.MouseEvent): void {
-    this._setClickFocus(event);
   }
 
 
@@ -729,7 +722,6 @@ export class CommentWidget<T> extends ReactWidget {
   }
 
   private _model: CommentFileModel;
-  private _awareness: Awareness;
   private _commentID: string;
   private _target: T;
   private _activeID: string;
