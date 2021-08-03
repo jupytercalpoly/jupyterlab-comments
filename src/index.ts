@@ -75,26 +75,73 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
     void registry.addFactory(new CellCommentFactory(nbTracker));
     void registry.addFactory(new CellSelectionCommentFactory(nbTracker));
 
-    let currAwareness: Awareness | null = null;
+    const button = panel.button;
 
-    const indicator = Private.createIndicator(panel, nbTracker);
+    function openButton(x: number, y: number): void {
+      button.open(x, y, () => {
+        const cell = nbTracker.activeCell;
+        if (cell == null) {
+          return;
+        }
+
+        const model = panel.model;
+        if (model == null) {
+          return;
+        }
+
+        const comments = model.comments;
+        let index = comments.length;
+        for (let i = comments.length; i > 0; i--) {
+          const comment = comments.get(i - 1) as ICellComment;
+          if (comment.target.cellID === cell.model.id) {
+            index = i;
+          }
+        }
+
+        void InputDialog.getText({ title: 'Add Comment' }).then(value => {
+          if (value.value == null) {
+            return;
+          }
+
+          model.insertComment(
+            {
+              type: 'cell-selection',
+              text: value.value,
+              source: cell,
+              identity: getIdentity(model.awareness)
+            },
+            index
+          );
+
+          panel.update();
+        });
+      });
+    }
+
+    let currAwareness: Awareness;
+    let awarenessHandler: () => void;
+    let onMouseup: (event: MouseEvent) => void;
 
     // This updates the indicator and scrolls to the comments of the selected cell
     // when the active cell changes.
     nbTracker.activeCellChanged.connect((_, cell: Cell | null) => {
-      if (cell == null) {
-        if (indicator.parentElement != null) {
-          indicator.remove();
-        }
+      // Remove the old awareness handler if one exists.
+      if (
+        currAwareness != null &&
+        awarenessHandler != null &&
+        onMouseup != null
+      ) {
+        document.removeEventListener('mouseup', onMouseup);
+        currAwareness.off('change', awarenessHandler);
+        button.close();
+      }
+
+      if (cell == null || panel.model == null) {
         return;
       }
 
-      const model = panel.model;
-      if (model == null) {
-        return;
-      }
-
-      for (let comment of model.comments) {
+      // Scroll to the first comment associated with the currently selected cell.
+      for (let comment of panel.model.comments) {
         if (comment.type === 'cell' || comment.type === 'cell-selection') {
           const cellComment = comment as ICellComment;
           if (cellComment.target.cellID === cell.model.id) {
@@ -104,21 +151,21 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
         }
       }
 
-      const awarenessHandler = (): void => {
+      // Open add comment button when mouse is released after selection
+      onMouseup = (_: MouseEvent): void => {
+        const { right, top, height } = cell.node.getBoundingClientRect();
+        openButton(right - 10, top + height / 2 - 10);
+      };
+
+      awarenessHandler = (): void => {
         const { start, end } = cell.editor.getSelection();
 
         if (start.column !== end.column || start.line !== end.line) {
-          if (!cell.node.contains(indicator)) {
-            cell.node.childNodes[1].appendChild(indicator);
-          }
-        } else if (indicator.parentElement != null) {
-          indicator.remove();
+          document.addEventListener('mouseup', onMouseup, { once: true });
+        } else {
+          button.close();
         }
       };
-
-      if (currAwareness != null) {
-        currAwareness.off('change', awarenessHandler);
-      }
 
       currAwareness = (nbTracker.currentWidget!.model!.sharedModel as YNotebook)
         .awareness;
@@ -365,45 +412,6 @@ function addCommands(
       }
     }
   });
-}
-
-namespace Private {
-  export function createIndicator(
-    panel: ICommentPanel,
-    nbTracker: INotebookTracker
-  ): HTMLElement {
-    const indicator = document.createElement('div');
-    indicator.className = 'jc-Indicator';
-
-    indicator.onclick = () => {
-      const cell = nbTracker.activeCell;
-      if (cell == null) {
-        return;
-      }
-
-      void InputDialog.getText({ title: 'Add Comment' }).then(value => {
-        if (value.value == null) {
-          return;
-        }
-
-        const model = panel.model;
-        if (model == null) {
-          return;
-        }
-
-        model.addComment({
-          type: 'cell-selection',
-          text: value.value,
-          source: cell,
-          identity: getIdentity(model.awareness)
-        });
-
-        panel.update();
-      });
-    };
-
-    return indicator;
-  }
 }
 
 const plugins: JupyterFrontEndPlugin<any>[] = [

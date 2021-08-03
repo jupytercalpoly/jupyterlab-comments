@@ -6,7 +6,7 @@ import { getIdentity, setIdentityName } from './utils';
 
 import { Awareness } from 'y-protocols/awareness';
 
-import { CommentsHubIcon, CreateCommentIcon } from './icons';
+import { CommentsHubIcon } from './icons';
 
 import { caretDownEmptyThinIcon, editIcon } from '@jupyterlab/ui-components';
 
@@ -89,11 +89,12 @@ export class PanelHeader extends ReactWidget {
     const { shell, panel } = options;
     this._shell = shell;
     this._panel = panel;
+    this.addClass('jc-panelHeader');
   }
 
   render(): ReactRenderElement {
     return (
-      <div className="jc-panelHeader">
+      <>
         <div className="jc-panelHeader-left">
           <UseSignal signal={this._renderNeeded}>
             {() => (
@@ -121,13 +122,10 @@ export class PanelHeader extends ReactWidget {
             </div>
           </div>
           <div>
-            <CreateCommentIcon.react />
-          </div>
-          <div>
             <CommentsHubIcon.react />
           </div>
         </div>
-      </div>
+      </>
     );
   }
 

@@ -1,7 +1,6 @@
 import { Menu, Panel, Widget } from '@lumino/widgets';
 import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
-import { listIcon } from '@jupyterlab/ui-components';
 import { CommentFileWidget, CommentWidget } from './widget';
 import { YDocument } from '@jupyterlab/shared-models';
 import { ISignal, Signal } from '@lumino/signaling';
@@ -14,6 +13,8 @@ import { IDocumentManager } from '@jupyterlab/docmanager';
 import { Context } from '@jupyterlab/docregistry';
 import { hashString } from './utils';
 import { CommentFileModel } from './model';
+import { CommentsPanelIcon } from './icons';
+import { NewCommentButton } from './button';
 import * as Y from 'yjs';
 
 export interface ICommentPanel extends Panel {
@@ -46,6 +47,10 @@ export interface ICommentPanel extends Panel {
    * The current `CommentFileModel` associated with the panel.
    */
   model: CommentFileModel | undefined;
+
+  button: NewCommentButton;
+
+  fileWidget: CommentFileWidget | undefined;
 }
 
 export class CommentPanel extends Panel implements ICommentPanel {
@@ -53,7 +58,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
     super();
 
     this.id = `CommentPanel-${UUID.uuid4()}`;
-    this.title.icon = listIcon;
+    this.title.icon = CommentsPanelIcon;
     this.addClass('jc-CommentPanel');
 
     const { docManager, registry } = options;
@@ -263,6 +268,10 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.update();
   }
 
+  get button(): NewCommentButton {
+    return this._button;
+  }
+
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
   private _revealed = new Signal<this, undefined>(this);
   private _commentMenu: Menu;
@@ -272,6 +281,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
   private _docManager: IDocumentManager;
   private _modelChanged = new Signal<this, CommentFileWidget | undefined>(this);
   private _pathPrefix: string = 'comments/';
+  private _button = new NewCommentButton();
 }
 
 export namespace CommentPanel2 {
