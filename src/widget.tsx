@@ -26,6 +26,7 @@ type CommentProps = {
 };
 
 type CommentWithRepliesProps = {
+  MYrenderNeeded: Signal<CommentWidget, boolean>;
   comment: IComment;
   editID: string;
   activeID: string;
@@ -36,6 +37,7 @@ type CommentWithRepliesProps = {
 
 type CommentWrapperProps = {
   commentWidget: CommentWidget<any>;
+  MYrenderNeeded: Signal<CommentWidget, boolean>;
   className?: string;
 };
 
@@ -182,43 +184,50 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const target = props.target;
   const factory = props.factory;
   const [open, SetOpen] = React.useState(false);
+  const MYrenderNeeded = props.MYrenderNeeded;
 
   let RepliesComponent = (): JSX.Element => {
-    let full = (
-      <div className={'jc-Replies'}>
-        {comment.replies.map(reply => (
-          <JCReply
-            reply={reply}
-            editable={editID === reply.id}
-            key={reply.id}
-          />
-        ))}
-      </div>
-    );
-    let minified = (
-      <div className={'jc-Replies'}>
-        <hr />
-        <div onClick={handleClick}>expand thread</div>
-        <div>...{comment.replies.length - 1}</div>
-        <hr />
-        <JCReply
-          reply={comment.replies[comment.replies.length - 1]}
-          editable={editID === comment.replies[comment.replies.length - 1].id}
-          key={comment.replies[comment.replies.length - 1].id}
-        />
-      </div>
-    );
+    // let full = (
+    //   <div className={'jc-Replies'}>
+    //     {comment.replies.map(reply => (
+    //       <JCReply
+    //         reply={reply}
+    //         editable={editID === reply.id}
+    //         key={reply.id}
+    //       />
+    //     ))}
+    //   </div>
+    // );
+    // let minified = (
+    //   <div className={'jc-Replies'}>
+    //     <hr />
+    //     <div onClick={handleClick}>expand thread</div>
+    //     <div>...{comment.replies.length - 1}</div>
+    //     <hr />
+    //     <JCReply
+    //       reply={comment.replies[comment.replies.length - 1]}
+    //       editable={editID === comment.replies[comment.replies.length - 1].id}
+    //       key={comment.replies[comment.replies.length - 1].id}
+    //     />
+    //   </div>
+    // );
 
     // parsing
-    if(comment.replies.length < 4){
-      SetOpen(true)
-    }
-  
+    // SetOpen(isExpand)
 
-    if ( comment.replies.length < 4 ) {
-    // if (isExpand){
+    MYrenderNeeded.connect((_, args)=> {
+      // if (isExpand === true) {
+        // SetOpen(false);
+        SetOpen(args);
+        // isExpand = false;
+        console.log(open);
+      // }
+    })
+
+
+    if (open === true || comment.replies.length < 4) {
       return (
-        <div className={'jc-Replies'} >
+        <div className={'jc-Replies'}>
           {comment.replies.map(reply => (
             <JCReply
               reply={reply}
@@ -228,17 +237,34 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
           ))}
         </div>
       );
-    // } else if(open == false) {
     } else {
-      return minified
+      return (
+        <div className={'jc-Replies'}>
+          <div className="jc-Replies-breaker">
+            <div onClick={handleClick}>expand thread</div>
+            <div className="jc-Replies-breaker-right">
+              <div className="jc-Replies-breaker-number">
+                {comment.replies.length - 1}
+              </div>
+              <hr />
+              <hr />
+            </div>
+          </div>
+          <JCReply
+            reply={comment.replies[comment.replies.length - 1]}
+            editable={editID === comment.replies[comment.replies.length - 1].id}
+            key={comment.replies[comment.replies.length - 1].id}
+          />
+        </div>
+      );
     }
-    
+
     // else {
     //   if (comment.replies.length < 4){
     //     return full
     //   }
     //   else if (isExpand === false || comment.replies.length > 4) {
-    //     // return full 
+    //     // return full
     //     return minified
     //   }
     //   else {
@@ -265,8 +291,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   };
 
   React.useEffect(() => {
-    console.log(open);
-
+    //
   }, [open]);
 
   const handleClick = () => {
@@ -306,6 +331,8 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   const commentWidget = props.commentWidget;
   const className = props.className || '';
 
+  const MYrenderNeeded = props.MYrenderNeeded;
+
   const onClick = commentWidget.handleEvent.bind(commentWidget);
   const onKeyDown = onClick;
 
@@ -317,6 +344,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
         activeID={commentWidget.activeID}
         target={commentWidget.target}
         factory={commentWidget.factory}
+        MYrenderNeeded = {MYrenderNeeded}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
     </Jdiv>
@@ -395,19 +423,23 @@ export class CommentWidget<T> extends ReactWidget {
 
   private _handleBlur(event: React.MouseEvent): void {
     const relatedTarget = event.relatedTarget;
+    event.preventDefault();
+    event.stopPropagation();
     if (relatedTarget == null) {
       console.log(
         'related target is null; no new focus target; collapse replies'
       );
-      // this.renderNeeded.emit(undefined);
+      this.MYrenderNeeded.emit(false);
     } else if (
       this.node.contains(relatedTarget as HTMLElement) ||
       this.node === relatedTarget
     ) {
       console.log("focus within; don't collapse replies");
+      // this._isExpand = true;
     } else {
       console.log('lost focus entirely; collapse replies');
-      // this.renderNeeded.emit(undefined);
+      // this._isExpand = false;
+      this.MYrenderNeeded.emit(false);
     }
   }
 
@@ -581,7 +613,7 @@ export class CommentWidget<T> extends ReactWidget {
   render(): ReactRenderElement {
     return (
       <UseSignal signal={this.renderNeeded}>
-        {() => <JCCommentWrapper commentWidget={this} />}
+        {() => <JCCommentWrapper commentWidget={this} MYrenderNeeded={this._MYrenderNeeded}/>}
       </UseSignal>
     );
   }
@@ -735,6 +767,10 @@ export class CommentWidget<T> extends ReactWidget {
     return this._renderNeeded;
   }
 
+  get MYrenderNeeded(): Signal<this, boolean> {
+    return this._MYrenderNeeded;
+  }
+
   /**
    * The ID of the managed comment being edited, or the empty string if none.
    */
@@ -764,6 +800,9 @@ export class CommentWidget<T> extends ReactWidget {
   private _editID: string = '';
   private _factory: ACommentFactory;
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
+    this
+  );
+  private _MYrenderNeeded: Signal<this,boolean > = new Signal<this, boolean>(
     this
   );
 }
