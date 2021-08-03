@@ -1,27 +1,16 @@
 import { ReactWidget, UseSignal } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { ellipsesIcon } from '@jupyterlab/ui-components';
-import {
-  ICellSelectionComment,
-  IComment,
-  IIdentity,
-  IReply
-} from './commentformat';
-import {
-  addReply,
-  deleteComment,
-  deleteReply,
-  edit,
-  getCommentByID,
-  ISharedMetadatedText
-} from './comments';
-import { Awareness } from 'y-protocols/awareness';
-import { getIdentity, lineToIndex } from './utils';
-import { Menu } from '@lumino/widgets';
-import { Signal } from '@lumino/signaling';
-import { INotebookTracker } from '@jupyterlab/notebook';
-import { ICellModel } from '@jupyterlab/cells';
-import { CommentFactory, ICommentFactory } from './factory';
+import { IComment, IIdentity, IReply /*, ITextSelectionComment */} from './commentformat';
+import { getIdentity } from './utils';
+import { Menu, Panel } from '@lumino/widgets';
+import { ISignal, Signal } from '@lumino/signaling';
+import { ACommentFactory /*, TextSelectionCommentFactory */} from './factory';
+import { CommentFileModel } from './model';
+import { Context } from '@jupyterlab/docregistry';
+import { Message } from '@lumino/messaging';
+import { IRenderMimeRegistry, renderMarkdown } from '@jupyterlab/rendermime';
+//import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -35,6 +24,7 @@ type CommentProps = {
   className?: string;
   editable?: boolean;
   target?: any;
+  factory: ACommentFactory;
 };
 
 type CommentWithRepliesProps = {
@@ -42,6 +32,7 @@ type CommentWithRepliesProps = {
   editID: string;
   className?: string;
   target?: any;
+  factory: ACommentFactory;
 };
 
 type CommentWrapperProps = {
@@ -57,6 +48,7 @@ type ReplyAreaProps = {
 type PreviewProps = {
   comment: IComment;
   target: any;
+  factory: ACommentFactory;
 };
 
 type ReplyProps = {
@@ -74,39 +66,10 @@ function Jspan(props: any): JSX.Element {
 }
 
 function JCPreview(props: PreviewProps): JSX.Element {
-  const { comment, target } = props;
-  let cell;
-  //let selection;
-  let previewText;
-  switch (comment.type) {
-    case 'cell': {
-      // cell = target as ICellModel;
-      // previewText = cell.value.text.split('\n')[0] + '...';
-      previewText = '';
-      break;
-    }
-    case 'cell-selection': {
-      cell = target as ICellModel;
-      let mainText = cell.value.text;
-      let selectionComment = comment as ICellSelectionComment;
-      let { start, end } = selectionComment.target;
-      let startIndex = lineToIndex(mainText, start.line, start.column);
-      let endIndex = lineToIndex(mainText, end.line, end.column);
-      if (start < end) {
-        previewText = cell.value.text.slice(startIndex, endIndex);
-      } else {
-        previewText = cell.value.text.slice(endIndex, startIndex);
-      }
-      if (previewText.length > 140) {
-        previewText = previewText.slice(0, 140) + '...';
-      }
-      break;
-    }
-    default: {
-      previewText = 'Unrecognized comment type';
-      break;
-    }
-  }
+  const { comment, target, factory } = props;
+
+  let previewText = factory.getPreviewText(comment, target);
+
   return (
     <div className="jc-Preview">
       <div className="jc-PreviewBar" />
@@ -129,6 +92,7 @@ function JCComment(props: CommentProps): JSX.Element {
   const className = props.className || '';
   const editable = props.editable;
   const target = props.target;
+  const factory = props.factory;
 
   return (
     <Jdiv
@@ -153,7 +117,9 @@ function JCComment(props: CommentProps): JSX.Element {
 
       <span className="jc-Time">{comment.time}</span>
 
-      {target != null && <JCPreview comment={comment} target={target} />}
+      {target != null && (
+        <JCPreview comment={comment} target={target} factory={factory} />
+      )}
 
       <Jdiv
         className="jc-Body jc-EditInputArea"
@@ -220,6 +186,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const className = props.className || '';
   const editID = props.editID;
   const target = props.target;
+  const factory = props.factory;
 
   return (
     <div className={'jc-CommentWithReplies ' + className}>
@@ -227,6 +194,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
         comment={comment}
         editable={editID === comment.id}
         target={target}
+        factory={factory}
       />
       <div className={'jc-Replies'}>
         {comment.replies.map(reply => (
@@ -270,6 +238,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
         comment={commentWidget.comment!}
         editID={commentWidget.editID}
         target={commentWidget.target}
+        factory={commentWidget.factory}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
     </div>
@@ -277,22 +246,19 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
 }
 
 /**
- * A ReactWidget that renders a comment and its replies.
+ * A React widget that can render a comment and its replies.
  */
-export class CommentWidget<T = any> extends ReactWidget {
+export class CommentWidget<T> extends ReactWidget {
+
   constructor(options: CommentWidget.IOptions<T>) {
     super();
 
-    const { awareness, id, target, sharedModel, menu, nbTracker, factory } =
-      options;
-    this._awareness = awareness;
+    const { id, target, model, factory } = options;
     this._commentID = id;
     this._activeID = id;
     this._target = target;
-    this._sharedModel = sharedModel;
-    this._menu = menu;
-    this._tracker = nbTracker;
     this._factory = factory;
+    this._model = model;
 
     this.addClass('jc-CommentWidget');
     this.node.tabIndex = 0;
@@ -353,17 +319,6 @@ export class CommentWidget<T = any> extends ReactWidget {
     if (oldActive == null || !this.node.contains(oldActive)) {
       this.node.focus();
     }
-
-    const cellModel = this.target as any as ICellModel;
-    const notebook = this._tracker.currentWidget?.content;
-    if (notebook == null) {
-      return;
-    }
-
-    const cell = notebook.widgets.find(cell => cell.model.id === cellModel.id);
-    if (cell != null) {
-      cell.node.scrollIntoView({ behavior: 'smooth' });
-    }
   }
 
   /**
@@ -371,7 +326,10 @@ export class CommentWidget<T = any> extends ReactWidget {
    */
   private _handleDropdownClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
-    this._menu.open(event.pageX, event.pageY);
+    const menu = this.menu;
+    if (menu != null) {
+      menu.open(event.pageX, event.pageY);
+    }
   }
 
   /**
@@ -418,7 +376,7 @@ export class CommentWidget<T = any> extends ReactWidget {
    */
   private _handleBodyClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
-    this.editActive();
+    this.openEditActive();
   }
 
   /**
@@ -454,14 +412,17 @@ export class CommentWidget<T = any> extends ReactWidget {
     event.preventDefault();
     event.stopPropagation();
 
-    const reply = CommentFactory.createReply({
-      identity: getIdentity(this._awareness),
-      text: target.innerText
-    });
+    this.model.addReply(
+      {
+        identity: getIdentity(this.model.awareness),
+        text: target.innerText
+      },
+      this.commentID
+    );
 
-    addReply(this.sharedModel, reply, this.commentID);
     target.textContent = '';
     this.replyAreaHidden = true;
+    this.parent?.update();
   }
 
   /**
@@ -491,15 +452,11 @@ export class CommentWidget<T = any> extends ReactWidget {
         if (target.innerText === '') {
           target.innerText = this.text!;
         } else {
-          edit(
-            this.sharedModel,
-            this.commentID,
-            this.activeID,
-            target.innerText!
-          );
+          this.editActive(target.innerText);
         }
         this.editID = '';
         target.blur();
+        this.parent?.update();
         break;
       default:
         break;
@@ -532,7 +489,7 @@ export class CommentWidget<T = any> extends ReactWidget {
   /**
    * Select the body area of the currently active comment for editing.
    */
-  editActive(): void {
+  openEditActive(): void {
     if (this.isAttached === false) {
       return;
     }
@@ -550,6 +507,14 @@ export class CommentWidget<T = any> extends ReactWidget {
     target.focus();
   }
 
+  editActive(text: string): void {
+    if (this.activeID === this.commentID) {
+      this.model.editComment({ text }, this.commentID);
+    } else {
+      this.model.editReply({ text }, this.activeID, this.commentID);
+    }
+  }
+
   /**
    * Delete the currently active comment or reply.
    *
@@ -562,10 +527,10 @@ export class CommentWidget<T = any> extends ReactWidget {
     }
 
     if (this.activeID === this.commentID) {
-      deleteComment(this.sharedModel, this.commentID);
+      this.model.deleteComment(this.commentID);
       this.dispose();
     } else {
-      deleteReply(this.sharedModel, this.activeID, this.commentID);
+      this.model.deleteReply(this.activeID, this.commentID);
     }
   }
 
@@ -573,7 +538,7 @@ export class CommentWidget<T = any> extends ReactWidget {
    * The comment object being rendered by the widget.
    */
   get comment(): IComment | undefined {
-    return getCommentByID(this.sharedModel, this.commentID);
+    return this.model.getComment(this.commentID);
   }
 
   /**
@@ -618,6 +583,10 @@ export class CommentWidget<T = any> extends ReactWidget {
     return this._commentID;
   }
 
+  get model(): CommentFileModel {
+    return this._model;
+  }
+
   /**
    * The ID of the last-focused comment or reply.
    */
@@ -629,13 +598,6 @@ export class CommentWidget<T = any> extends ReactWidget {
       this._activeID = newVal;
       this._renderNeeded.emit(undefined);
     }
-  }
-
-  /**
-   * The shared model hosting the metadata hosting the comment.
-   */
-  get sharedModel(): ISharedMetadatedText {
-    return this._sharedModel;
   }
 
   /**
@@ -671,20 +633,21 @@ export class CommentWidget<T = any> extends ReactWidget {
     }
   }
 
-  get factory(): ICommentFactory {
+  get factory(): ACommentFactory {
     return this._factory;
   }
 
-  private _awareness: Awareness;
+  get menu(): Menu | undefined {
+    return this.model.commentMenu;
+  }
+
+  private _model: CommentFileModel;
   private _commentID: string;
   private _target: T;
-  private _sharedModel: ISharedMetadatedText;
   private _activeID: string;
-  private _menu: Menu;
   private _replyAreaHidden: boolean = true;
   private _editID: string = '';
-  private _tracker: INotebookTracker;
-  private _factory: ICommentFactory;
+  private _factory: ACommentFactory;
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );
@@ -692,19 +655,13 @@ export class CommentWidget<T = any> extends ReactWidget {
 
 export namespace CommentWidget {
   export interface IOptions<T> {
-    awareness: Awareness;
-
     id: string;
 
-    sharedModel: ISharedMetadatedText;
+    model: CommentFileModel;
 
     target: T;
 
-    menu: Menu;
-
-    nbTracker: INotebookTracker;
-
-    factory: ICommentFactory;
+    factory: ACommentFactory;
   }
 
   /**
@@ -752,6 +709,100 @@ export namespace CommentWidget {
     event.target = areaElement;
 
     return isEventArea(area) ? area : 'other';
+  }
+}
+
+/**
+ * A widget that hosts and displays a list of `CommentWidget`s
+ */
+export class CommentFileWidget extends Panel {
+
+  renderer: IRenderMimeRegistry;
+
+  constructor(options: CommentFileWidget.IOptions, renderer: IRenderMimeRegistry) {
+    super();
+
+    const { context } = options;
+    this._context = context;
+    this._model = context.model as CommentFileModel;
+
+    this.id = `Comments-${context.path}`;
+    this.addClass('jc-CommentFileWidget');
+    this.renderer = renderer;
+  }
+
+  onUpdateRequest(msg: Message): void {
+    super.onUpdateRequest(msg);
+
+    const { comments, registry } = this.model;
+
+    while (this.widgets.length > 0) {
+      this.widgets[0].dispose();
+    }
+    /*let counter = 0;
+    let selections: CodeEditor.ITextSelection[] = [];
+    let editor : CodeEditorWrapper;*/
+    comments.forEach(comment => {
+      const factory = registry.getFactory(comment.type);
+      if (factory == null) {
+        return;
+      }
+
+      const widget = factory.createWidget(comment, this.model);
+
+      if (widget != null) {
+        this.addComment(widget);
+        this.render_all(widget, this.renderer);
+      }
+    });
+    
+  }
+
+  addComment(widget: CommentWidget<any>) {
+    this.addWidget(widget);
+    this._commentAdded.emit(widget);
+  }
+
+  /**
+   * Render markdown and LaTeX in a comment widget
+   */
+   render_all(widget: CommentWidget<any>, registry: IRenderMimeRegistry): void {
+    let nodes = widget.node.getElementsByClassName('jc-Body');
+
+    Array.from(nodes).forEach(element => {
+      renderMarkdown({
+        host: element as HTMLElement,
+        source: (element as HTMLElement).innerText,
+        trusted: true,
+        latexTypesetter: registry.latexTypesetter,
+        linkHandler: registry.linkHandler,
+        resolver: registry.resolver,
+        sanitizer: registry.sanitizer,
+        shouldTypeset: widget.isAttached
+      }).catch(() => console.warn('render Markdown failed'));
+    });
+  }
+
+  get model(): CommentFileModel {
+    return this._model;
+  }
+
+  get context(): Context {
+    return this._context;
+  }
+
+  get commentAdded(): ISignal<this, CommentWidget<any>> {
+    return this._commentAdded;
+  }
+
+  private _model: CommentFileModel;
+  private _context: Context;
+  private _commentAdded = new Signal<this, CommentWidget<any>>(this);
+}
+
+export namespace CommentFileWidget {
+  export interface IOptions {
+    context: Context;
   }
 }
 

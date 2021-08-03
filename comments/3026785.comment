@@ -1,0 +1,25 @@
+[
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 381492976,
+      "name": "Anonymous Orthosie",
+      "color": "#A79011"
+    },
+    "type": "text-selection",
+    "id": "8c0a31a3-15da-4e09-87d0-bc6dc1deff52",
+    "replies": [],
+    "time": "4:28 PM Aug 2",
+    "target": {
+      "editorID": "d.md",
+      "start": {
+        "line": 1,
+        "column": 4
+      },
+      "end": {
+        "line": 2,
+        "column": 2
+      }
+    }
+  }
+]

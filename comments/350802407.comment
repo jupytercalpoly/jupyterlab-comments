@@ -1,0 +1,25 @@
+[
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 3575908147,
+      "name": "Anonymous Io",
+      "color": "#609DA9"
+    },
+    "type": "text-selection",
+    "id": "6dbb70ce-858a-4aae-a629-475c98ea74e4",
+    "replies": [],
+    "time": "10:45 AM Aug 2",
+    "target": {
+      "editorID": "id-0e1c16d3-83ce-46cf-95d4-2f18be1864e7",
+      "start": {
+        "line": 4,
+        "column": 16
+      },
+      "end": {
+        "line": 4,
+        "column": 3
+      }
+    }
+  }
+]

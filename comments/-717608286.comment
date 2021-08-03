@@ -1,0 +1,71 @@
+[
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 284097067,
+      "name": "Anonymous Themisto",
+      "color": "#CC8500"
+    },
+    "type": "text-selection",
+    "id": "110bce37-84fd-4e9e-92f3-b5bd588e38c4",
+    "replies": [],
+    "time": "11:26 AM Aug 3",
+    "target": {
+      "editorID": "yy.txt",
+      "start": {
+        "line": 1,
+        "column": 18
+      },
+      "end": {
+        "line": 1,
+        "column": 3
+      }
+    }
+  },
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 284097067,
+      "name": "Anonymous Themisto",
+      "color": "#CC8500"
+    },
+    "type": "text-selection",
+    "id": "645140eb-7d22-40a2-99df-f213eaab913a",
+    "replies": [],
+    "time": "11:26 AM Aug 3",
+    "target": {
+      "editorID": "yy.txt",
+      "start": {
+        "line": 2,
+        "column": 24
+      },
+      "end": {
+        "line": 2,
+        "column": 16
+      }
+    }
+  },
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 284097067,
+      "name": "Anonymous Themisto",
+      "color": "#CC8500"
+    },
+    "type": "text-selection",
+    "id": "137b02b3-550b-4eef-acf2-bb53a84c6fdf",
+    "replies": [],
+    "time": "11:26 AM Aug 3",
+    "target": {
+      "editorID": "yy.txt",
+      "start": {
+        "line": 3,
+        "column": 14
+      },
+      "end": {
+        "line": 3,
+        "column": 4
+      }
+    }
+  }
+]

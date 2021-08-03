@@ -1,0 +1,48 @@
+[
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 2087595760,
+      "name": "Anonymous Callirrhoe",
+      "color": "#4BA749"
+    },
+    "type": "text-selection",
+    "id": "cb6c427b-9c4f-4253-97dc-2034fa961332",
+    "replies": [],
+    "time": "10:42 AM Aug 2",
+    "target": {
+      "editorID": "id-5b0e91d7-6fff-4daa-a1fb-51ea5e6af1e0",
+      "start": {
+        "line": 0,
+        "column": 636
+      },
+      "end": {
+        "line": 0,
+        "column": 661
+      }
+    }
+  },
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 2087595760,
+      "name": "Anonymous Callirrhoe",
+      "color": "#4BA749"
+    },
+    "type": "text-selection",
+    "id": "a91b9bc6-1735-4260-98e3-6321c9260207",
+    "replies": [],
+    "time": "10:42 AM Aug 2",
+    "target": {
+      "editorID": "id-5b0e91d7-6fff-4daa-a1fb-51ea5e6af1e0",
+      "start": {
+        "line": 0,
+        "column": 314
+      },
+      "end": {
+        "line": 0,
+        "column": 288
+      }
+    }
+  }
+]

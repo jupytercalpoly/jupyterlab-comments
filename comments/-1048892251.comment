@@ -1,0 +1,25 @@
+[
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 1481004459,
+      "name": "Anonymous Autonoe",
+      "color": "#A79011"
+    },
+    "type": "text-selection",
+    "id": "92d7dde4-645e-497a-ba9a-b79dfc3082f6",
+    "replies": [],
+    "time": "10:51 AM Aug 2",
+    "target": {
+      "editorID": "id-b8e8f90d-41f4-4ddb-8cad-daddf08e2c8d",
+      "start": {
+        "line": 1,
+        "column": 22
+      },
+      "end": {
+        "line": 1,
+        "column": 4
+      }
+    }
+  }
+]

@@ -53,3 +53,12 @@ export interface ICellSelectionComment extends IComment {
     end: CodeEditor.IPosition;
   };
 }
+
+export interface ITextSelectionComment extends IComment {
+  type: 'text-selection';
+  target: {
+    editorID: string;
+    start: CodeEditor.IPosition;
+    end: CodeEditor.IPosition;
+  }
+}

@@ -1,24 +1,21 @@
-import { Menu, Panel } from '@lumino/widgets';
-import { each } from '@lumino/algorithm';
+import { Menu, Panel, Widget } from '@lumino/widgets';
 import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
 import { listIcon } from '@jupyterlab/ui-components';
-import { INotebookTracker } from '@jupyterlab/notebook';
-import { CommentWidget } from './widget';
-import { getComments } from './comments';
-import { ICellModel } from '@jupyterlab/cells';
+import { CommentFileWidget, CommentWidget } from './widget';
 import { YDocument } from '@jupyterlab/shared-models';
-import { Signal } from '@lumino/signaling';
+import { ISignal, Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
-import { ICellSelectionComment } from './commentformat';
-import {
-  IRenderMimeRegistry,
-  renderLatex,
-  renderMarkdown
-} from '@jupyterlab/rendermime';
+import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import { ICommentRegistry } from './registry';
-import { CommentFactory } from './factory';
+import { ILabShell } from '@jupyterlab/application';
+import { PanelHeader } from './panelHeaderWidget';
+import { IDocumentManager } from '@jupyterlab/docmanager';
+import { Context } from '@jupyterlab/docregistry';
+import { hashString } from './utils';
+import { CommentFileModel } from './model';
+import * as Y from 'yjs';
 
 export interface ICommentPanel extends Panel {
   /**
@@ -46,153 +43,143 @@ export interface ICommentPanel extends Panel {
    */
   revealed: Signal<this, undefined>;
 
+  /**
+   * The current awareness associated with the panel.
+   */
   awareness: Awareness | undefined;
 
-  nbTracker: INotebookTracker;
+  /**
+   * The current `CommentFileModel` associated with the panel.
+   */
+  model: CommentFileModel | undefined;
 }
 
 export class CommentPanel extends Panel implements ICommentPanel {
+
   renderer: IRenderMimeRegistry;
 
-  constructor(options: CommentPanel.IOptions, renderer: IRenderMimeRegistry) {
-    super(options);
+  constructor(options: CommentPanel2.IOptions, renderer: IRenderMimeRegistry) {
+    super();
 
-    this._tracker = options.tracker;
-    this._registry = options.registry;
     this.id = `CommentPanel-${UUID.uuid4()}`;
     this.title.icon = listIcon;
     this.addClass('jc-CommentPanel');
-    this.renderer = renderer;
+
+    const { docManager, registry } = options;
+
+    this._registry = registry;
     this._commentMenu = new Menu({ commands: options.commands });
+    this._docManager = docManager;
+
+    const panelHeader: PanelHeader = new PanelHeader({
+      shell: options.shell,
+      panel: this
+    });
+
+    this.addWidget(panelHeader as Widget);
+
+    this._panelHeader = panelHeader;
+    this.renderer = renderer;
   }
 
-  onAfterAttach(msg: Message): void {
-    super.onAfterAttach(msg);
-  }
-
-  onAfterDetach(msg: Message): void {
-    super.onAfterDetach(msg);
-  }
-
-  /**
-   * Re-render the comment widgets when an `update` message is recieved.
-   */
   onUpdateRequest(msg: Message): void {
-    super.onUpdateRequest(msg);
-
-    const tracker = this._tracker;
-    const model = tracker.currentWidget?.model;
-
-    if (model == null) {
-      console.warn(
-        'Either no current widget or no widget model; aborting panel render'
-      );
+    if (this._fileWidget == null) {
+      console.log('this._fileWidget is null');
       return;
     }
 
     const awareness = this.awareness;
-    if (awareness == null) {
-      console.warn('No awareness; aborting panel render');
-      return;
+    if (awareness != null && awareness !== this.panelHeader.awareness) {
+      this.panelHeader.awareness = awareness;
     }
 
-    while (this.widgets.length > 0) {
-      this.widgets[0].dispose();
+    this._fileWidget.update();
+  }
+
+  async pathExists(path: string): Promise<boolean> {
+    const contents = this._docManager.services.contents;
+
+    try {
+      void (await contents.get(path));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async getContext(path: string): Promise<Context> {
+    const factory = this._docManager.registry.getModelFactory('comment-file');
+    const preference = this._docManager.registry.getKernelPreference(
+      path,
+      'comment-factory',
+      undefined
+    );
+
+    let context: Context;
+    let isNew: boolean = false;
+    // @ts-ignore
+    context = this._docManager._findContext(path, 'comment-file') || null;
+    if (context == null) {
+      isNew = !(await this.pathExists(path));
+      // @ts-ignore
+      context = this._docManager._createContext(path, factory, preference);
     }
 
-    each(model.cells, cell => {
-      const sharedModel = cell.sharedModel;
-      const comments = getComments(sharedModel);
-      if (comments == null) {
-        return;
-      }
+    void this._docManager.services.ready.then(
+      () => void context!.initialize(isNew)
+    );
 
-      let t1: string = '';
-      let t2: string = '';
-      let f1: CommentFactory | undefined;
-      let f2: CommentFactory | undefined;
-      let factory: CommentFactory | undefined;
+    return context;
+  }
 
-      let selections = [];
+  async loadModel(sourcePath: string): Promise<void> {
+    if (this._fileWidget != null) {
+      const oldWidget = this._fileWidget;
+      void (await oldWidget.context.save());
+      oldWidget.dispose();
+    }
 
-      // TODO: Make this not re-create the comment widget every time.
-      // (Update it instead?)
-      for (let comment of comments) {
-        // Simple factory/type "cache" to speed up panel updates
-        if (comment.type === '') {
-          console.warn('empty comment type is not allowed');
-          continue;
-        } else if (t1 === comment.type) {
-          factory = f1;
-        } else if (t2 === comment.type) {
-          factory = f2;
-          [f2, f1] = [f1, f2];
-          [t2, t1] = [t1, t2];
-        } else {
-          factory = this._registry.getFactory(comment.type);
-          [f2, t2] = [f1, t1];
-          [f1, t1] = [factory, comment.type];
-        }
+    const path =
+      this.pathPrefix + hashString(sourcePath).toString() + '.comment';
+    const context = await this.getContext(path);
+    const content = new CommentFileWidget({ context }, this.renderer);
 
-        if (factory == null) {
-          console.warn('no factory found for comment with type', comment.type);
-          continue;
-        }
+    this._fileWidget = content;
+    this.model!.comments.observeDeep(this._onChange.bind(this));
 
-        const widget = new CommentWidget<ICellModel>({
-          awareness,
-          id: comment.id,
-          target: cell,
-          sharedModel,
-          menu: this._commentMenu,
-          nbTracker: this._tracker,
-          factory
-        });
+    this.addWidget(content);
 
-        this.addComment(widget);
-        this.render_all(widget, this.renderer);
-
-        if (comment.type == 'cell-selection') {
-          selections.push({
-            start: (comment as ICellSelectionComment).target.start,
-            end: (comment as ICellSelectionComment).target.end,
-            style: {
-              className: 'jc-Highlight',
-              color: 'black',
-              displayName: comment.identity.name
-            },
-            uuid: comment.id
-          });
-        }
-      }
-      cell.selections.set(cell.id, selections);
+    void context.ready.then(() => {
+      this._modelChanged.emit(content);
+      this.update();
     });
   }
 
-  /**
-   * Render markdown and LaTeX in a comment widget
-   */
-  render_all(widget: CommentWidget<any>, registry: IRenderMimeRegistry): void {
-    let nodes = widget.node.getElementsByClassName('jc-Body');
+  private _onChange(changes: Y.YEvent[]): void {
+    this.update();
+  }
 
-    Array.from(nodes).forEach(element => {
-      renderMarkdown({
-        host: element as HTMLElement,
-        source: (element as HTMLElement).innerText,
-        trusted: true,
-        latexTypesetter: registry.latexTypesetter,
-        linkHandler: registry.linkHandler,
-        resolver: registry.resolver,
-        sanitizer: registry.sanitizer,
-        shouldTypeset: widget.isAttached
-      }).catch(() => console.warn('render Markdown failed'));
-      renderLatex({
-        host: element as HTMLElement,
-        source: (element as HTMLElement).innerText,
-        shouldTypeset: widget.isAttached,
-        latexTypesetter: registry.latexTypesetter
-      }).catch(() => console.warn('render LaTeX failed'));
-    });
+  get ymodel(): YDocument<any> | undefined {
+    if (this._fileWidget == null) {
+      return;
+    }
+    return this._fileWidget.context.model.sharedModel as YDocument<any>;
+  }
+
+  get model(): CommentFileModel | undefined {
+    const docWidget = this._fileWidget;
+    if (docWidget == null) {
+      return;
+    }
+    return docWidget.model;
+  }
+
+  get fileWidget(): CommentFileWidget | undefined {
+    return this._fileWidget;
+  }
+
+  get modelChanged(): ISignal<this, CommentFileWidget | undefined> {
+    return this._modelChanged;
   }
 
   /**
@@ -251,29 +238,62 @@ export class CommentPanel extends Panel implements ICommentPanel {
     return this._revealed;
   }
 
+  get panelHeader(): PanelHeader {
+    return this._panelHeader;
+  }
+
   get awareness(): Awareness | undefined {
-    const sharedModel = this._tracker.currentWidget?.context.model.sharedModel;
-    if (sharedModel == null) {
-      return undefined;
+    return this.model?.awareness;
+  }
+
+  get registry(): ICommentRegistry {
+    return this._registry;
+  }
+
+  get pathPrefix(): string {
+    return this._pathPrefix;
+  }
+  set pathPrefix(newValue: string) {
+    this._pathPrefix = newValue;
+  }
+
+  updateIdentity(id: number, newName: string): void {
+    const model = this.model;
+    if (model == null) {
+      return;
     }
-    return (sharedModel as any as YDocument<any>).awareness;
+
+    model.comments.forEach(comment => {
+      if (comment.identity.id === id) {
+        comment.identity.name = newName;
+      }
+
+      comment.replies.forEach(reply => {
+        if (reply.identity.id === id) {
+          reply.identity.name = newName;
+        }
+      });
+    });
+
+    this.update();
   }
 
-  get nbTracker(): INotebookTracker {
-    return this._tracker;
-  }
-
-  private _tracker: INotebookTracker;
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
   private _revealed = new Signal<this, undefined>(this);
   private _commentMenu: Menu;
   private _registry: ICommentRegistry;
+  private _panelHeader: PanelHeader;
+  private _fileWidget: CommentFileWidget | undefined = undefined;
+  private _docManager: IDocumentManager;
+  private _modelChanged = new Signal<this, CommentFileWidget | undefined>(this);
+  private _pathPrefix: string = 'comments/';
 }
 
-export namespace CommentPanel {
-  export interface IOptions extends Panel.IOptions {
-    tracker: INotebookTracker;
+export namespace CommentPanel2 {
+  export interface IOptions {
+    docManager: IDocumentManager;
     commands: CommandRegistry;
     registry: ICommentRegistry;
+    shell: ILabShell;
   }
 }

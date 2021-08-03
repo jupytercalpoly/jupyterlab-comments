@@ -1,49 +1,54 @@
-import { IComment, IIdentity, IReply } from './commentformat';
+import {
+  ICellSelectionComment,
+  IComment,
+  IIdentity,
+  IReply,
+  ISelection,
+  ITextSelectionComment
+} from './commentformat';
+import { WidgetTracker } from '@jupyterlab/apputils';
 import { PartialJSONValue, UUID } from '@lumino/coreutils';
 import { getCommentTimeString } from './utils';
+import { Cell } from '@jupyterlab/cells';
+import { CommentFileModel } from './model';
+import { CommentWidget } from './widget';
+import { INotebookTracker } from '@jupyterlab/notebook';
+import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
+import { DocumentWidget } from '@jupyterlab/docregistry';
+//import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 
-export interface ICommentFactory<T = any> {
-  createComment: (options: CommentFactory.ICommentOptions<T>) => IComment;
-  createCommentWithPrecomputedTarget: (
-    options: Exclude<ICommentOptions<T>, 'target'>,
-    target: PartialJSONValue
-  ) => IComment;
-
-  readonly type: string;
-  readonly targetFactory: (target: T) => PartialJSONValue;
-}
-
-/**
- * A class that creates comments of a given type.
- */
-export class CommentFactory<T = any> implements ICommentFactory<T> {
-  constructor(options: CommentFactory.IOptions<T>) {
-    const { type, targetFactory } = options;
-
+export abstract class ACommentFactory<T = any> {
+  constructor(options: ACommentFactory.IOptions) {
+    const { type } = options;
     this.type = type;
-    this.targetFactory = targetFactory;
   }
 
-  createComment(options: CommentFactory.ICommentOptions<T>): IComment {
-    const { target, text, identity, replies, id } = options;
+  abstract targetToJSON(target: T): PartialJSONValue;
+  abstract targetFromJSON(json: PartialJSONValue): T | undefined;
+  abstract getPreviewText(comment: IComment, target: T): string;
 
-    return {
-      text,
-      identity,
-      type: this.type,
-      id: id ?? UUID.uuid4(),
-      replies: replies ?? [],
-      time: getCommentTimeString(),
-      target: this.targetFactory(target)
-    };
+  getElement(target: T): HTMLElement | undefined {
+    return;
   }
 
-  createCommentWithPrecomputedTarget(
-    options: Exclude<ICommentOptions<T>, 'target'>,
-    target: PartialJSONValue
+  createWidget(
+    comment: IComment,
+    model: CommentFileModel,
+    target?: T
+  ): CommentWidget<any> | null {
+    return new CommentWidget({
+      model,
+      id: comment.id,
+      target: target ?? this.targetFromJSON(comment.target),
+      factory: this
+    });
+  }
+
+  createComment(
+    options: ACommentFactory.ICommentOptions<T>,
+    target?: PartialJSONValue
   ): IComment {
     const { text, identity, replies, id } = options;
-
     return {
       text,
       identity,
@@ -51,11 +56,11 @@ export class CommentFactory<T = any> implements ICommentFactory<T> {
       id: id ?? UUID.uuid4(),
       replies: replies ?? [],
       time: getCommentTimeString(),
-      target
+      target: target ?? this.targetToJSON(options.source!)
     };
   }
 
-  static createReply(options: IReplyOptions): IReply {
+  static createReply(options: ACommentFactory.IReplyOptions): IReply {
     const { text, identity, id } = options;
 
     return {
@@ -68,13 +73,286 @@ export class CommentFactory<T = any> implements ICommentFactory<T> {
   }
 
   readonly type: string;
-  readonly targetFactory: (target: T) => PartialJSONValue;
 }
 
-export namespace CommentFactory {
-  export interface IOptions<T> {
-    type: string;
-    targetFactory: (target: T) => PartialJSONValue;
+export class TestCommentFactory extends ACommentFactory<null> {
+  constructor() {
+    super({ type: 'test' });
+  }
+
+  getPreviewText() {
+    return '';
+  }
+
+  targetToJSON() {
+    return null;
+  }
+
+  targetFromJSON() {
+    return null;
+  }
+}
+
+export class CellCommentFactory extends ACommentFactory<Cell> {
+  constructor(tracker: INotebookTracker) {
+    super({ type: 'cell' });
+
+    this._tracker = tracker;
+  }
+
+  getPreviewText(comment: IComment, target: any): string {
+    return '';
+  }
+
+  targetToJSON(cell: Cell): PartialJSONValue {
+    return { cellID: cell.model.id };
+  }
+
+  targetFromJSON(json: PartialJSONValue): Cell | undefined {
+    if (!(json instanceof Object && 'cellID' in json)) {
+      return;
+    }
+
+    const notebook = this._tracker.currentWidget;
+    if (notebook == null) {
+      return;
+    }
+
+    const cellID = json['cellID'];
+    return notebook.content.widgets.find(w => w.model.id === cellID);
+  }
+
+  getElement(target: Cell): HTMLElement | undefined {
+    return target.node;
+  }
+
+  private _tracker: INotebookTracker;
+}
+
+export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
+  constructor(tracker: INotebookTracker) {
+    super({ type: 'cell-selection' });
+
+    this._tracker = tracker;
+  }
+
+  createWidget(
+    comment: IComment,
+    model: CommentFileModel,
+    target?: Cell
+  ): CommentWidget<Cell> {
+    const cell = target ?? this.targetFromJSON(comment.target);
+    if (cell == null) {
+      console.warn('no cell found for cell selection comment', comment);
+    }
+
+    // Add the selection to the cell's selections map.
+    //const selections = cell!.model.selections.get(cell!.model.id) ?? [];
+    let tempSelections = cell!.editor.model.selections.get(cell!.model.id);
+    let selections = [];
+    if(tempSelections != null) {
+      selections = JSON.parse(JSON.stringify(tempSelections));
+    }
+    const { start, end } = comment.target as any as ISelection;
+    selections!.push({
+      start,
+      end,
+      style: {
+        className: 'jc-Highlight',
+        color: 'black',
+        displayName: comment.identity.name
+      },
+      uuid: comment.id
+    });
+    cell!.model.selections.set(cell!.model.id, selections);
+
+    return super.createWidget(comment, model, cell)!;
+  }
+
+  targetToJSON(cell: Cell): PartialJSONValue {
+    const { start, end } = cell.editor.getSelection();
+    return {
+      cellID: cell.model.id,
+      start,
+      end
+    };
+  }
+
+  targetFromJSON(json: PartialJSONValue): Cell | undefined {
+    if (!(json instanceof Object && 'cellID' in json)) {
+      return;
+    }
+
+    const notebook = this._tracker.currentWidget;
+    if (notebook == null) {
+      return;
+    }
+
+    const cellID = json['cellID'];
+    return notebook.content.widgets.find(w => w.model.id === cellID);
+  }
+
+  getPreviewText(comment: IComment, target?: Cell): string {
+    const cell = target ?? this.targetFromJSON(comment.target);
+    if (cell == null) {
+      console.warn('no cell found for cell selection comment', comment);
+      return '';
+    }
+
+    const mainText = cell.model.value.text;
+    const selectionComment = comment as ICellSelectionComment;
+    const { start, end } = selectionComment.target;
+
+    let startIndex = lineToIndex(mainText, start.line, start.column);
+    let endIndex = lineToIndex(mainText, end.line, end.column);
+
+    if (startIndex > endIndex) {
+      [startIndex, endIndex] = [endIndex, startIndex];
+    }
+
+    let previewText: string = mainText.slice(startIndex, endIndex);
+
+    if (previewText.length > 140) {
+      return previewText.slice(0, 140) + '...';
+    }
+
+    return previewText;
+  }
+
+  getElement(target: Cell): HTMLElement | undefined {
+    return target.node;
+  }
+
+  private _tracker: INotebookTracker;
+}
+
+export class HTMLElementCommentFactory extends ACommentFactory<HTMLElement> {
+  constructor(options: HTMLElementCommentFactory.IOptions) {
+    super(options);
+
+    this._root = options.root ?? document.body;
+    console.log(this._root);
+  }
+
+  getElement(target: HTMLElement): HTMLElement {
+    return target;
+  }
+
+  targetToJSON(target: HTMLElement): PartialJSONValue {
+    return {
+      id: target.id
+    };
+  }
+
+  targetFromJSON(json: PartialJSONValue): HTMLElement | undefined {
+    if (!(json instanceof Object && 'id' in json)) {
+      return;
+    }
+
+    return document.getElementById(json['id'] as string) ?? undefined;
+  }
+
+  getPreviewText(): string {
+    return '';
+  }
+
+  private _root: HTMLElement;
+}
+
+export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapper> {
+  constructor(options: ACommentFactory.IOptions, tracker: WidgetTracker){
+    super({type: options.type});
+    this._tracker = tracker;
+  }
+
+  createWidget(comment: IComment, model: CommentFileModel, target?: CodeEditorWrapper) : CommentWidget<CodeEditorWrapper> | null {
+    const wrapper = target ?? this.targetFromJSON(comment.target);
+    if(wrapper == null) {
+      console.warn('no valid selection for: ', comment);
+      return null;
+    }
+
+    let tempSelections = wrapper!.editor.model.selections.get((wrapper.parent as DocumentWidget).context.path);
+    let selections = [];
+    if(tempSelections != null) {
+      selections = JSON.parse(JSON.stringify(tempSelections));
+    }
+
+    console.log('selections: ', selections);
+    const {start, end} = comment.target as any as ISelection;
+    selections.push({
+      start,
+      end,
+      style: {
+        className: 'jc-Highlight',
+        color: 'black',
+        displayName: comment.identity.name
+      },
+      uuid: comment.id
+    });
+
+    wrapper!.editor.model.selections.set((wrapper.parent as DocumentWidget).context.path, selections);
+    return super.createWidget(comment, model, wrapper);
+  }
+
+  targetToJSON(wrapper: CodeEditorWrapper): PartialJSONValue {
+    const { start, end } = wrapper.editor.getSelection();
+    return {
+      editorID: (wrapper.parent as DocumentWidget).context.path,
+      start,
+      end
+    };
+  }
+
+  targetFromJSON(json: PartialJSONValue) : CodeEditorWrapper | undefined {
+    if(!(json instanceof Object && 'editorID' in json)) {
+      return;
+    }
+    return this._tracker.filter(widget => (widget.parent as DocumentWidget).context.path === json['editorID'])[0] as CodeEditorWrapper;
+  }
+
+  getPreviewText(comment: IComment, target?: CodeEditorWrapper): string {
+    const wrapper = target ?? this.targetFromJSON(comment.target);
+    if(wrapper == null) {
+      console.warn('no CodeEditorWrapper found on text file');
+      return '';
+    }
+
+    const text = wrapper.editor.model.value.text;
+    const textComment = comment as ITextSelectionComment;
+    const { start, end } = textComment.target;
+
+    let startIndex = wrapper.editor.getOffsetAt(start);
+    let endIndex = wrapper.editor.getOffsetAt(end);
+    
+    if(startIndex > endIndex) {
+      [startIndex, endIndex] = [endIndex, startIndex];
+    }
+
+    let previewText = text.slice(startIndex, endIndex);
+    if(previewText.length > 140) {
+      return previewText.slice(0, 140) + '...';
+    }
+
+    return previewText;
+  }
+
+  getElement(target: CodeEditorWrapper) {
+    return target.node;
+  }
+
+  private _tracker: WidgetTracker;
+}
+
+export namespace HTMLElementCommentFactory {
+  export interface IOptions extends ACommentFactory.IOptions {
+    root?: HTMLElement;
+  }
+}
+
+export namespace ACommentFactory {
+  export interface IOptions {
+    type: string; // cell or cell-selection or text-selection
   }
 
   export interface IReplyOptions {
@@ -84,10 +362,17 @@ export namespace CommentFactory {
   }
 
   export interface ICommentOptions<T> extends IReplyOptions {
-    target: T;
+    source?: T;
     replies?: IReply[];
   }
 }
 
-export type ICommentOptions<T> = CommentFactory.ICommentOptions<T>;
-export type IReplyOptions = CommentFactory.IReplyOptions;
+//function that converts a line-column pairing to an index
+export function lineToIndex(str: string, line: number, col: number): number {
+  if (line == 0) {
+    return col;
+  } else {
+    let arr = str.split('\n');
+    return arr.slice(0, line).join('\n').length + col + 1;
+  }
+}

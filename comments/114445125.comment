@@ -1,0 +1,25 @@
+[
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 3231530060,
+      "name": "Anonymous Arche",
+      "color": "#609DA9"
+    },
+    "type": "text-selection",
+    "id": "33becec2-74b3-46fa-91bb-6578dda15b57",
+    "replies": [],
+    "time": "10:56 AM Aug 2",
+    "target": {
+      "editorID": "id-27ce94ff-021c-467e-852e-de6a92658c4f",
+      "start": {
+        "line": 0,
+        "column": 24
+      },
+      "end": {
+        "line": 0,
+        "column": 5
+      }
+    }
+  }
+]

@@ -1,0 +1,48 @@
+[
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 3698960585,
+      "name": "Anonymous Kalyke",
+      "color": "#609DA9"
+    },
+    "type": "text-selection",
+    "id": "15475fff-4eca-466a-87ac-6f666397bfba",
+    "replies": [],
+    "time": "4:51 PM Aug 2",
+    "target": {
+      "editorID": "yu.txt",
+      "start": {
+        "line": 4,
+        "column": 20
+      },
+      "end": {
+        "line": 4,
+        "column": 2
+      }
+    }
+  },
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 3698960585,
+      "name": "Anonymous Kalyke",
+      "color": "#609DA9"
+    },
+    "type": "text-selection",
+    "id": "fefdf924-2982-413c-b268-9f414afe1ea1",
+    "replies": [],
+    "time": "4:51 PM Aug 2",
+    "target": {
+      "editorID": "yu.txt",
+      "start": {
+        "line": 1,
+        "column": 1
+      },
+      "end": {
+        "line": 3,
+        "column": 1
+      }
+    }
+  }
+]

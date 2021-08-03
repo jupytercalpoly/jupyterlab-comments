@@ -1,30 +1,32 @@
 import { IComment, IIdentity, IReply } from './commentformat';
-import { CommentFactory } from './factory';
+import { ACommentFactory } from './factory';
 import { ICommentRegistry } from './registry';
-import { YDocument } from '@jupyterlab/shared-models';
+import { ISharedDocument, YDocument } from '@jupyterlab/shared-models';
 import * as Y from 'yjs';
 import { PartialJSONValue } from '@lumino/coreutils';
 import { ISignal, Signal } from '@lumino/signaling';
 import { Awareness } from 'y-protocols/awareness';
 import { Menu } from '@lumino/widgets';
+import { DocumentRegistry } from '@jupyterlab/docregistry';
+import { IModelDB, ModelDB } from '@jupyterlab/observables';
+import { IChangedArgs } from '@jupyterlab/coreutils';
+import { Contents } from '@jupyterlab/services';
 
 /**
  * The default model for comment files.
  */
-export class CommentFileModel {
+export class CommentFileModel implements DocumentRegistry.IModel {
   /**
    * Construct a new `CommentFileModel`.
    */
   constructor(options: CommentFileModel.IOptions) {
-    const { registry, ydoc, awareness, sourcePath, commentMenu } = options;
+    const { registry, commentMenu, isInitialized } = options;
 
     this.registry = registry;
-    this.ydoc = ydoc;
-    this.awarenss = awareness;
-    this._sourcePath = sourcePath;
     this._commentMenu = commentMenu;
+    this._isInitialized = !!isInitialized;
 
-    this.comments.observe(this._commentsObserver);
+    this.comments.observeDeep(this._commentsObserver);
   }
 
   /**
@@ -36,9 +38,7 @@ export class CommentFileModel {
     }
 
     this._isDisposed = true;
-    this.comments.unobserve(this._commentsObserver);
-    // Remove all signal connections from the model.
-    Signal.clearData(this);
+    this.comments.unobserveDeep(this._commentsObserver);
   }
 
   /**
@@ -52,32 +52,35 @@ export class CommentFileModel {
    * Deserialize the model from JSON.
    */
   fromJSON(value: PartialJSONValue): void {
-    this.ydoc.transact(() => {
+    this.ymodel.transact(() => {
       const comments = this.comments;
       comments.delete(0, comments.length);
       comments.push(value as any as IComment[]);
     });
+
+    this._contentChanged.emit();
   }
 
   /**
    * Serialize the model to a string.
    */
   toString(): string {
-    return JSON.stringify(this.toJSON());
+    return JSON.stringify(this.toJSON(), undefined, 2);
   }
 
   /**
    * Deserialize the model from a string.
    */
   fromString(value: string): void {
-    this.fromJSON(JSON.parse(value));
+    this.fromJSON(JSON.parse(value !== '' ? value : '[]'));
   }
 
-  private _commentsObserver = (event: Y.YArrayEvent<IComment>): void => {
+  private _commentsObserver = (event: Y.YEvent[]): void => {
     // In the future, this should emit a signal describing changes made to the comments.
     // I don't understand YArrayEvent well enough yet so I'm just logging it here.
-    console.log(event);
+    console.log('changes', event as Y.YEvent[]);
   };
+
   /**
    * Create a comment from an `ICommentOptions` object.
    *
@@ -90,6 +93,10 @@ export class CommentFileModel {
       return;
     }
 
+    if ('target' in options) {
+      return factory.createComment(options, options.target);
+    }
+
     return factory.createComment(options);
   }
 
@@ -97,7 +104,7 @@ export class CommentFileModel {
    * Create a reply from an `IReplyOptions` object.
    */
   createReply(options: Exclude<IReplyOptions, 'parentID'>): IReply {
-    return CommentFactory.createReply(options);
+    return ACommentFactory.createReply(options);
   }
 
   /**
@@ -110,6 +117,7 @@ export class CommentFileModel {
     }
 
     this.comments.insert(index, [comment]);
+    this._contentChanged.emit();
   }
 
   /**
@@ -122,6 +130,7 @@ export class CommentFileModel {
     }
 
     this.comments.push([comment]);
+    this._contentChanged.emit();
   }
 
   /**
@@ -136,6 +145,7 @@ export class CommentFileModel {
 
     const reply = this.createReply(options);
     parentComment.replies.splice(index, 0, reply);
+    this._contentChanged.emit();
   }
 
   /**
@@ -150,6 +160,7 @@ export class CommentFileModel {
 
     const reply = this.createReply(options);
     parentComment.replies.push(reply);
+    this._contentChanged.emit();
   }
 
   /**
@@ -161,6 +172,7 @@ export class CommentFileModel {
       const comment = comments.get(i);
       if (comment.id === id) {
         comments.delete(i);
+        this._contentChanged.emit();
         return;
       }
     }
@@ -182,6 +194,7 @@ export class CommentFileModel {
       const replyIndex = comment.replies.findIndex(reply => reply.id === id);
       if (replyIndex !== -1) {
         comment.replies.splice(replyIndex, 1);
+        this._contentChanged.emit();
       }
       return;
     }
@@ -191,6 +204,7 @@ export class CommentFileModel {
       const replyIndex = comment.replies.findIndex(reply => reply.id === id);
       if (replyIndex !== -1) {
         comment.replies.splice(replyIndex, 1);
+        this._contentChanged.emit();
         return;
       }
     }
@@ -209,6 +223,7 @@ export class CommentFileModel {
     }
 
     Object.assign(comment, comment, options);
+    this._contentChanged.emit();
   }
 
   /**
@@ -228,6 +243,7 @@ export class CommentFileModel {
     }
 
     Object.assign(reply, reply, options);
+    this._contentChanged.emit();
   }
 
   /**
@@ -271,18 +287,16 @@ export class CommentFileModel {
     return;
   }
 
+  initialize(): void {
+    this.sharedModel.clearUndoHistory();
+    this._isInitialized = true;
+  }
+
   /**
    * The comments associated with the model.
    */
   get comments(): Y.Array<IComment> {
-    return this.ydoc.ydoc.getArray('comments');
-  }
-
-  /**
-   * Whether the model has been disposed.
-   */
-  get isDisposed(): boolean {
-    return this._isDisposed;
+    return this.ymodel.ydoc.getArray('comments');
   }
 
   /**
@@ -293,24 +307,19 @@ export class CommentFileModel {
   /**
    * The underlying model handling RTC between clients.
    */
-  readonly ydoc: YDocument<any>;
+  readonly ymodel = new YDocument<any>();
 
   /**
    * The awareness associated with the document being commented on.
    */
-  readonly awarenss: Awareness;
-
-  /**
-   * The path to the document being commented on.
-   */
-  get sourcePath(): string {
-    return this._sourcePath;
+  get awareness(): Awareness {
+    return this.ymodel.awareness;
   }
 
   /**
    * The dropdown menu for comment widgets.
    */
-  get commentMenu(): Menu {
+  get commentMenu(): Menu | undefined {
     return this._commentMenu;
   }
 
@@ -322,19 +331,76 @@ export class CommentFileModel {
     return this._changed;
   }
 
-  private _sourcePath: string;
-  private _commentMenu: Menu;
+  get sharedModel(): ISharedDocument {
+    return this.ymodel;
+  }
+
+  get readOnly(): boolean {
+    return this._readOnly;
+  }
+  set readOnly(newVal: boolean) {
+    const oldVal = this.readOnly;
+    if (newVal !== oldVal) {
+      this._readOnly = newVal;
+      this._signalStateChange(oldVal, newVal, 'readOnly');
+    }
+  }
+
+  get dirty(): boolean {
+    return this._dirty;
+  }
+  set dirty(newVal: boolean) {
+    const oldVal = this.dirty;
+    if (newVal !== oldVal) {
+      this._dirty = newVal;
+      this._signalStateChange(oldVal, newVal, 'dirty');
+    }
+  }
+
+  get stateChanged(): ISignal<this, IChangedArgs<any>> {
+    return this._stateChanged;
+  }
+
+  get contentChanged(): ISignal<this, void> {
+    return this._contentChanged;
+  }
+
+  get isDisposed(): boolean {
+    return this._isDisposed;
+  }
+
+  get isInitialized(): boolean {
+    return this._isInitialized;
+  }
+
+  private _signalStateChange(oldValue: any, newValue: any, name: string): void {
+    this._stateChanged.emit({
+      oldValue,
+      newValue,
+      name
+    });
+  }
+
+  // These are never used--just here to satisfy the interface requirements.
+  readonly modelDB: IModelDB = new ModelDB();
+  readonly defaultKernelLanguage = '';
+  readonly defaultKernelName = '';
+
+  private _isInitialized: boolean;
+  private _dirty: boolean = false;
+  private _readOnly: boolean = false;
   private _isDisposed: boolean = false;
+  private _commentMenu: Menu | undefined;
   private _changed = new Signal<this, CommentFileModel.IChange>(this);
+  private _stateChanged = new Signal<this, IChangedArgs<any>>(this);
+  private _contentChanged = new Signal<this, void>(this);
 }
 
 export namespace CommentFileModel {
   export interface IOptions {
     registry: ICommentRegistry;
-    ydoc: YDocument<any>;
-    sourcePath: string;
-    awareness: Awareness;
-    commentMenu: Menu;
+    isInitialized?: boolean;
+    commentMenu?: Menu;
   }
 
   /**
@@ -346,17 +412,71 @@ export namespace CommentFileModel {
   }
 }
 
+export class CommentFileModelFactory
+  implements DocumentRegistry.IModelFactory<CommentFileModel>
+{
+  constructor(options: CommentFileModelFactory.IOptions) {
+    const { registry, commentMenu } = options;
+
+    this._registry = registry;
+    this._commentMenu = commentMenu;
+  }
+
+  readonly name: string = 'comment-file';
+  readonly contentType: Contents.ContentType = 'file';
+  readonly fileFormat: Contents.FileFormat = 'text';
+
+  createNew(
+    languagePreference?: string,
+    modelDB?: IModelDB,
+    isInitialized?: boolean
+  ): CommentFileModel {
+    const registry = this._registry;
+    const commentMenu = this._commentMenu;
+    return new CommentFileModel({
+      registry,
+      commentMenu,
+      isInitialized
+    });
+  }
+
+  preferredLanguage(path: string): string {
+    return '';
+  }
+
+  dispose(): void {
+    this._isDisposed = true;
+  }
+
+  get isDisposed(): boolean {
+    return this._isDisposed;
+  }
+
+  private _registry: ICommentRegistry;
+  private _commentMenu: Menu;
+  private _isDisposed = false;
+}
+
+export namespace CommentFileModelFactory {
+  export interface IOptions {
+    registry: ICommentRegistry;
+    commentMenu: Menu;
+  }
+}
+
 /**
  * Options object for creating a comment.
  */
-export interface ICommentOptions {
+export interface ICommentOptionsBase {
   text: string;
   identity: IIdentity;
   type: string;
-  target: any;
   replies?: IReply[];
-  id?: string; // defaults to UUID.uuid4()
+  id?: string; // defaults to UUID.uuid4();
 }
+
+export type ICommentOptions = ({ target: PartialJSONValue } | { source: any }) &
+  ICommentOptionsBase;
 
 /**
  * Options object for creating a reply.

@@ -1,0 +1,48 @@
+[
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 4100663706,
+      "name": "Anonymous Pandia",
+      "color": "#CC8500"
+    },
+    "type": "text-selection",
+    "id": "03b602c3-dcc0-486c-88c0-29c0fdf0f920",
+    "replies": [],
+    "time": "10:42 AM Aug 2",
+    "target": {
+      "editorID": "id-3e9cb2a2-ce6c-4d94-a113-84c1d215fddf",
+      "start": {
+        "line": 0,
+        "column": 297
+      },
+      "end": {
+        "line": 0,
+        "column": 279
+      }
+    }
+  },
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 38341705,
+      "name": "Anonymous Ganymede",
+      "color": "#00A1B3"
+    },
+    "type": "text-selection",
+    "id": "ec5acb45-95ac-46f2-904f-64389a846088",
+    "replies": [],
+    "time": "10:44 AM Aug 2",
+    "target": {
+      "editorID": "id-f32e0690-7a1c-410f-8887-7f07b9e11e14",
+      "start": {
+        "line": 0,
+        "column": 269
+      },
+      "end": {
+        "line": 0,
+        "column": 296
+      }
+    }
+  }
+]

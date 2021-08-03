@@ -1,0 +1,25 @@
+[
+  {
+    "text": "abcdef",
+    "identity": {
+      "id": 3452266015,
+      "name": "Anonymous Herse",
+      "color": "#A79011"
+    },
+    "type": "text-selection",
+    "id": "4f6c777c-52b9-43b5-aac3-3f602702cd69",
+    "replies": [],
+    "time": "2:41 PM Aug 2",
+    "target": {
+      "editorID": "id-a78d95a1-4e65-409a-bf00-5c2efb2d4ec2",
+      "start": {
+        "line": 5,
+        "column": 12
+      },
+      "end": {
+        "line": 5,
+        "column": 1
+      }
+    }
+  }
+]
