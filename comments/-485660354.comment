@@ -33,28 +33,5 @@
         "column": 12
       }
     }
-  },
-  {
-    "text": "d",
-    "identity": {
-      "id": 1890278448,
-      "name": "Anonymous Io",
-      "color": "#12A0D3"
-    },
-    "type": "cell-selection",
-    "id": "d32e05f1-948f-4227-85d8-b39ba6ba9978",
-    "replies": [],
-    "time": "3:57 PM Aug 3",
-    "target": {
-      "cellID": "d5c4bfe9-3098-47f2-a6e9-f955b5a7950c",
-      "start": {
-        "line": 0,
-        "column": 1
-      },
-      "end": {
-        "line": 0,
-        "column": 0
-      }
-    }
   }
 ]

@@ -67,5 +67,28 @@
         "column": 4
       }
     }
+  },
+  {
+    "text": "a",
+    "identity": {
+      "id": 929031222,
+      "name": "Anonymous Ersa",
+      "color": "#609DA9"
+    },
+    "type": "text-selection",
+    "id": "4e0b934d-1495-4104-b10e-b694e9edee9e",
+    "replies": [],
+    "time": "4:16 PM Aug 3",
+    "target": {
+      "editorID": "yy.txt",
+      "start": {
+        "line": 0,
+        "column": 9
+      },
+      "end": {
+        "line": 0,
+        "column": 0
+      }
+    }
   }
 ]

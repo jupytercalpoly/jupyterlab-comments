@@ -229,11 +229,10 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   const commentWidget = props.commentWidget;
   const className = props.className || '';
 
-  const onClick = commentWidget.handleEvent.bind(commentWidget);
-  const onKeyDown = onClick;
+  const eventHandler = commentWidget.handleEvent.bind(commentWidget);
 
   return (
-    <div className={className} onClick={onClick} onKeyDown={onKeyDown}>
+    <div className={className} onClick={eventHandler} onKeyDown={eventHandler}>
       <JCCommentWithReplies
         comment={commentWidget.comment!}
         editID={commentWidget.editID}
@@ -249,7 +248,6 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
  * A React widget that can render a comment and its replies.
  */
 export class CommentWidget<T> extends ReactWidget {
-
   constructor(options: CommentWidget.IOptions<T>) {
     super();
 
@@ -264,7 +262,7 @@ export class CommentWidget<T> extends ReactWidget {
     this.node.tabIndex = 0;
   }
 
-  handleEvent(event: React.SyntheticEvent): void {
+  handleEvent(event: React.SyntheticEvent | Event): void {
     switch (event.type) {
       case 'click':
         this._handleClick(event as React.MouseEvent);
@@ -729,6 +727,9 @@ export class CommentFileWidget extends Panel {
     this.id = `Comments-${context.path}`;
     this.addClass('jc-CommentFileWidget');
     this.renderer = renderer;
+
+    const content = new Panel();
+    content.addClass('jc-CommentFileWidgetChild');
   }
 
   onUpdateRequest(msg: Message): void {
@@ -739,9 +740,6 @@ export class CommentFileWidget extends Panel {
     while (this.widgets.length > 0) {
       this.widgets[0].dispose();
     }
-    /*let counter = 0;
-    let selections: CodeEditor.ITextSelection[] = [];
-    let editor : CodeEditorWrapper;*/
     comments.forEach(comment => {
       const factory = registry.getFactory(comment.type);
       if (factory == null) {

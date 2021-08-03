@@ -887,6 +887,7 @@
     "@lumino/widgets" "^1.19.0"
     react "^17.0.1"
 
+<<<<<<< HEAD
 "@jupyterlab/nbformat@^3.0.6":
   version "3.0.6"
   resolved "https://registry.yarnpkg.com/@jupyterlab/nbformat/-/nbformat-3.0.6.tgz#858a6567cdd60879bc7f9dad6c9dcb5587417b5d"
@@ -894,6 +895,8 @@
   dependencies:
     "@lumino/coreutils" "^1.5.3"
 
+=======
+>>>>>>> upstream/main
 "@jupyterlab/nbformat@^3.1.0-rc.1":
   version "3.1.0-rc.1"
   resolved "https://registry.yarnpkg.com/@jupyterlab/nbformat/-/nbformat-3.1.0-rc.1.tgz#f9bf8ad10a13e0e856b675e4280005d6b38ff404"
@@ -1051,6 +1054,7 @@
     ajv "^6.12.3"
     json5 "^2.1.1"
 
+<<<<<<< HEAD
 "@jupyterlab/settingregistry@^3.1.0-rc.1":
   version "3.1.0-rc.1"
   resolved "https://registry.yarnpkg.com/@jupyterlab/settingregistry/-/settingregistry-3.1.0-rc.1.tgz#8882fdc4dc271b8a41b7ad77ee506028a66ec3a9"
@@ -1064,6 +1068,8 @@
     ajv "^6.12.3"
     json5 "^2.1.1"
 
+=======
+>>>>>>> upstream/main
 "@jupyterlab/shared-models@^3.1.0-rc.1":
   version "3.1.0-rc.1"
   resolved "https://registry.yarnpkg.com/@jupyterlab/shared-models/-/shared-models-3.1.0-rc.1.tgz#d5912dff3bf78883a9b4e16dfbd2e6d3df0c46ce"
