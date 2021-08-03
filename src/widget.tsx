@@ -35,11 +35,10 @@ type CommentProps = {
 };
 
 type CommentWithRepliesProps = {
-  MYrenderNeeded: Signal<CommentWidget, boolean>;
+  collapseNeeded: Signal<CommentWidget, boolean>;
   comment: IComment;
   editID: string;
   activeID: string;
-  isExpand: boolean;
   className?: string;
   target?: any;
   factory: ACommentFactory;
@@ -47,7 +46,7 @@ type CommentWithRepliesProps = {
 
 type CommentWrapperProps = {
   commentWidget: CommentWidget<any>;
-  MYrenderNeeded: Signal<CommentWidget, boolean>;
+  collapseNeeded: Signal<CommentWidget, boolean>;
   className?: string;
 };
 
@@ -191,50 +190,15 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
   const editID = props.editID;
-  // let isExpand = props.isExpand;
   const target = props.target;
   const factory = props.factory;
   const [open, SetOpen] = React.useState(false);
-  const MYrenderNeeded = props.MYrenderNeeded;
+  const collapseNeeded = props.collapseNeeded;
 
   let RepliesComponent = (): JSX.Element => {
-    // let full = (
-    //   <div className={'jc-Replies'}>
-    //     {comment.replies.map(reply => (
-    //       <JCReply
-    //         reply={reply}
-    //         editable={editID === reply.id}
-    //         key={reply.id}
-    //       />
-    //     ))}
-    //   </div>
-    // );
-    // let minified = (
-    //   <div className={'jc-Replies'}>
-    //     <hr />
-    //     <div onClick={handleClick}>expand thread</div>
-    //     <div>...{comment.replies.length - 1}</div>
-    //     <hr />
-    //     <JCReply
-    //       reply={comment.replies[comment.replies.length - 1]}
-    //       editable={editID === comment.replies[comment.replies.length - 1].id}
-    //       key={comment.replies[comment.replies.length - 1].id}
-    //     />
-    //   </div>
-    // );
-
-    // parsing
-    // SetOpen(isExpand)
-
-    MYrenderNeeded.connect((_, args)=> {
-      // if (isExpand === true) {
-        // SetOpen(false);
+    collapseNeeded.connect((_, args)=> {
         SetOpen(args);
-        // isExpand = false;
-        console.log(open);
-      // }
     })
-
 
     if (open === true || comment.replies.length < 4) {
       return (
@@ -252,7 +216,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
       return (
         <div className={'jc-Replies'}>
           <div className="jc-Replies-breaker">
-            <div onClick={handleClick}>expand thread</div>
+            <div onClick={handleClick} className="jc-Replies-breaker-left">expand thread</div>
             <div className="jc-Replies-breaker-right">
               <div className="jc-Replies-breaker-number">
                 {comment.replies.length - 1}
@@ -270,35 +234,6 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
       );
     }
 
-    // else {
-    //   if (comment.replies.length < 4){
-    //     return full
-    //   }
-    //   else if (isExpand === false || comment.replies.length > 4) {
-    //     // return full
-    //     return minified
-    //   }
-    //   else {
-    //     return <div> bleehhhhhh</div>
-    //   }
-    // }
-
-    // console.log(isExpand);
-    // if (isExpand === true) {
-    //   if (comment.replies && comment.replies.length < 4) {
-    //     return full;
-    //   } else {
-    //     return minified;
-    //   }
-    // } else {
-    //   if (open === true || (comment.replies &&comment.replies.length < 4)) {
-    //     return full;
-    //   } else if (open === false) {
-    //     return minified;
-    //   } else {
-    //     return <div>[dummy]</div>;
-    //   }
-    // }
   };
 
   React.useEffect(() => {
@@ -310,7 +245,8 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   };
 
   return (
-    <Jdiv className={'jc-CommentWithReplies ' + className}>
+    // <Jdiv className={'jc-CommentWithReplies ' + className} onFocus={() => document.execCommand('selectAll', false, undefined)}>
+    <Jdiv className={'jc-CommentWithReplies ' + className}> 
       <JCComment
         comment={comment}
         editable={editID === comment.id}
@@ -342,7 +278,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   const commentWidget = props.commentWidget;
   const className = props.className || '';
 
-  const MYrenderNeeded = props.MYrenderNeeded;
+  const collapseNeeded = props.collapseNeeded;
 
   const onClick = commentWidget.handleEvent.bind(commentWidget);
   const onKeyDown = onClick;
@@ -353,10 +289,9 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
         comment={commentWidget.comment!}
         editID={commentWidget.editID}
         activeID={commentWidget.activeID}
-        isExpand={commentWidget.isExpand}
         target={commentWidget.target}
         factory={commentWidget.factory}
-        MYrenderNeeded = {MYrenderNeeded}
+        collapseNeeded = {collapseNeeded}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
     </Jdiv>
@@ -380,8 +315,6 @@ export class CommentWidget<T = any> extends ReactWidget {
     this._menu = menu;
     this._tracker = nbTracker;
     this._factory = factory;
-    // this._isExpand = true;
-    this._isExpand = false;
 
     this.addClass('jc-CommentWidget');
     this.node.tabIndex = 0;
@@ -447,18 +380,14 @@ export class CommentWidget<T = any> extends ReactWidget {
       console.log(
         'related target is null; no new focus target; collapse replies'
       );
-      this._isExpand = true;
       this.MYrenderNeeded.emit(false);
     } else if (
       this.node.contains(relatedTarget as HTMLElement) ||
       this.node === relatedTarget
     ) {
       console.log("focus within; don't collapse replies");
-      // this._isExpand = true;
     } else {
       console.log('lost focus entirely; collapse replies');
-      // this._isExpand = false;
-      this._isExpand = true;
       this.MYrenderNeeded.emit(false);
     }
   }
@@ -636,7 +565,7 @@ export class CommentWidget<T = any> extends ReactWidget {
   render(): ReactRenderElement {
     return (
       <UseSignal signal={this.renderNeeded}>
-        {() => <JCCommentWrapper commentWidget={this} MYrenderNeeded={this._MYrenderNeeded}/>}
+        {() => <JCCommentWrapper commentWidget={this} collapseNeeded={this._collapseNeeded}/>}
       </UseSignal>
     );
   }
@@ -786,7 +715,7 @@ export class CommentWidget<T = any> extends ReactWidget {
   }
 
   get MYrenderNeeded(): Signal<this, boolean> {
-    return this._MYrenderNeeded;
+    return this._collapseNeeded;
   }
 
   /**
@@ -802,19 +731,10 @@ export class CommentWidget<T = any> extends ReactWidget {
     }
   }
 
-  get isExpand(): boolean {
-    return this._isExpand;
-  }
-
-  set isExpand(value: boolean) {
-    this._isExpand = value;
-  }
-
   get factory(): ACommentFactory {
     return this._factory;
   }
 
-  private _isExpand: boolean;
   private _awareness: Awareness;
   private _commentID: string;
   private _target: T;
@@ -828,7 +748,7 @@ export class CommentWidget<T = any> extends ReactWidget {
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );
-  private _MYrenderNeeded: Signal<this,boolean > = new Signal<this, boolean>(
+  private _collapseNeeded: Signal<this,boolean > = new Signal<this, boolean>(
     this
   );
 }
