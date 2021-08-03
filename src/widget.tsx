@@ -10,6 +10,7 @@ import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
 
+
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
  */
@@ -26,8 +27,10 @@ type CommentProps = {
 };
 
 type CommentWithRepliesProps = {
+  collapseNeeded: Signal<CommentWidget<any>, boolean>;
   comment: IComment;
   editID: string;
+  activeID: string;
   className?: string;
   target?: any;
   factory: ACommentFactory;
@@ -35,6 +38,7 @@ type CommentWithRepliesProps = {
 
 type CommentWrapperProps = {
   commentWidget: CommentWidget<any>;
+  collapseNeeded: Signal<CommentWidget<any>, boolean>;
   className?: string;
 };
 
@@ -98,9 +102,9 @@ function JCComment(props: CommentProps): JSX.Element {
       id={comment.id}
       jcEventArea="other"
     >
-      <Jdiv className="jc-ProfilePicContainer">
+      <Jdiv className="jc-CommentProfilePicContainer">
         <Jdiv
-          className="jc-ProfilePic"
+          className="jc-CommentProfilePic"
           style={{ backgroundColor: comment.identity.color }}
           jcEventArea="user"
         />
@@ -143,9 +147,9 @@ function JCReply(props: ReplyProps): JSX.Element {
       id={reply.id}
       jcEventArea="other"
     >
-      <Jdiv className="jc-ProfilePicContainer">
+      <Jdiv className="jc-ReplyProfilePicContainer">
         <Jdiv
-          className="jc-ProfilePic"
+          className="jc-ReplyProfilePic"
           style={{ backgroundColor: reply.identity.color }}
           jcEventArea="user"
         />
@@ -179,25 +183,69 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const editID = props.editID;
   const target = props.target;
   const factory = props.factory;
+  const [open, SetOpen] = React.useState(false);
+  const collapseNeeded = props.collapseNeeded;
+
+  let RepliesComponent = (): JSX.Element => {
+    collapseNeeded.connect((_, args)=> {
+        SetOpen(args);
+    })
+
+    if (open === true || comment.replies.length < 4) {
+      return (
+        <div className={'jc-Replies'}>
+          {comment.replies.map(reply => (
+            <JCReply
+              reply={reply}
+              editable={editID === reply.id}
+              key={reply.id}
+            />
+          ))}
+        </div>
+      );
+    } else {
+      return (
+        <div className={'jc-Replies'}>
+          <div onClick={handleClick} className="jc-Replies-breaker">
+            <div className="jc-Replies-breaker-left">expand thread</div>
+            <div className="jc-Replies-breaker-right">
+              <div className="jc-Replies-breaker-number">
+                {comment.replies.length - 1}
+              </div>
+              <hr />
+              <hr />
+            </div>
+          </div>
+          <JCReply
+            reply={comment.replies[comment.replies.length - 1]}
+            editable={editID === comment.replies[comment.replies.length - 1].id}
+            key={comment.replies[comment.replies.length - 1].id}
+          />
+        </div>
+      );
+    }
+
+  };
+
+  React.useEffect(() => {
+    //
+  }, [open]);
+
+  const handleClick = () => {
+    SetOpen(open => !open);
+  };
 
   return (
-    <div className={'jc-CommentWithReplies ' + className}>
+    // <Jdiv className={'jc-CommentWithReplies ' + className} onFocus={() => document.execCommand('selectAll', false, undefined)}>
+    <Jdiv className={'jc-CommentWithReplies ' + className}> 
       <JCComment
         comment={comment}
         editable={editID === comment.id}
         target={target}
         factory={factory}
       />
-      <div className={'jc-Replies'}>
-        {comment.replies.map(reply => (
-          <JCReply
-            reply={reply}
-            editable={editID === reply.id}
-            key={reply.id}
-          />
-        ))}
-      </div>
-    </div>
+      <RepliesComponent />
+    </Jdiv>
   );
 }
 
@@ -222,14 +270,17 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   const className = props.className || '';
 
   const eventHandler = commentWidget.handleEvent.bind(commentWidget);
+  const collapseNeeded = props.collapseNeeded;
 
   return (
     <div className={className} onClick={eventHandler} onKeyDown={eventHandler}>
       <JCCommentWithReplies
         comment={commentWidget.comment!}
         editID={commentWidget.editID}
+        activeID={commentWidget.activeID}
         target={commentWidget.target}
         factory={commentWidget.factory}
+        collapseNeeded = {collapseNeeded}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
     </div>
@@ -254,6 +305,16 @@ export class CommentWidget<T> extends ReactWidget {
     this.node.tabIndex = 0;
   }
 
+  protected onAfterAttach(msg: Message): void {
+    super.onAfterAttach(msg);
+    this.node.addEventListener('focusout', this);
+  }
+
+  protected onAfterDetach(msg: Message): void {
+    super.onAfterAttach(msg);
+    this.node.removeEventListener('focusout', this);
+  }
+
   handleEvent(event: React.SyntheticEvent | Event): void {
     switch (event.type) {
       case 'click':
@@ -261,6 +322,9 @@ export class CommentWidget<T> extends ReactWidget {
         break;
       case 'keydown':
         this._handleKeydown(event as React.KeyboardEvent);
+        break;
+      case 'focusout':
+        this._handleBlur(event as React.MouseEvent);
         break;
     }
   }
@@ -285,10 +349,24 @@ export class CommentWidget<T> extends ReactWidget {
       case 'other':
         this._handleOtherClick(event);
         break;
+
       case 'none':
         break;
       default:
         break;
+    }
+  }
+
+  private _handleBlur(event: React.MouseEvent): void {
+    const relatedTarget = event.relatedTarget;
+    event.preventDefault();
+    event.stopPropagation();
+    if (relatedTarget == null) {
+      this.collapseNeeded.emit(false);
+    } else if (
+      !this.node.contains(relatedTarget as HTMLElement) ||
+      !(this.node === relatedTarget)){
+      this.collapseNeeded.emit(false);
     }
   }
 
@@ -310,6 +388,9 @@ export class CommentWidget<T> extends ReactWidget {
       this.node.focus();
     }
   }
+
+
+
 
   /**
    * Handle a click on the dropdown (ellipses) area of a widget.
@@ -454,7 +535,7 @@ export class CommentWidget<T> extends ReactWidget {
   render(): ReactRenderElement {
     return (
       <UseSignal signal={this.renderNeeded}>
-        {() => <JCCommentWrapper commentWidget={this} />}
+        {() => <JCCommentWrapper commentWidget={this} collapseNeeded={this._collapseNeeded}/>}
       </UseSignal>
     );
   }
@@ -608,6 +689,10 @@ export class CommentWidget<T> extends ReactWidget {
     return this._renderNeeded;
   }
 
+  get collapseNeeded(): Signal<this, boolean> {
+    return this._collapseNeeded;
+  }
+
   /**
    * The ID of the managed comment being edited, or the empty string if none.
    */
@@ -639,12 +724,14 @@ export class CommentWidget<T> extends ReactWidget {
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );
+  private _collapseNeeded: Signal<this,boolean > = new Signal<this, boolean>(
+    this
+  );
 }
 
 export namespace CommentWidget {
   export interface IOptions<T> {
     id: string;
-
     model: CommentFileModel;
 
     target: T;
@@ -661,15 +748,22 @@ export namespace CommentWidget {
     | 'user'
     | 'reply'
     | 'other'
+    | 'blur'
     | 'none';
 
   /**
    * Whether a string is a type of `EventArea`
    */
   export function isEventArea(input: string): input is EventArea {
-    return ['dropdown', 'body', 'user', 'reply', 'other', 'none'].includes(
-      input
-    );
+    return [
+      'dropdown',
+      'body',
+      'user',
+      'reply',
+      'other',
+      'none',
+      'blur'
+    ].includes(input);
   }
 
   /**

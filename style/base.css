@@ -1,7 +1,8 @@
 :root {
   --jc-dropdown-size: 25px;
 
-  --jc-profile-pic-size: 32px;
+  --jc-comment-profile-pic-size: 32px;
+  --jc-reply-profile-pic-size: 26px;
 
   --jc-panel-background-color: var(--jp-layout-color0);
 
@@ -73,6 +74,52 @@
   white-space: pre-wrap;
 }
 
+.jc-Replies-breaker:focus {
+  outline: 1px solid var(--jp-ui-font-color3);
+}
+
+.jc-Replies-breaker{
+  display: flex;
+  border: var(--jc-comment-border);
+  align-items: baseline;
+  /* align-items: flex-start; */
+  justify-content: space-between;
+  /* padding: 5px 10px -10px 10px; */
+  padding: 0px 10px 0px 10px;
+  margin-top: -4px;
+  position: relative;
+  z-index: 2;
+  border-top: none;
+  height: 30px;
+}
+
+.jc-CommentWidget:focus-within .jc-Replies-breaker {
+  border-color: var(--jp-brand-color1);
+}
+
+.jc-Replies-breaker-right > hr{
+  border: 0.5px solid var(--jp-ui-font-color3);
+  position: relative;
+  bottom: 2em;
+  width: 8em;
+  z-index: 1;
+}
+.jc-Replies-breaker-number {
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--jp-ui-font-color3);
+  background-color: var(--jc-panel-background-color);
+  /* text-align: center; */
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  left: 70%;
+  z-index: 10;
+}
+
+
 .jc-CommentInput {
   width: 100%;
   min-height: 44px;
@@ -90,21 +137,35 @@
   z-index: 5;
 }
 
-/* .jc-Indicator:hover {
-
-} */
-
-.jc-ProfilePic {
+.jc-Indicator:hover {
+  background-color: orange;
+  width: 12px;
+  width: 12px;
+}
+.jc-CommentProfilePic {
   display: block;
   border-radius: 50%;
   top: 0;
   left: 0;
-  height: var(--jc-profile-pic-size);
-  width: var(--jc-profile-pic-size);
+  height: var(--jc-comment-profile-pic-size);
+  width: var(--jc-comment-profile-pic-size);
 }
-.jc-ProfilePicContainer {
+.jc-CommentProfilePicContainer {
   float: left;
-  width: var(--jc-profile-pic-size);
+  width: var(--jc-comment-profile-pic-size);
+}
+
+.jc-ReplyProfilePic {
+  display: block;
+  border-radius: 50%;
+  top: 0;
+  left: 0;
+  height: var(--jc-reply-profile-pic-size);
+  width: var(--jc-reply-profile-pic-size);
+}
+.jc-ReplyProfilePicContainer {
+  float: left;
+  width: var(--jc-reply-profile-pic-size);
 }
 
 .jc-CommentWidget {
