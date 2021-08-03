@@ -367,7 +367,7 @@ export class CommentWidget<T> extends ReactWidget {
       console.log(
         'related target is null; no new focus target; collapse replies'
       );
-      this.MYrenderNeeded.emit(false);
+      this.collapseNeeded.emit(false);
     } else if (
       this.node.contains(relatedTarget as HTMLElement) ||
       this.node === relatedTarget
@@ -375,7 +375,7 @@ export class CommentWidget<T> extends ReactWidget {
       console.log("focus within; don't collapse replies");
     } else {
       console.log('lost focus entirely; collapse replies');
-      this.MYrenderNeeded.emit(false);
+      this.collapseNeeded.emit(false);
     }
   }
 
@@ -696,7 +696,7 @@ export class CommentWidget<T> extends ReactWidget {
     return this._renderNeeded;
   }
 
-  get MYrenderNeeded(): Signal<this, boolean> {
+  get collapseNeeded(): Signal<this, boolean> {
     return this._collapseNeeded;
   }
 
