@@ -38,7 +38,6 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     }
 
     this._isDisposed = true;
-    console.log('disposed old model');
     this.comments.unobserveDeep(this._commentsObserver);
   }
 
@@ -77,12 +76,8 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   }
 
   private _commentsObserver = (events: Y.YEvent[]): void => {
-    console.log('comment change');
-    // const f = (_: this, e: CommentFileModel.IChange[]): void => console.log('delta', e);
     for (let event of events) {
-      // this.changed.connect(f);
       this._changed.emit(event.delta as any);
-      // this.changed.disconnect(f);
     }
   };
 

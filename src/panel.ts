@@ -89,9 +89,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
   }
 
   onUpdateRequest(msg: Message): void {
-    console.log('panel update request');
     if (this._fileWidget == null) {
-      console.log('this._fileWidget is null');
       return;
     }
 

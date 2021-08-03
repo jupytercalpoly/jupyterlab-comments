@@ -848,7 +848,6 @@ export class CommentFileWidget extends Panel {
     if (widget != null) {
       this.insertWidget(index, widget);
       this._commentAdded.emit(widget);
-      console.log('insertComment', widget);
     }
   }
 
@@ -873,7 +872,6 @@ export class CommentFileWidget extends Panel {
     if (widget != null) {
       this.addWidget(widget);
       this._commentAdded.emit(widget);
-      console.log('addComment', widget);
     }
   }
 
