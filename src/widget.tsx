@@ -270,15 +270,8 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   const commentWidget = props.commentWidget;
   const className = props.className || '';
 
-<<<<<<< HEAD
   const eventHandler = commentWidget.handleEvent.bind(commentWidget);
   const collapseNeeded = props.collapseNeeded;
-=======
-  const MYrenderNeeded = props.MYrenderNeeded;
-
-  const onClick = commentWidget.handleEvent.bind(commentWidget);
-  const onKeyDown = onClick;
->>>>>>> add in working system
 
   return (
     <div className={className} onClick={eventHandler} onKeyDown={eventHandler}>
@@ -291,7 +284,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
         collapseNeeded = {collapseNeeded}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
-    </Jdiv>
+    </div>
   );
 }
 
