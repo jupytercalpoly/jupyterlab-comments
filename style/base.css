@@ -74,16 +74,6 @@
   white-space: pre-wrap;
 }
 
-.jc-Replies {
-  /* border: 1px solid var(--jc-comment-border); */
-  /* border: var(--jc-comment-border); */
-}
-
-/* .jc-CommentWithReplies {
-  position: relative;
-  z-index: 1;
-} */
-
 .jc-Replies-breaker:focus {
   outline: 1px solid var(--jp-ui-font-color3);
 }
@@ -105,10 +95,6 @@
 
 .jc-CommentWidget:focus-within .jc-Replies-breaker {
   border-color: var(--jp-brand-color1);
-}
-
-.jc-Replies-breaker-left{
-  /* height: 0% */
 }
 
 .jc-Replies-breaker-right > hr{
