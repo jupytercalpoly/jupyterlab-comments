@@ -362,17 +362,10 @@ export class CommentWidget<T> extends ReactWidget {
     event.preventDefault();
     event.stopPropagation();
     if (relatedTarget == null) {
-      console.log(
-        'related target is null; no new focus target; collapse replies'
-      );
       this.collapseNeeded.emit(false);
     } else if (
-      this.node.contains(relatedTarget as HTMLElement) ||
-      this.node === relatedTarget
-    ) {
-      console.log("focus within; don't collapse replies");
-    } else {
-      console.log('lost focus entirely; collapse replies');
+      !this.node.contains(relatedTarget as HTMLElement) ||
+      !(this.node === relatedTarget)){
       this.collapseNeeded.emit(false);
     }
   }
