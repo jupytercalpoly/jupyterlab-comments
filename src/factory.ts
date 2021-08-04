@@ -287,6 +287,7 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
   constructor(options: ACommentFactory.IOptions, tracker: WidgetTracker) {
     super({ type: options.type });
     this._tracker = tracker;
+    this._path = "";
   }
 
   createWidget(
@@ -300,13 +301,14 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
       return null;
     }
 
+    this._path = (wrapper.parent as DocumentWidget)?.context.path;
+
     const widget = super.createWidget(comment, model, wrapper);
     if (widget == null) {
       return null;
     }
-
     let tempSelections = wrapper!.editor.model.selections.get(
-      (wrapper.parent as DocumentWidget).context.path
+      this._path
     );
     let selections = [];
     if (tempSelections != null) {
@@ -327,18 +329,18 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
     });
 
     wrapper!.editor.model.selections.set(
-      (wrapper.parent as DocumentWidget).context.path,
+      this._path,
       selections
     );
 
     widget.disposed.connect(() => {
       const sels =
         wrapper!.editor.model.selections.get(
-          (wrapper.parent as DocumentWidget).context.path
+          this._path
         ) ?? [];
       const newSels = sels.filter(sel => sel.uuid !== comment.id);
       wrapper!.editor.model.selections.set(
-        (wrapper.parent as DocumentWidget).context.path,
+        this._path,
         newSels
       );
     });
@@ -396,6 +398,7 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
   }
 
   private _tracker: WidgetTracker;
+  private _path: string;
 }
 
 export namespace HTMLElementCommentFactory {

@@ -306,11 +306,18 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     // panel.revealed.connect(() => panel.update());
     shell.currentChanged.connect((_, args) => {
+      console.warn("yes?: ", args.newValue instanceof DocumentWidget)
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
         const path = docWidget.context.path;
         if (path !== '') {
           void panel.loadModel(docWidget.context.path);
+        }
+      } else {
+        try {
+          void panel.loadModel('');
+        } catch(e) {
+          console.warn('no file for Launcher!');
         }
       }
     });
@@ -319,7 +326,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     //commenting stuff for non-notebook/json files
     shell.currentChanged.connect((_, changed) => {
-      if (changed.newValue == null) {
+      if (changed.newValue == null || panel.model == null) {
         return;
       }
 
@@ -333,7 +340,6 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
         return;
       }
       if (!editorTracker.has(editorWidget)) {
-        console.warn('new document!');
         editorTracker.add(editorWidget).catch(() => {
           console.warn('could not add widget');
         });
