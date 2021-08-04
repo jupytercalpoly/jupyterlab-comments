@@ -1,9 +1,11 @@
 import { Awareness } from 'y-protocols/awareness';
 import { IIdentity } from './commentformat';
 import { getAnonymousUserName, getRandomColor } from '@jupyterlab/docprovider';
+import { UserIcons } from './icons';
 
 export const emptyIdentity: IIdentity = {
   id: 0,
+  icon: 0,
   name: 'User',
   color: ''
 };
@@ -13,7 +15,8 @@ export function randomIdentity(): IIdentity {
   return {
     id: count--,
     name: getAnonymousUserName(),
-    color: getRandomColor()
+    color: getRandomColor(),
+    icon: Math.floor(Math.random() * UserIcons.length)
   };
 }
 
@@ -28,7 +31,8 @@ export function setIdentityName(awareness: Awareness, name: string): boolean {
   }
   let newUser = {
     name: name,
-    color: oldUser['color']
+    color: oldUser['color'],
+    icon: oldUser['icon'] ?? Math.floor(Math.random() * UserIcons.length)
   };
   awareness.setLocalStateField('user', newUser);
 
@@ -54,7 +58,8 @@ export function getIdentity(awareness: Awareness): IIdentity {
     return {
       id: awareness.clientID,
       name: userInfo['name'],
-      color: userInfo['color']
+      color: userInfo['color'],
+      icon: Math.floor(Math.random() * UserIcons.length)
     };
   }
 

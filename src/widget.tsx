@@ -10,7 +10,7 @@ import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
 import { PartialJSONValue } from '@lumino/coreutils';
-
+import { UserIcons } from './icons';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -96,6 +96,7 @@ function JCComment(props: CommentProps): JSX.Element {
   const editable = props.editable;
   const target = props.target;
   const factory = props.factory;
+  const icon = UserIcons[comment.identity.icon] ?? UserIcons[0];
 
   return (
     <Jdiv
@@ -108,7 +109,9 @@ function JCComment(props: CommentProps): JSX.Element {
           className="jc-CommentProfilePic"
           style={{ backgroundColor: comment.identity.color }}
           jcEventArea="user"
-        />
+        >
+          <icon.react className="jc-MoonIcon" />
+        </Jdiv>
       </Jdiv>
       <span className="jc-Nametag">{comment.identity.name}</span>
 
@@ -141,6 +144,7 @@ function JCReply(props: ReplyProps): JSX.Element {
   const reply = props.reply;
   const className = props.className ?? '';
   const editable = props.editable;
+  const icon = UserIcons[reply.identity.icon] ?? UserIcons[0];
 
   return (
     <Jdiv
@@ -148,12 +152,14 @@ function JCReply(props: ReplyProps): JSX.Element {
       id={reply.id}
       jcEventArea="other"
     >
-      <Jdiv className="jc-ReplyProfilePicContainer">
+      <Jdiv className="jc-ReplyPicContainer">
         <Jdiv
-          className="jc-ReplyProfilePic"
+          className="jc-ReplyPic"
           style={{ backgroundColor: reply.identity.color }}
           jcEventArea="user"
-        />
+        >
+          <icon.react className="jc-MoonIcon" />
+        </Jdiv>
       </Jdiv>
       <span className="jc-Nametag">{reply.identity.name}</span>
 
@@ -163,7 +169,7 @@ function JCReply(props: ReplyProps): JSX.Element {
 
       <br />
 
-      <span className="jc-Time">{reply.time}</span>
+      <div className="jc-ReplySpacer" />
 
       <Jdiv
         className="jc-Body jc-EditInputArea"
@@ -188,9 +194,9 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const collapseNeeded = props.collapseNeeded;
 
   let RepliesComponent = (): JSX.Element => {
-    collapseNeeded.connect((_, args)=> {
-        SetOpen(args);
-    })
+    collapseNeeded.connect((_, args) => {
+      SetOpen(args);
+    });
 
     if (open === true || comment.replies.length < 4) {
       return (
@@ -225,7 +231,6 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
         </div>
       );
     }
-
   };
 
   React.useEffect(() => {
@@ -238,7 +243,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
 
   return (
     // <Jdiv className={'jc-CommentWithReplies ' + className} onFocus={() => document.execCommand('selectAll', false, undefined)}>
-    <Jdiv className={'jc-CommentWithReplies ' + className}> 
+    <Jdiv className={'jc-CommentWithReplies ' + className}>
       <JCComment
         comment={comment}
         editable={editID === comment.id}
@@ -281,7 +286,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
         activeID={commentWidget.activeID}
         target={commentWidget.target}
         factory={commentWidget.factory}
-        collapseNeeded = {collapseNeeded}
+        collapseNeeded={collapseNeeded}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
     </div>
@@ -387,7 +392,8 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       this.collapseNeeded.emit(false);
     } else if (
       !this.node.contains(relatedTarget as HTMLElement) ||
-      !(this.node === relatedTarget)){
+      !(this.node === relatedTarget)
+    ) {
       this.collapseNeeded.emit(false);
     }
   }
@@ -410,9 +416,6 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       this.node.focus();
     }
   }
-
-
-
 
   /**
    * Handle a click on the dropdown (ellipses) area of a widget.
@@ -557,7 +560,12 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
   render(): ReactRenderElement {
     return (
       <UseSignal signal={this.renderNeeded}>
-        {() => <JCCommentWrapper commentWidget={this} collapseNeeded={this._collapseNeeded}/>}
+        {() => (
+          <JCCommentWrapper
+            commentWidget={this}
+            collapseNeeded={this._collapseNeeded}
+          />
+        )}
       </UseSignal>
     );
   }
@@ -746,7 +754,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );
-  private _collapseNeeded: Signal<this,boolean > = new Signal<this, boolean>(
+  private _collapseNeeded: Signal<this, boolean> = new Signal<this, boolean>(
     this
   );
 }
