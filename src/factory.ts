@@ -140,21 +140,36 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
     comment: IComment,
     model: CommentFileModel,
     target?: Cell
-  ): CommentWidget<Cell> {
+  ): CommentWidget<Cell> | null {
     const cell = target ?? this.targetFromJSON(comment.target);
     if (cell == null) {
       console.warn('no cell found for cell selection comment', comment);
+      return null;
+    }
+
+    const widget = super.createWidget(comment, model, cell);
+    if (widget == null) {
+      return null;
     }
 
     // Add the selection to the cell's selections map.
     //const selections = cell!.model.selections.get(cell!.model.id) ?? [];
-    let tempSelections = cell!.editor.model.selections.get(cell!.model.id);
+
+    /*let tempSelections = cell!.editor.model.selections.get(cell!.model.id);
+    let selections = [];
+    if (tempSelections != null) {
+      selections = JSON.parse(JSON.stringify(tempSelections));
+    }*/
+    const selectionsMap = cell.editor.model.selections;
+    //const selections = selectionsMap.get(cell.model.id) ?? [];
+    let tempSelections = selectionsMap.get(cell.model.id);
     let selections = [];
     if (tempSelections != null) {
       selections = JSON.parse(JSON.stringify(tempSelections));
     }
     const { start, end } = comment.target as any as ISelection;
-    selections!.push({
+
+    selections.push({
       start,
       end,
       style: {
@@ -164,9 +179,18 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
       },
       uuid: comment.id
     });
-    cell!.model.selections.set(cell!.model.id, selections);
+    selectionsMap.set(cell.model.id, selections);
 
-    return super.createWidget(comment, model, cell)!;
+    // Remove selections when widget is disposed.
+    // Currently runs O(N^2) when all widgets are disposed at once.
+
+    widget.disposed.connect(() => {
+      const sels = selectionsMap.get(cell.model.id) ?? [];
+      const newSels = sels.filter(sel => sel.uuid !== comment.id);
+      selectionsMap.set(cell.model.id, newSels);
+    });
+
+    return widget;
   }
 
   targetToJSON(cell: Cell): PartialJSONValue {
@@ -276,6 +300,11 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
       return null;
     }
 
+    const widget = super.createWidget(comment, model, wrapper);
+    if (widget == null) {
+      return null;
+    }
+
     let tempSelections = wrapper!.editor.model.selections.get(
       (wrapper.parent as DocumentWidget).context.path
     );
@@ -301,7 +330,20 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
       (wrapper.parent as DocumentWidget).context.path,
       selections
     );
-    return super.createWidget(comment, model, wrapper);
+
+    widget.disposed.connect(() => {
+      const sels =
+        wrapper!.editor.model.selections.get(
+          (wrapper.parent as DocumentWidget).context.path
+        ) ?? [];
+      const newSels = sels.filter(sel => sel.uuid !== comment.id);
+      wrapper!.editor.model.selections.set(
+        (wrapper.parent as DocumentWidget).context.path,
+        newSels
+      );
+    });
+
+    return widget;
   }
 
   targetToJSON(wrapper: CodeEditorWrapper): PartialJSONValue {

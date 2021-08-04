@@ -80,45 +80,41 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
 
     const button = panel.button;
 
-    function openButton(x: number, y: number): void {
-      button.open(x, y, () => {
-        const cell = nbTracker.activeCell;
-        if (cell == null) {
-          return;
-        }
-
-        const model = panel.model;
-        if (model == null) {
-          return;
-        }
-
-        const comments = model.comments;
-        let index = comments.length;
-        for (let i = comments.length; i > 0; i--) {
-          const comment = comments.get(i - 1) as ICellComment;
-          if (comment.target.cellID === cell.model.id) {
-            index = i;
-          }
-        }
-
-        void InputDialog.getText({ title: 'Add Comment' }).then(value => {
-          if (value.value == null) {
+    function openButton(x: number, y: number, anchor: HTMLElement): void {
+      button.open(
+        x,
+        y,
+        () => {
+          const cell = nbTracker.activeCell;
+          if (cell == null) {
             return;
           }
 
-          model.insertComment(
+          const model = panel.model;
+          if (model == null) {
+            return;
+          }
+
+          const comments = model.comments;
+          let index = comments.length;
+          for (let i = comments.length; i > 0; i--) {
+            const comment = comments.get(i - 1) as ICellComment;
+            if (comment.target.cellID === cell.model.id) {
+              index = i;
+            }
+          }
+
+          panel.mockComment(
             {
+              identity: getIdentity(model.awareness),
               type: 'cell-selection',
-              text: value.value,
-              source: cell,
-              identity: getIdentity(model.awareness)
+              source: cell
             },
             index
           );
-
-          panel.update();
-        });
-      });
+        },
+        anchor
+      );
     }
 
     let currAwareness: Awareness;
@@ -156,8 +152,10 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
 
       // Open add comment button when mouse is released after selection
       onMouseup = (_: MouseEvent): void => {
-        const { right, top, height } = cell.node.getBoundingClientRect();
-        openButton(right - 10, top + height / 2 - 10);
+        const { right, top, height } =
+          cell.editorWidget.node.getBoundingClientRect();
+        const node = nbTracker.currentWidget!.content.node;
+        openButton(right - 10, top + height / 2 - 10, node);
       };
 
       awarenessHandler = (): void => {
@@ -176,30 +174,43 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
     });
 
     app.commands.addCommand(CommandIDs.addNotebookComment, {
-      label: 'Add Cell Comment',
+      label: 'Add Comment',
       execute: () => {
         const cell = nbTracker.activeCell;
         if (cell == null) {
           return;
         }
 
-        void InputDialog.getText({
-          title: 'Enter Comment'
-        }).then(value => {
-          if (value.value == null) {
-            return;
+        const model = panel.model;
+        if (model == null) {
+          return;
+        }
+
+        const comments = model.comments;
+        let index = comments.length;
+        for (let i = comments.length; i > 0; i--) {
+          const comment = comments.get(i - 1) as ICellComment;
+          if (comment.target.cellID === cell.model.id) {
+            index = i;
           }
+        }
 
-          const model = panel.model!;
-          model.addComment({
-            source: cell,
-            text: value.value,
+        let type;
+        const { start, end } = cell.editor.getSelection();
+        if (start.column === end.column && start.line === end.line) {
+          type = 'cell';
+        } else {
+          type = 'cell-selection';
+        }
+
+        panel.mockComment(
+          {
             identity: getIdentity(model.awareness),
-            type: 'cell'
-          });
-
-          panel.update();
-        });
+            type,
+            source: cell
+          },
+          index
+        );
       }
     });
 
@@ -355,8 +366,15 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       currAwareness.on('change', handler);
     });
 
+    commentTracker.widgetAdded.connect((_, widget) =>
+      console.log('widget tracked', widget)
+    );
+
     panel.modelChanged.connect((_, fileWidget) => {
       if (fileWidget != null) {
+        fileWidget.widgets.forEach(
+          widget => void commentTracker.add(widget as CommentWidget<any>)
+        );
         fileWidget.commentAdded.connect(
           (_, commentWidget) => void commentTracker.add(commentWidget)
         );
@@ -444,8 +462,6 @@ function addCommands(
           }
 
           model.addComment(comment);
-
-          panel.update();
         }
       });
     }
@@ -457,7 +473,6 @@ function addCommands(
       const currentComment = commentTracker.currentWidget;
       if (currentComment != null) {
         currentComment.deleteActive();
-        panel.update();
       }
     }
   });

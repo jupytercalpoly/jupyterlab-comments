@@ -30,7 +30,7 @@ export class NewCommentButton extends Widget {
     this.close();
   }
 
-  open(x: number, y: number, f: () => void): void {
+  open(x: number, y: number, f: () => void, anchor?: HTMLElement): void {
     // Bail if button is already attached
     // if (this.isAttached) {
     //   return;
@@ -41,6 +41,14 @@ export class NewCommentButton extends Widget {
     const py = window.pageYOffset;
     const cw = document.documentElement.clientWidth;
     const ch = document.documentElement.clientHeight;
+    let ax = 0;
+    let ay = 0;
+
+    if (anchor != null) {
+      const { left, top } = anchor.getBoundingClientRect();
+      ax = anchor.scrollLeft - left;
+      ay = anchor.scrollTop - top;
+    }
 
     // Reset position
     const style = this.node.style;
@@ -49,7 +57,7 @@ export class NewCommentButton extends Widget {
     style.visibility = 'hidden';
 
     if (!this.isAttached) {
-      Widget.attach(this, document.body);
+      Widget.attach(this, anchor ?? document.body);
     }
 
     const { width, height } = this.node.getBoundingClientRect();
@@ -65,6 +73,10 @@ export class NewCommentButton extends Widget {
         y = y - height;
       }
     }
+
+    // Adjust according to anchor
+    x += ax;
+    y += ay;
 
     // Add onclick function
     this._onClick = f;
