@@ -306,7 +306,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     // panel.revealed.connect(() => panel.update());
     shell.currentChanged.connect((_, args) => {
-      console.warn("yes?: ", args.newValue instanceof DocumentWidget)
+      console.warn('yes?: ', args.newValue instanceof DocumentWidget);
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
         const path = docWidget.context.path;
@@ -316,7 +316,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       } else {
         try {
           void panel.loadModel('');
-        } catch(e) {
+        } catch (e) {
           console.warn('no file for Launcher!');
         }
       }
