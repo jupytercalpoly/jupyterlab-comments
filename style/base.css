@@ -3,6 +3,8 @@
 
   --jc-profile-pic-size: 32px;
 
+  --jc-reply-pic-size: 24px;
+
   --jc-panel-background-color: var(--jp-layout-color0);
 
   --jc-comment-color: var(--jp-ui-font-color0);
@@ -30,13 +32,12 @@
 .jc-CommentFileWidget {
   overflow: auto;
   flex-grow: 1;
-  padding-top: 12px;
+  padding-top: 6px;
 }
 
 .jc-Comment {
   background-color: var(--jc-comment-background-color);
   padding: 10px 10px 7px 10px;
-  border: var(--jc-comment-border);
 }
 
 .jc-Nametag {
@@ -69,8 +70,8 @@
 }
 
 .jc-Reply {
-  border-top: none;
   white-space: pre-wrap;
+  border-top: var(--jc-comment-border);
 }
 
 .jc-CommentInput {
@@ -95,22 +96,47 @@
 } */
 
 .jc-ProfilePic {
-  display: block;
+  /* display: block; */
   border-radius: 50%;
   top: 0;
   left: 0;
   height: var(--jc-profile-pic-size);
   width: var(--jc-profile-pic-size);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 .jc-ProfilePicContainer {
   float: left;
   width: var(--jc-profile-pic-size);
 }
 
-.jc-CommentWidget {
-  margin: 0 8px 24px 8px;
-  box-shadow: var(--jp-elevation-z1);
+.jc-ReplyPic {
+  border-radius: 50%;
+  top: 0;
+  left: 0;
+  height: var(--jc-reply-pic-size);
+  height: var(--jc-reply-pic-size);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
+.jc-ReplyPicContainer {
+  float: left;
+  width: var(--jc-reply-pic-size);
+  height: var(--jc-reply-pic-size);
+}
+
+.jc-CommentWidget {
+  margin: 0 8px 6px 8px;
+  border: var(--jc-comment-border);
+  border-radius: 5px;
+}
+
+.jc-CommentWidget:focus-within {
+  border-color: var(--jp-brand-color1);
+}
+
 .jc-CommentWidget:focus-within .jc-Comment {
   border-color: var(--jp-brand-color1);
 }
@@ -128,10 +154,8 @@
   color: var(--jp-ui-font-color3);
 }
 .jc-ReplyInputArea {
-  border: var(--jc-comment-border);
-  border-top: none;
+  border-top: var(--jc-comment-border);
   padding: 10px;
-  /* min-height: 30px; */
   word-break: break-word;
 }
 
@@ -165,7 +189,7 @@
 .jc-PreviewBar {
   width: 2px;
   height: 100%;
-  background-color: orange;
+  background-color: var(--jp-warn-color0);
 }
 .jc-PreviewText {
   color: var(--jc-timestamp-color);
@@ -183,7 +207,6 @@
   align-items: center;
   /* padding: 10px 10px 10px 10px; */
   padding: 10px;
-  box-shadow: var(--jp-elevation-z1);
   z-index: 2;
 }
 .jc-panelHeader-identity-container {
@@ -243,4 +266,13 @@
 .jc-IconShadow {
   filter: drop-shadow(0px 2px 1px var(--jp-shadow-umbra-color));
   cursor: pointer;
+}
+
+.jc-ReplySpacer {
+  margin-top: 8px;
+}
+
+.jc-MoonIcon {
+  width: 80%;
+  height: 80%;
 }

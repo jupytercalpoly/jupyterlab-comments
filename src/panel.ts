@@ -11,10 +11,11 @@ import { ILabShell } from '@jupyterlab/application';
 import { PanelHeader } from './panelHeaderWidget';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import { Context } from '@jupyterlab/docregistry';
-import { hashString } from './utils';
+import { hashString, randomIdentity } from './utils';
 import { CommentFileModel } from './model';
 import { CommentsPanelIcon } from './icons';
 import { NewCommentButton } from './button';
+import { IIdentity } from './commentformat';
 
 export interface ICommentPanel extends Panel {
   /**
@@ -56,6 +57,8 @@ export interface ICommentPanel extends Panel {
 
   fileWidget: CommentFileWidget | undefined;
 
+  localIdentity: IIdentity;
+
   mockComment: (
     options: CommentFileWidget.IMockCommentOptions,
     index: number
@@ -70,14 +73,14 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.title.icon = CommentsPanelIcon;
     this.addClass('jc-CommentPanel');
 
-    const { docManager, registry } = options;
+    const { docManager, registry, shell } = options;
 
     this._registry = registry;
     this._commentMenu = new Menu({ commands: options.commands });
     this._docManager = docManager;
 
     const panelHeader: PanelHeader = new PanelHeader({
-      shell: options.shell,
+      shell,
       panel: this
     });
 
@@ -86,6 +89,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this._panelHeader = panelHeader;
 
     this._boundOnChange = this._onChange.bind(this);
+
+    this._localIdentity = randomIdentity();
   }
 
   onUpdateRequest(msg: Message): void {
@@ -161,6 +166,13 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
     this.addWidget(content);
 
+    const { name, color, icon } = this._localIdentity;
+    this.model!.awareness.setLocalStateField('user', {
+      name,
+      color,
+      icon
+    });
+
     void context.ready.then(() => {
       this._modelChanged.emit(content);
       this.update();
@@ -192,7 +204,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
         );
       } else if (change.delete != null) {
         toDelete.push(...widgets.slice(index, index + change.delete));
-
         index += change.delete;
       } else if (change.update != null) {
         for (let i = 0; i < change.update; i++) {
@@ -338,6 +349,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
   }
 
   updateIdentity(id: number, newName: string): void {
+    this._localIdentity.name = newName;
+
     const model = this.model;
     if (model == null) {
       return;
@@ -345,12 +358,23 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
     model.comments.forEach(comment => {
       if (comment.identity.id === id) {
-        comment.identity.name = newName;
+        model.editComment(
+          {
+            identity: { ...comment.identity, name: newName }
+          },
+          comment.id
+        );
       }
 
       comment.replies.forEach(reply => {
         if (reply.identity.id === id) {
-          reply.identity.name = newName;
+          model.editReply(
+            {
+              identity: { ...reply.identity, name: newName }
+            },
+            reply.id,
+            comment.id
+          );
         }
       });
     });
@@ -360,6 +384,10 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
   get button(): NewCommentButton {
     return this._button;
+  }
+
+  get localIdentity(): IIdentity {
+    return this._localIdentity;
   }
 
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
@@ -377,6 +405,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
     _: CommentFileModel,
     changes: CommentFileModel.IChange[]
   ) => void;
+  private _localIdentity: IIdentity;
 }
 
 export namespace CommentPanel {

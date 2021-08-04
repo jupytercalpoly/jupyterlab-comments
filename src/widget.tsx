@@ -10,6 +10,7 @@ import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
 import { PartialJSONValue } from '@lumino/coreutils';
+import { UserIcons } from './icons';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -92,6 +93,7 @@ function JCComment(props: CommentProps): JSX.Element {
   const editable = props.editable;
   const target = props.target;
   const factory = props.factory;
+  const icon = UserIcons[comment.identity.icon] ?? UserIcons[0];
 
   return (
     <Jdiv
@@ -104,7 +106,9 @@ function JCComment(props: CommentProps): JSX.Element {
           className="jc-ProfilePic"
           style={{ backgroundColor: comment.identity.color }}
           jcEventArea="user"
-        />
+        >
+          <icon.react className="jc-MoonIcon" />
+        </Jdiv>
       </Jdiv>
       <span className="jc-Nametag">{comment.identity.name}</span>
 
@@ -137,6 +141,7 @@ function JCReply(props: ReplyProps): JSX.Element {
   const reply = props.reply;
   const className = props.className ?? '';
   const editable = props.editable;
+  const icon = UserIcons[reply.identity.icon] ?? UserIcons[0];
 
   return (
     <Jdiv
@@ -144,12 +149,14 @@ function JCReply(props: ReplyProps): JSX.Element {
       id={reply.id}
       jcEventArea="other"
     >
-      <Jdiv className="jc-ProfilePicContainer">
+      <Jdiv className="jc-ReplyPicContainer">
         <Jdiv
-          className="jc-ProfilePic"
+          className="jc-ReplyPic"
           style={{ backgroundColor: reply.identity.color }}
           jcEventArea="user"
-        />
+        >
+          <icon.react className="jc-MoonIcon" />
+        </Jdiv>
       </Jdiv>
       <span className="jc-Nametag">{reply.identity.name}</span>
 
@@ -159,7 +166,7 @@ function JCReply(props: ReplyProps): JSX.Element {
 
       <br />
 
-      <span className="jc-Time">{reply.time}</span>
+      <div className="jc-ReplySpacer" />
 
       <Jdiv
         className="jc-Body jc-EditInputArea"

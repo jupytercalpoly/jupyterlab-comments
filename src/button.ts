@@ -1,4 +1,4 @@
-import { CreateCommentIcon } from './icons';
+import { OrangeCreateCommentIcon } from './icons';
 import { Widget } from '@lumino/widgets';
 import { Message } from '@lumino/messaging';
 
@@ -95,7 +95,7 @@ export namespace Private {
   export function createNode() {
     const node = document.createElement('div');
     node.className = 'jc-Indicator';
-    const icon = CreateCommentIcon.element();
+    const icon = OrangeCreateCommentIcon.element();
     node.appendChild(icon);
     return node;
   }
