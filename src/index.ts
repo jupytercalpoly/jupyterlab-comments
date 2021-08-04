@@ -28,7 +28,6 @@ import { CommentFileModelFactory, ICommentOptions } from './model';
 import { ICellComment } from './commentformat';
 import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
 
-
 namespace CommandIDs {
   export const addComment = 'jl-comments:add-comment';
   export const deleteComment = 'jl-comments:delete-comment';
@@ -215,7 +214,12 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
 export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
   id: 'jupyterlab-comments:commenting-api',
   autoStart: true,
-  requires: [ICommentRegistry, ILabShell, IDocumentManager, IRenderMimeRegistry],
+  requires: [
+    ICommentRegistry,
+    ILabShell,
+    IDocumentManager,
+    IRenderMimeRegistry
+  ],
   provides: ICommentPanel,
   activate: (
     app: JupyterFrontEnd,
@@ -242,15 +246,19 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     });
 
     void registry.addFactory(new TestCommentFactory());
-    void registry.addFactory(new TextSelectionCommentFactory({type: 'text-selection'}, editorTracker));
+    void registry.addFactory(
+      new TextSelectionCommentFactory({ type: 'text-selection' }, editorTracker)
+    );
 
-    const panel = new CommentPanel({
-      commands: app.commands,
-      registry,
-      docManager,
-      shell
-    },
-    renderer);
+    const panel = new CommentPanel(
+      {
+        commands: app.commands,
+        registry,
+        docManager,
+        shell
+      },
+      renderer
+    );
 
     // Create the directory holding the comments.
     void panel.pathExists(panel.pathPrefix).then(exists => {
@@ -300,42 +308,51 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     //commenting stuff for non-notebook/json files
     shell.currentChanged.connect((_, changed) => {
-      if(changed.newValue == null) {
+      if (changed.newValue == null) {
         return;
       }
 
       let invalids = ['json', 'ipynb'];
-      let editorWidget = ((changed.newValue as DocumentWidget).content as CodeEditorWrapper);
-      if(invalids.includes(changed.newValue.title.label.split(".").pop()!) || editorWidget.editor == null) {
+      let editorWidget = (changed.newValue as DocumentWidget)
+        .content as CodeEditorWrapper;
+      if (
+        invalids.includes(changed.newValue.title.label.split('.').pop()!) ||
+        editorWidget.editor == null
+      ) {
         return;
       }
-      if(!editorTracker.has(editorWidget)) {
-        console.warn('new document!')
-        editorTracker.add(editorWidget);
+      if (!editorTracker.has(editorWidget)) {
+        console.warn('new document!');
+        editorTracker.add(editorWidget).catch(() => {
+          console.warn('could not add widget');
+        });
       }
       editorWidget.editor.focus();
 
       editorWidget.node.oncontextmenu = () => {
-        void InputDialog.getText({title: 'Enter Comment'}).then(value => 
-        panel.model?.addComment({
-          type: 'text-selection',
-          text: value.value ?? 'invalid!',
-          source: editorWidget,
-          identity: getIdentity(panel.model.awareness)
-        }));
-      }
+        void InputDialog.getText({ title: 'Enter Comment' }).then(value =>
+          panel.model?.addComment({
+            type: 'text-selection',
+            text: value.value ?? 'invalid!',
+            source: editorWidget,
+            identity: getIdentity(panel.model.awareness)
+          })
+        );
+      };
 
-      const handler = () : void => {
-        
-      }
+      const handler = (): void => {
+        //handler will be populated in the future the log is there so that the linter
+        //does not call an error
+        console.log('');
+      };
 
-      if(currAwareness != null) {
+      if (currAwareness != null) {
         currAwareness.off('change', handler);
       }
 
-      currAwareness = (editorWidget.editor.model.sharedModel as YFile).awareness;
+      currAwareness = (editorWidget.editor.model.sharedModel as YFile)
+        .awareness;
       currAwareness.on('change', handler);
-      
     });
 
     panel.modelChanged.connect((_, fileWidget) => {

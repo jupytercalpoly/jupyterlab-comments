@@ -52,11 +52,9 @@ export interface ICommentPanel extends Panel {
   button: NewCommentButton;
 
   fileWidget: CommentFileWidget | undefined;
-
 }
 
 export class CommentPanel extends Panel implements ICommentPanel {
-
   renderer: IRenderMimeRegistry;
 
   constructor(options: CommentPanel2.IOptions, renderer: IRenderMimeRegistry) {

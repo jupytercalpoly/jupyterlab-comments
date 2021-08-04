@@ -150,7 +150,7 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
     //const selections = cell!.model.selections.get(cell!.model.id) ?? [];
     let tempSelections = cell!.editor.model.selections.get(cell!.model.id);
     let selections = [];
-    if(tempSelections != null) {
+    if (tempSelections != null) {
       selections = JSON.parse(JSON.stringify(tempSelections));
     }
     const { start, end } = comment.target as any as ISelection;
@@ -260,26 +260,32 @@ export class HTMLElementCommentFactory extends ACommentFactory<HTMLElement> {
 }
 
 export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapper> {
-  constructor(options: ACommentFactory.IOptions, tracker: WidgetTracker){
-    super({type: options.type});
+  constructor(options: ACommentFactory.IOptions, tracker: WidgetTracker) {
+    super({ type: options.type });
     this._tracker = tracker;
   }
 
-  createWidget(comment: IComment, model: CommentFileModel, target?: CodeEditorWrapper) : CommentWidget<CodeEditorWrapper> | null {
+  createWidget(
+    comment: IComment,
+    model: CommentFileModel,
+    target?: CodeEditorWrapper
+  ): CommentWidget<CodeEditorWrapper> | null {
     const wrapper = target ?? this.targetFromJSON(comment.target);
-    if(wrapper == null) {
+    if (wrapper == null) {
       console.warn('no valid selection for: ', comment);
       return null;
     }
 
-    let tempSelections = wrapper!.editor.model.selections.get((wrapper.parent as DocumentWidget).context.path);
+    let tempSelections = wrapper!.editor.model.selections.get(
+      (wrapper.parent as DocumentWidget).context.path
+    );
     let selections = [];
-    if(tempSelections != null) {
+    if (tempSelections != null) {
       selections = JSON.parse(JSON.stringify(tempSelections));
     }
 
     console.log('selections: ', selections);
-    const {start, end} = comment.target as any as ISelection;
+    const { start, end } = comment.target as any as ISelection;
     selections.push({
       start,
       end,
@@ -291,7 +297,10 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
       uuid: comment.id
     });
 
-    wrapper!.editor.model.selections.set((wrapper.parent as DocumentWidget).context.path, selections);
+    wrapper!.editor.model.selections.set(
+      (wrapper.parent as DocumentWidget).context.path,
+      selections
+    );
     return super.createWidget(comment, model, wrapper);
   }
 
@@ -304,16 +313,19 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
     };
   }
 
-  targetFromJSON(json: PartialJSONValue) : CodeEditorWrapper | undefined {
-    if(!(json instanceof Object && 'editorID' in json)) {
+  targetFromJSON(json: PartialJSONValue): CodeEditorWrapper | undefined {
+    if (!(json instanceof Object && 'editorID' in json)) {
       return;
     }
-    return this._tracker.filter(widget => (widget.parent as DocumentWidget).context.path === json['editorID'])[0] as CodeEditorWrapper;
+    return this._tracker.filter(
+      widget =>
+        (widget.parent as DocumentWidget).context.path === json['editorID']
+    )[0] as CodeEditorWrapper;
   }
 
   getPreviewText(comment: IComment, target?: CodeEditorWrapper): string {
     const wrapper = target ?? this.targetFromJSON(comment.target);
-    if(wrapper == null) {
+    if (wrapper == null) {
       console.warn('no CodeEditorWrapper found on text file');
       return '';
     }
@@ -324,13 +336,13 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
 
     let startIndex = wrapper.editor.getOffsetAt(start);
     let endIndex = wrapper.editor.getOffsetAt(end);
-    
-    if(startIndex > endIndex) {
+
+    if (startIndex > endIndex) {
       [startIndex, endIndex] = [endIndex, startIndex];
     }
 
     let previewText = text.slice(startIndex, endIndex);
-    if(previewText.length > 140) {
+    if (previewText.length > 140) {
       return previewText.slice(0, 140) + '...';
     }
 

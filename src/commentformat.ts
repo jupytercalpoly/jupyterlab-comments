@@ -60,5 +60,5 @@ export interface ITextSelectionComment extends IComment {
     editorID: string;
     start: CodeEditor.IPosition;
     end: CodeEditor.IPosition;
-  }
+  };
 }

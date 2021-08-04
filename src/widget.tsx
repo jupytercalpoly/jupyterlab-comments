@@ -1,11 +1,15 @@
 import { ReactWidget, UseSignal } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { ellipsesIcon } from '@jupyterlab/ui-components';
-import { IComment, IIdentity, IReply /*, ITextSelectionComment */} from './commentformat';
+import {
+  IComment,
+  IIdentity,
+  IReply /*, ITextSelectionComment */
+} from './commentformat';
 import { getIdentity } from './utils';
 import { Menu, Panel } from '@lumino/widgets';
 import { ISignal, Signal } from '@lumino/signaling';
-import { ACommentFactory /*, TextSelectionCommentFactory */} from './factory';
+import { ACommentFactory /*, TextSelectionCommentFactory */ } from './factory';
 import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
@@ -714,10 +718,12 @@ export namespace CommentWidget {
  * A widget that hosts and displays a list of `CommentWidget`s
  */
 export class CommentFileWidget extends Panel {
-
   renderer: IRenderMimeRegistry;
 
-  constructor(options: CommentFileWidget.IOptions, renderer: IRenderMimeRegistry) {
+  constructor(
+    options: CommentFileWidget.IOptions,
+    renderer: IRenderMimeRegistry
+  ) {
     super();
 
     const { context } = options;
@@ -753,7 +759,6 @@ export class CommentFileWidget extends Panel {
         this.render_all(widget, this.renderer);
       }
     });
-    
   }
 
   addComment(widget: CommentWidget<any>) {
@@ -764,7 +769,7 @@ export class CommentFileWidget extends Panel {
   /**
    * Render markdown and LaTeX in a comment widget
    */
-   render_all(widget: CommentWidget<any>, registry: IRenderMimeRegistry): void {
+  render_all(widget: CommentWidget<any>, registry: IRenderMimeRegistry): void {
     let nodes = widget.node.getElementsByClassName('jc-Body');
 
     Array.from(nodes).forEach(element => {
