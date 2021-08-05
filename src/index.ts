@@ -296,10 +296,6 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       }
     });
 
-    commentTracker.widgetAdded.connect((_, widget) =>
-      console.log('widget tracked', widget)
-    );
-
     panel.modelChanged.connect((_, fileWidget) => {
       if (fileWidget != null) {
         fileWidget.widgets.forEach(
