@@ -16,6 +16,7 @@ import { Message } from '@lumino/messaging';
 import { IRenderMimeRegistry, renderMarkdown } from '@jupyterlab/rendermime';
 //import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
 import { PartialJSONValue } from '@lumino/coreutils';
+import { UserIcons } from './icons';
 
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -33,7 +34,7 @@ type CommentProps = {
 };
 
 type CommentWithRepliesProps = {
-  collapseNeeded: Signal<CommentWidget<any>, boolean>;
+  collapsed: boolean;
   comment: IComment;
   editID: string;
   activeID: string;
@@ -44,7 +45,6 @@ type CommentWithRepliesProps = {
 
 type CommentWrapperProps = {
   commentWidget: ICommentWidget<any>;
-  collapseNeeded: Signal<CommentWidget<any>, boolean>;
   className?: string;
 };
 
@@ -101,6 +101,7 @@ function JCComment(props: CommentProps): JSX.Element {
   const editable = props.editable;
   const target = props.target;
   const factory = props.factory;
+  const icon = UserIcons[comment.identity.icon] ?? UserIcons[0];
 
   return (
     <Jdiv
@@ -113,7 +114,9 @@ function JCComment(props: CommentProps): JSX.Element {
           className="jc-CommentProfilePic"
           style={{ backgroundColor: comment.identity.color }}
           jcEventArea="user"
-        />
+        >
+          <icon.react className="jc-MoonIcon" />
+        </Jdiv>
       </Jdiv>
       <span className="jc-Nametag">{comment.identity.name}</span>
 
@@ -149,6 +152,7 @@ function JCReply(props: ReplyProps): JSX.Element {
   const reply = props.reply;
   const className = props.className ?? '';
   const editable = props.editable;
+  const icon = UserIcons[reply.identity.icon] ?? UserIcons[0];
 
   return (
     <Jdiv
@@ -156,12 +160,14 @@ function JCReply(props: ReplyProps): JSX.Element {
       id={reply.id}
       jcEventArea="other"
     >
-      <Jdiv className="jc-ReplyProfilePicContainer">
+      <Jdiv className="jc-ReplyPicContainer">
         <Jdiv
-          className="jc-ReplyProfilePic"
+          className="jc-ReplyPic"
           style={{ backgroundColor: reply.identity.color }}
           jcEventArea="user"
-        />
+        >
+          <icon.react className="jc-MoonIcon" />
+        </Jdiv>
       </Jdiv>
       <span className="jc-Nametag">{reply.identity.name}</span>
 
@@ -171,7 +177,7 @@ function JCReply(props: ReplyProps): JSX.Element {
 
       <br />
 
-      <span className="jc-Time">{reply.time}</span>
+      <div className="jc-ReplySpacer" />
 
       <Jdiv
         className="jc-Body jc-EditInputArea"
@@ -195,15 +201,10 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const editID = props.editID;
   const target = props.target;
   const factory = props.factory;
-  const [open, SetOpen] = React.useState(false);
-  const collapseNeeded = props.collapseNeeded;
+  const collapsed = props.collapsed;
 
   let RepliesComponent = (): JSX.Element => {
-    collapseNeeded.connect((_, args) => {
-      SetOpen(args);
-    });
-
-    if (open === true || comment.replies.length < 4) {
+    if (!collapsed || comment.replies.length < 4) {
       return (
         <div className={'jc-Replies'}>
           {comment.replies.map(reply => (
@@ -218,16 +219,17 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
     } else {
       return (
         <div className={'jc-Replies'}>
-          <div onClick={handleClick} className="jc-Replies-breaker">
+          <Jdiv className="jc-Replies-breaker" jcEventArea="collapser">
             <div className="jc-Replies-breaker-left">expand thread</div>
+            <div className="jc-RepliesSpacer" />
             <div className="jc-Replies-breaker-right">
+              <hr />
+              <hr />
               <div className="jc-Replies-breaker-number">
                 {comment.replies.length - 1}
               </div>
-              <hr />
-              <hr />
             </div>
-          </div>
+          </Jdiv>
           <JCReply
             reply={comment.replies[comment.replies.length - 1]}
             editable={editID === comment.replies[comment.replies.length - 1].id}
@@ -236,14 +238,6 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
         </div>
       );
     }
-  };
-
-  React.useEffect(() => {
-    //
-  }, [open]);
-
-  const handleClick = () => {
-    SetOpen(open => !open);
   };
 
   return (
@@ -281,7 +275,6 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   const className = props.className || '';
 
   const eventHandler = commentWidget.handleEvent.bind(commentWidget);
-  const collapseNeeded = props.collapseNeeded;
 
   const comment = commentWidget.comment;
   if (comment == null) {
@@ -295,7 +288,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
         activeID={commentWidget.activeID}
         target={commentWidget.target}
         factory={commentWidget.factory}
-        collapseNeeded={collapseNeeded}
+        collapsed={commentWidget.collapsed}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
     </div>
@@ -321,6 +314,7 @@ export interface ICommentWidget<T> {
   factory: ACommentFactory;
   renderNeeded: ISignal<this, undefined>;
   handleEvent: (event: React.SyntheticEvent | Event) => void;
+  collapsed: boolean;
 }
 
 /**
@@ -337,18 +331,10 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     this._factory = factory;
     this._model = model;
 
+    this.id = id;
+
     this.addClass('jc-CommentWidget');
     this.node.tabIndex = 0;
-  }
-
-  protected onAfterAttach(msg: Message): void {
-    super.onAfterAttach(msg);
-    this.node.addEventListener('focusout', this);
-  }
-
-  protected onAfterDetach(msg: Message): void {
-    super.onAfterAttach(msg);
-    this.node.removeEventListener('focusout', this);
   }
 
   handleEvent(event: React.SyntheticEvent | Event): void {
@@ -358,9 +344,6 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
         break;
       case 'keydown':
         this._handleKeydown(event as React.KeyboardEvent);
-        break;
-      case 'focusout':
-        this._handleBlur(event as React.MouseEvent);
         break;
     }
   }
@@ -385,7 +368,9 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       case 'other':
         this._handleOtherClick(event);
         break;
-
+      case 'collapser':
+        this._handleCollapserClick(event);
+        break;
       case 'none':
         break;
       default:
@@ -393,18 +378,36 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     }
   }
 
-  private _handleBlur(event: React.MouseEvent): void {
-    const relatedTarget = event.relatedTarget;
-    event.preventDefault();
-    event.stopPropagation();
-    if (relatedTarget == null) {
-      this.collapseNeeded.emit(false);
-    } else if (
-      !this.node.contains(relatedTarget as HTMLElement) ||
-      !(this.node === relatedTarget)
-    ) {
-      this.collapseNeeded.emit(false);
+  private _handleCollapserClick(event: React.MouseEvent): void {
+    this._setClickFocus(event);
+    this.collapsed = false;
+    this.revealReply();
+  }
+
+  /**
+   * Collapses and hides the reply area of other comment widgets in the same panel.
+   */
+  private _collapseOtherComments(): void {
+    const parent = this.parent;
+    if (parent == null) {
+      return;
     }
+
+    const commentFileWidget = parent as CommentFileWidget;
+    if (commentFileWidget.expandedCommentID === this.id) {
+      return;
+    }
+
+    const widgets = commentFileWidget.widgets as CommentWidget<any>[];
+    widgets.forEach(widget => {
+      if (widget.id !== this.id) {
+        widget.collapsed = true;
+        widget.replyAreaHidden = true;
+        widget.editID = '';
+      }
+    });
+
+    commentFileWidget.expandedCommentID = this.id;
   }
 
   /**
@@ -424,6 +427,8 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     if (oldActive == null || !this.node.contains(oldActive)) {
       this.node.focus();
     }
+
+    this._collapseOtherComments();
   }
 
   /**
@@ -569,12 +574,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
   render(): ReactRenderElement {
     return (
       <UseSignal signal={this.renderNeeded}>
-        {() => (
-          <JCCommentWrapper
-            commentWidget={this}
-            collapseNeeded={this._collapseNeeded}
-          />
-        )}
+        {() => <JCCommentWrapper commentWidget={this} />}
       </UseSignal>
     );
   }
@@ -602,12 +602,12 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       return;
     }
 
+    this.editID = this.activeID;
     const comment = document.getElementById(this.activeID);
     if (comment == null) {
       return;
     }
 
-    this.editID = this.activeID;
     const elements = comment.getElementsByClassName(
       'jc-Body'
     ) as HTMLCollectionOf<HTMLDivElement>;
@@ -728,8 +728,14 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     return this._renderNeeded;
   }
 
-  get collapseNeeded(): Signal<this, boolean> {
-    return this._collapseNeeded;
+  get collapsed(): boolean {
+    return this._collapsed;
+  }
+  set collapsed(newVal: boolean) {
+    if (newVal !== this.collapsed) {
+      this._collapsed = newVal;
+      this._renderNeeded.emit(undefined);
+    }
   }
 
   /**
@@ -763,9 +769,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );
-  private _collapseNeeded: Signal<this, boolean> = new Signal<this, boolean>(
-    this
-  );
+  private _collapsed: boolean = true;
 }
 
 export namespace CommentWidget {
@@ -787,22 +791,16 @@ export namespace CommentWidget {
     | 'user'
     | 'reply'
     | 'other'
-    | 'blur'
-    | 'none';
+    | 'none'
+    | 'collapser';
 
   /**
    * Whether a string is a type of `EventArea`
    */
   export function isEventArea(input: string): input is EventArea {
-    return [
-      'dropdown',
-      'body',
-      'user',
-      'reply',
-      'other',
-      'none',
-      'blur'
-    ].includes(input);
+    return ['dropdown', 'body', 'user', 'reply', 'other', 'collapser'].includes(
+      input
+    );
   }
 
   /**
@@ -982,7 +980,7 @@ export class CommentFileWidget extends Panel {
   }
 
   addComment(comment: IComment) {
-    const factory = this.model.registry.getFactory(comment.type);
+    /*const factory = this.model.registry.getFactory(comment.type);
     if (factory == null) {
       return;
     }
@@ -993,7 +991,8 @@ export class CommentFileWidget extends Panel {
       this.addWidget(widget);
       this.render_all(widget, this.renderer);
       this._commentAdded.emit(widget);
-    }
+    }*/
+    this.insertComment(comment, this.widgets.length);
   }
 
   /**
@@ -1028,9 +1027,17 @@ export class CommentFileWidget extends Panel {
     return this._commentAdded;
   }
 
+  get expandedCommentID(): string | undefined {
+    return this._expandedCommentID;
+  }
+  set expandedCommentID(newVal: string | undefined) {
+    this._expandedCommentID = newVal;
+  }
+
   private _model: CommentFileModel;
   private _context: Context;
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
+  private _expandedCommentID: string | undefined;
 }
 
 export namespace CommentFileWidget {

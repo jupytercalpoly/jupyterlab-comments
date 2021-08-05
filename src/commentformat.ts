@@ -8,6 +8,7 @@ export interface IIdentity {
   id: number;
   name: string;
   color: string;
+  icon: number;
 }
 
 /**
