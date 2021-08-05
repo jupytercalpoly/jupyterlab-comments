@@ -287,7 +287,6 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
   constructor(options: ACommentFactory.IOptions, tracker: WidgetTracker) {
     super({ type: options.type });
     this._tracker = tracker;
-    this._path = '';
   }
 
   createWidget(
@@ -301,13 +300,13 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
       return null;
     }
 
-    this._path = (wrapper.parent as DocumentWidget)?.context.path;
-
     const widget = super.createWidget(comment, model, wrapper);
     if (widget == null) {
       return null;
     }
-    let tempSelections = wrapper!.editor.model.selections.get(this._path);
+    let tempSelections = wrapper!.editor.model.selections.get(
+      (wrapper.parent as DocumentWidget)?.context.path
+    );
     let selections = [];
     if (tempSelections != null) {
       selections = JSON.parse(JSON.stringify(tempSelections));
@@ -326,12 +325,21 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
       uuid: comment.id
     });
 
-    wrapper!.editor.model.selections.set(this._path, selections);
+    wrapper!.editor.model.selections.set(
+      (wrapper.parent as DocumentWidget)?.context.path,
+      selections
+    );
 
     widget.disposed.connect(() => {
-      const sels = wrapper!.editor.model.selections.get(this._path) ?? [];
+      const sels =
+        wrapper!.editor.model.selections.get(
+          (wrapper.parent as DocumentWidget)?.context.path
+        ) ?? [];
       const newSels = sels.filter(sel => sel.uuid !== comment.id);
-      wrapper!.editor.model.selections.set(this._path, newSels);
+      wrapper!.editor.model.selections.set(
+        (wrapper.parent as DocumentWidget)?.context.path,
+        newSels
+      );
     });
 
     return widget;
@@ -387,7 +395,6 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
   }
 
   private _tracker: WidgetTracker;
-  private _path: string;
 }
 
 export namespace HTMLElementCommentFactory {

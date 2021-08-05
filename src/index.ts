@@ -25,7 +25,7 @@ import {
 } from './factory';
 import { Menu } from '@lumino/widgets';
 import { CommentFileModelFactory, ICommentOptions } from './model';
-import { ICellComment } from './commentformat';
+import { ICellComment, ITextSelectionComment } from './commentformat';
 import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
 
 namespace CommandIDs {
@@ -303,10 +303,49 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     // Add the panel to the shell's right area.
     shell.add(panel, 'right', { rank: 600 });
+    const button = panel.button;
+
+    function openButton(x: number, y: number, anchor: HTMLElement): void {
+      button.open(
+        x,
+        y,
+        () => {
+          let editorWidget = (shell.currentWidget as DocumentWidget)
+            .content as CodeEditorWrapper;
+
+          if (editorWidget == null) {
+            return;
+          }
+
+          const model = panel.model;
+          if (model == null) {
+            return;
+          }
+
+          const comments = model.comments;
+          let index = comments.length;
+          for (let i = comments.length; i > 0; i--) {
+            const comment = comments.get(i - 1) as ITextSelectionComment;
+            if (comment.target.editorID === editorWidget.id) {
+              index = i;
+            }
+          }
+
+          panel.mockComment(
+            {
+              identity: getIdentity(model.awareness),
+              type: 'text-selection',
+              source: editorWidget
+            },
+            index
+          );
+        },
+        anchor
+      );
+    }
 
     // panel.revealed.connect(() => panel.update());
     shell.currentChanged.connect((_, args) => {
-      console.warn('yes?: ', args.newValue instanceof DocumentWidget);
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
         const path = docWidget.context.path;
@@ -323,9 +362,17 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     });
 
     let currAwareness: Awareness | null = null;
+    let handler: () => void;
+    let onMouseup: (event: MouseEvent) => void;
 
     //commenting stuff for non-notebook/json files
     shell.currentChanged.connect((_, changed) => {
+      if (currAwareness != null && handler != null && onMouseup != null) {
+        document.removeEventListener('mouseup', onMouseup);
+        currAwareness.off('change', handler);
+        button.close();
+      }
+
       if (changed.newValue == null || panel.model == null) {
         return;
       }
@@ -346,7 +393,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       }
       editorWidget.editor.focus();
 
-      editorWidget.node.oncontextmenu = () => {
+      /*editorWidget.node.oncontextmenu = () => {
         void InputDialog.getText({ title: 'Enter Comment' }).then(value =>
           panel.model?.addComment({
             type: 'text-selection',
@@ -355,12 +402,26 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
             identity: getIdentity(panel.model.awareness)
           })
         );
+      };*/
+
+      onMouseup = (_: MouseEvent): void => {
+        const { right } = editorWidget.node.getBoundingClientRect();
+        const { start, end } = editorWidget.editor.getSelection();
+        let coord1, coord2;
+        coord1 = editorWidget.editor.getCoordinateForPosition(start);
+        coord2 = editorWidget.editor.getCoordinateForPosition(end);
+        const node = editorWidget.parent?.parent?.node ?? editorWidget.node;
+        openButton(right - 10, (coord1.top + coord2.bottom) / 2 - 10, node);
       };
 
-      const handler = (): void => {
-        //handler will be populated in the future the log is there so that the linter
-        //does not call an error
-        console.log('');
+      handler = (): void => {
+        const { start, end } = editorWidget.editor.getSelection();
+
+        if (start.column !== end.column || start.line !== end.line) {
+          document.addEventListener('mouseup', onMouseup, { once: true });
+        } else {
+          button.close();
+        }
       };
 
       if (currAwareness != null) {

@@ -186,6 +186,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
     //const toDelete: Widget[] = [];
 
     for (let change of changes) {
+      console.log('changin!');
       if (change.retain != null) {
         index += change.retain;
       } else if (change.insert != null) {
