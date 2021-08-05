@@ -1,14 +1,20 @@
 import { ReactWidget, UseSignal } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { ellipsesIcon } from '@jupyterlab/ui-components';
-import { IComment, IIdentity, IReply } from './commentformat';
+import {
+  IComment,
+  IIdentity,
+  IReply /*, ITextSelectionComment */
+} from './commentformat';
 import { getIdentity } from './utils';
 import { Menu, Panel } from '@lumino/widgets';
 import { ISignal, Signal } from '@lumino/signaling';
-import { ACommentFactory } from './factory';
+import { ACommentFactory /*, TextSelectionCommentFactory */ } from './factory';
 import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
+import { IRenderMimeRegistry, renderMarkdown } from '@jupyterlab/rendermime';
+//import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
 import { PartialJSONValue } from '@lumino/coreutils';
 import { UserIcons } from './icons';
 
@@ -131,7 +137,10 @@ function JCComment(props: CommentProps): JSX.Element {
         contentEditable={editable}
         suppressContentEditableWarning={true}
         jcEventArea="body"
-        onFocus={() => document.execCommand('selectAll', false, undefined)}
+        onFocus={(e: React.MouseEvent) => {
+          document.execCommand('selectAll', false, undefined);
+          (e.target as HTMLElement).innerHTML = `<p>${comment.text}</p>`;
+        }}
       >
         {comment.text}
       </Jdiv>
@@ -175,7 +184,10 @@ function JCReply(props: ReplyProps): JSX.Element {
         contentEditable={editable}
         suppressContentEditableWarning={true}
         jcEventArea="body"
-        onFocus={() => document.execCommand('selectAll', false, undefined)}
+        onFocus={(e: React.MouseEvent) => {
+          document.execCommand('selectAll', false, undefined);
+          (e.target as HTMLElement).innerHTML = `<p>${reply.text}</p>`;
+        }}
       >
         {reply.text}
       </Jdiv>
@@ -921,7 +933,12 @@ export class MockCommentWidget<T> extends CommentWidget<T> {
  * A widget that hosts and displays a list of `CommentWidget`s
  */
 export class CommentFileWidget extends Panel {
-  constructor(options: CommentFileWidget.IOptions) {
+  renderer: IRenderMimeRegistry;
+
+  constructor(
+    options: CommentFileWidget.IOptions,
+    renderer: IRenderMimeRegistry
+  ) {
     super();
 
     const { context } = options;
@@ -930,6 +947,8 @@ export class CommentFileWidget extends Panel {
 
     this.id = `Comments-${context.path}`;
     this.addClass('jc-CommentFileWidget');
+
+    this.renderer = renderer;
   }
 
   insertComment(comment: IComment, index: number): void {
@@ -942,11 +961,13 @@ export class CommentFileWidget extends Panel {
 
     if (widget != null) {
       this.insertWidget(index, widget);
+      this.render_all(widget, this.renderer);
       this._commentAdded.emit(widget);
     }
   }
 
   onUpdateRequest(msg: Message): void {
+    console.log('entering update request!');
     super.onUpdateRequest(msg);
 
     while (this.widgets.length > 0) {
@@ -958,6 +979,26 @@ export class CommentFileWidget extends Panel {
 
   addComment(comment: IComment) {
     this.insertComment(comment, this.widgets.length);
+  }
+
+  /**
+   * Render markdown and LaTeX in a comment widget
+   */
+  render_all(widget: CommentWidget<any>, registry: IRenderMimeRegistry): void {
+    let nodes = widget.node.getElementsByClassName('jc-Body');
+
+    Array.from(nodes).forEach(element => {
+      renderMarkdown({
+        host: element as HTMLElement,
+        source: (element as HTMLElement).innerText,
+        trusted: true,
+        latexTypesetter: registry.latexTypesetter,
+        linkHandler: registry.linkHandler,
+        resolver: registry.resolver,
+        sanitizer: registry.sanitizer,
+        shouldTypeset: widget.isAttached
+      }).catch(() => console.warn('render Markdown failed'));
+    });
   }
 
   get model(): CommentFileModel {

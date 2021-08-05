@@ -343,3 +343,9 @@
   width: 80%;
   height: 80%;
 }
+
+.jc-Error {
+  height: 120px;
+  width: 120px;
+  background-color: red;
+}
