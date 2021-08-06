@@ -56,7 +56,6 @@
 }
 
 .jc-Body {
-  display: block;
   outline: none;
   border: none;
   appearance: none;
@@ -64,9 +63,21 @@
   -moz-appearance: none;
   background-color: transparent;
   white-space: pre-wrap;
-  font-family: var(--jp-content-font-family);
-  font-size: var(--jp-content-font-size1);
-  line-height: var(--jp-content-line-height);
+  margin-top: var(--var-jc-linesep);
+  line-height: 1.2em;
+  padding: 3px;
+}
+
+.jc-Body strong {
+  font-weight: bold;
+}
+
+.jc-Body a {
+  color: revert;
+}
+
+.jc-Body * {
+  margin: 0;
 }
 
 .jc-Body:focus {
@@ -149,20 +160,14 @@
 }
 
 .jc-Indicator {
+  cursor: pointer;
   position: absolute;
   height: fit-content;
   width: fit-content;
-  float: right;
   text-align: center;
-  margin: auto auto;
   z-index: 5;
 }
 
-.jc-Indicator:hover {
-  background-color: orange;
-  width: 12px;
-  width: 12px;
-}
 .jc-CommentProfilePic {
   display: block;
   border-radius: 50%;
@@ -210,11 +215,6 @@
 }
 .jc-CommentWidget:focus-within .jc-ReplyInputArea {
   border-color: var(--jp-brand-color1);
-}
-
-.jc-EditInputArea {
-  margin-top: var(--var-jc-linesep);
-  padding: 3px;
 }
 
 .jc-ReplyInputArea:empty:before {
@@ -342,4 +342,10 @@
 .jc-MoonIcon {
   width: 80%;
   height: 80%;
+}
+
+.jc-Error {
+  height: 120px;
+  width: 120px;
+  background-color: red;
 }

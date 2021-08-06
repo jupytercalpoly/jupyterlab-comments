@@ -9,6 +9,7 @@ import { ACommentFactory } from './factory';
 import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
+import { IRenderMimeRegistry, renderMarkdown } from '@jupyterlab/rendermime';
 import { PartialJSONValue } from '@lumino/coreutils';
 import { UserIcons } from './icons';
 
@@ -127,11 +128,15 @@ function JCComment(props: CommentProps): JSX.Element {
       )}
 
       <Jdiv
-        className="jc-Body jc-EditInputArea"
+        className="jc-Body"
         contentEditable={editable}
         suppressContentEditableWarning={true}
         jcEventArea="body"
-        onFocus={() => document.execCommand('selectAll', false, undefined)}
+        onFocus={(event: React.MouseEvent) => {
+          const e = event.target as HTMLElement;
+          e.innerHTML = `<p>${comment.text}</p>`;
+          document.execCommand('selectAll', false, undefined);
+        }}
       >
         {comment.text}
       </Jdiv>
@@ -171,11 +176,14 @@ function JCReply(props: ReplyProps): JSX.Element {
       <div className="jc-ReplySpacer" />
 
       <Jdiv
-        className="jc-Body jc-EditInputArea"
+        className="jc-Body"
         contentEditable={editable}
         suppressContentEditableWarning={true}
         jcEventArea="body"
-        onFocus={() => document.execCommand('selectAll', false, undefined)}
+        onFocus={(e: React.MouseEvent) => {
+          (e.target as HTMLElement).innerHTML = `<p>${reply.text}</p>`;
+          document.execCommand('selectAll', false, undefined);
+        }}
       >
         {reply.text}
       </Jdiv>
@@ -501,6 +509,10 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     if (event.key === 'Escape') {
       this.replyAreaHidden = true;
       return;
+    } else if (event.key === 'Tab') {
+      event.preventDefault();
+      document.execCommand('insertHTML', false, '&#009');
+      return;
     } else if (event.key !== 'Enter') {
       return;
     } else if (event.shiftKey) {
@@ -534,6 +546,10 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     const target = event.target as HTMLDivElement;
 
     switch (event.key) {
+      case 'Tab':
+        event.preventDefault();
+        document.execCommand('insertHTML', false, '&#009');
+        break;
       case 'Escape':
         event.preventDefault();
         event.stopPropagation();
@@ -921,7 +937,12 @@ export class MockCommentWidget<T> extends CommentWidget<T> {
  * A widget that hosts and displays a list of `CommentWidget`s
  */
 export class CommentFileWidget extends Panel {
-  constructor(options: CommentFileWidget.IOptions) {
+  renderer: IRenderMimeRegistry;
+
+  constructor(
+    options: CommentFileWidget.IOptions,
+    renderer: IRenderMimeRegistry
+  ) {
     super();
 
     const { context } = options;
@@ -930,6 +951,8 @@ export class CommentFileWidget extends Panel {
 
     this.id = `Comments-${context.path}`;
     this.addClass('jc-CommentFileWidget');
+
+    this.renderer = renderer;
   }
 
   insertComment(comment: IComment, index: number): void {
@@ -942,13 +965,12 @@ export class CommentFileWidget extends Panel {
 
     if (widget != null) {
       this.insertWidget(index, widget);
+      this.render_all(widget, this.renderer);
       this._commentAdded.emit(widget);
     }
   }
 
-  onUpdateRequest(msg: Message): void {
-    super.onUpdateRequest(msg);
-
+  initialize(): void {
     while (this.widgets.length > 0) {
       this.widgets[0].dispose();
     }
@@ -958,6 +980,26 @@ export class CommentFileWidget extends Panel {
 
   addComment(comment: IComment) {
     this.insertComment(comment, this.widgets.length);
+  }
+
+  /**
+   * Render markdown and LaTeX in a comment widget
+   */
+  render_all(widget: CommentWidget<any>, registry: IRenderMimeRegistry): void {
+    let nodes = widget.node.getElementsByClassName('jc-Body');
+
+    Array.from(nodes).forEach(element => {
+      renderMarkdown({
+        host: element as HTMLElement,
+        source: (element as HTMLElement).innerText,
+        trusted: true,
+        latexTypesetter: registry.latexTypesetter,
+        linkHandler: registry.linkHandler,
+        resolver: registry.resolver,
+        sanitizer: registry.sanitizer,
+        shouldTypeset: widget.isAttached
+      }).catch(() => console.warn('render Markdown failed'));
+    });
   }
 
   get model(): CommentFileModel {

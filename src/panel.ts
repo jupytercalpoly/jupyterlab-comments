@@ -6,6 +6,7 @@ import { YDocument } from '@jupyterlab/shared-models';
 import { ISignal, Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
+import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import { ICommentRegistry } from './registry';
 import { ILabShell } from '@jupyterlab/application';
 import { PanelHeader } from './panelHeaderWidget';
@@ -61,7 +62,9 @@ export interface ICommentPanel extends Panel {
 }
 
 export class CommentPanel extends Panel implements ICommentPanel {
-  constructor(options: CommentPanel.IOptions) {
+  renderer: IRenderMimeRegistry;
+
+  constructor(options: CommentPanel.IOptions, renderer: IRenderMimeRegistry) {
     super();
 
     this.id = `CommentPanel-${UUID.uuid4()}`;
@@ -82,6 +85,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.addWidget(panelHeader as Widget);
 
     this._panelHeader = panelHeader;
+    this.renderer = renderer;
 
     this._boundOnChange = this._onChange.bind(this);
 
@@ -143,6 +147,10 @@ export class CommentPanel extends Panel implements ICommentPanel {
       return;
     }
 
+    if (sourcePath === '') {
+      return;
+    }
+
     this._loadingModel = true;
 
     if (this._fileWidget != null) {
@@ -153,28 +161,30 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
     const path =
       this.pathPrefix + hashString(sourcePath).toString() + '.comment';
+
     const context = await this.getContext(path);
-    const content = new CommentFileWidget({ context });
-
-    this._fileWidget = content;
-    this.model!.changed.connect(this._boundOnChange);
-
-    this.addWidget(content);
-    content.commentAdded.connect((_, widget) =>
-      this._commentAdded.emit(widget)
-    );
-
-    const { name, color, icon } = this._localIdentity;
-    this.model!.awareness.setLocalStateField('user', {
-      name,
-      color,
-      icon
-    });
 
     void context.ready.then(() => {
-      this._modelChanged.emit(content);
+      const content = new CommentFileWidget({ context }, this.renderer);
+      this._fileWidget = content;
+      this.addWidget(content);
+
+      content.commentAdded.connect((_, widget) =>
+        this._commentAdded.emit(widget)
+      );
+
+      this.model!.changed.connect(this._boundOnChange);
+
+      const { name, color, icon } = this._localIdentity;
+      this.model!.awareness.setLocalStateField('user', {
+        name,
+        color,
+        icon
+      });
+
       this.update();
-      content.update();
+      content.initialize();
+      this._modelChanged.emit(content);
     });
 
     this._loadingModel = false;
@@ -191,7 +201,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
     const widgets = fileWidget.widgets;
     let index = 0;
-    const toDelete: Widget[] = [];
 
     for (let change of changes) {
       if (change.retain != null) {
@@ -201,16 +210,15 @@ export class CommentPanel extends Panel implements ICommentPanel {
           fileWidget.insertComment(comment, index++)
         );
       } else if (change.delete != null) {
-        toDelete.push(...widgets.slice(index, index + change.delete));
-        index += change.delete;
+        widgets
+          .slice(index, index + change.delete)
+          .forEach(widget => widget.dispose());
       } else if (change.update != null) {
         for (let i = 0; i < change.update; i++) {
           widgets[index++].update();
         }
       }
     }
-
-    toDelete.forEach(widget => widget.dispose());
   }
 
   get ymodel(): YDocument<any> | undefined {

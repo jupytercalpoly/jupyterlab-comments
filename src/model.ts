@@ -92,10 +92,12 @@ export class CommentFileModel implements DocumentRegistry.IModel {
 
   private _updateComment(comment: IComment, index: number): void {
     const comments = this.comments;
-    this.ymodel.ydoc.transact(() => {
-      comments.delete(index);
-      comments.insert(index, [comment]);
-    });
+    // this.ymodel.ydoc.transact(() => {
+    //   comments.delete(index);
+    //   comments.insert(index, [comment]);
+    // });
+    comments.delete(index);
+    comments.insert(index, [comment]);
     this._contentChanged.emit();
   }
 

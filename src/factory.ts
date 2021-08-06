@@ -3,14 +3,19 @@ import {
   IComment,
   IIdentity,
   IReply,
-  ISelection
+  ISelection,
+  ITextSelectionComment
 } from './commentformat';
+import { WidgetTracker } from '@jupyterlab/apputils';
 import { PartialJSONValue, UUID } from '@lumino/coreutils';
 import { getCommentTimeString } from './utils';
 import { Cell } from '@jupyterlab/cells';
 import { CommentFileModel } from './model';
 import { CommentWidget } from './widget';
 import { INotebookTracker } from '@jupyterlab/notebook';
+import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
+import { DocumentWidget } from '@jupyterlab/docregistry';
+//import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 
 export abstract class ACommentFactory<T = any> {
   constructor(options: ACommentFactory.IOptions) {
@@ -148,8 +153,20 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
     }
 
     // Add the selection to the cell's selections map.
-    const selectionsMap = cell.model.selections;
-    const selections = selectionsMap.get(cell.model.id) ?? [];
+    //const selections = cell!.model.selections.get(cell!.model.id) ?? [];
+
+    /*let tempSelections = cell!.editor.model.selections.get(cell!.model.id);
+    let selections = [];
+    if (tempSelections != null) {
+      selections = JSON.parse(JSON.stringify(tempSelections));
+    }*/
+    const selectionsMap = cell.editor.model.selections;
+    //const selections = selectionsMap.get(cell.model.id) ?? [];
+    let tempSelections = selectionsMap.get(cell.model.id);
+    let selections = [];
+    if (tempSelections != null) {
+      selections = JSON.parse(JSON.stringify(tempSelections));
+    }
     const { start, end } = comment.target as any as ISelection;
 
     selections.push({
@@ -166,6 +183,7 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
 
     // Remove selections when widget is disposed.
     // Currently runs O(N^2) when all widgets are disposed at once.
+
     widget.disposed.connect(() => {
       const sels = selectionsMap.get(cell.model.id) ?? [];
       const newSels = sels.filter(sel => sel.uuid !== comment.id);
@@ -265,6 +283,112 @@ export class HTMLElementCommentFactory extends ACommentFactory<HTMLElement> {
   private _root: HTMLElement;
 }
 
+export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapper> {
+  constructor(options: ACommentFactory.IOptions, tracker: WidgetTracker) {
+    super({ type: options.type });
+    this._tracker = tracker;
+    this._path = '';
+  }
+
+  createWidget(
+    comment: IComment,
+    model: CommentFileModel,
+    target?: CodeEditorWrapper
+  ): CommentWidget<CodeEditorWrapper> | null {
+    const wrapper = target ?? this.targetFromJSON(comment.target);
+    if (wrapper == null) {
+      console.warn('no valid selection for: ', comment);
+      return null;
+    }
+
+    this._path = (wrapper.parent as DocumentWidget)?.context.path;
+
+    const widget = super.createWidget(comment, model, wrapper);
+    if (widget == null) {
+      return null;
+    }
+    let tempSelections = wrapper!.editor.model.selections.get(this._path);
+    let selections = [];
+    if (tempSelections != null) {
+      selections = JSON.parse(JSON.stringify(tempSelections));
+    }
+
+    const { start, end } = comment.target as any as ISelection;
+    selections.push({
+      start,
+      end,
+      style: {
+        className: 'jc-Highlight',
+        color: 'black',
+        displayName: comment.identity.name
+      },
+      uuid: comment.id
+    });
+
+    wrapper!.editor.model.selections.set(this._path, selections);
+
+    widget.disposed.connect(() => {
+      const sels = wrapper!.editor.model.selections.get(this._path) ?? [];
+      const newSels = sels.filter(sel => sel.uuid !== comment.id);
+      wrapper!.editor.model.selections.set(this._path, newSels);
+    });
+
+    return widget;
+  }
+
+  targetToJSON(wrapper: CodeEditorWrapper): PartialJSONValue {
+    const { start, end } = wrapper.editor.getSelection();
+    return {
+      editorID: (wrapper.parent as DocumentWidget).context.path,
+      start,
+      end
+    };
+  }
+
+  targetFromJSON(json: PartialJSONValue): CodeEditorWrapper | undefined {
+    if (!(json instanceof Object && 'editorID' in json)) {
+      return;
+    }
+    return this._tracker.filter(
+      widget =>
+        (widget.parent as DocumentWidget).context.path === json['editorID']
+    )[0] as CodeEditorWrapper;
+  }
+
+  getPreviewText(comment: IComment, target?: CodeEditorWrapper): string {
+    const wrapper = target ?? this.targetFromJSON(comment.target);
+    if (wrapper == null) {
+      console.warn('no CodeEditorWrapper found on text file');
+      return '';
+    }
+
+    const text = wrapper.editor.model.value.text;
+    const textComment = comment as ITextSelectionComment;
+    const { start, end } = textComment.target;
+
+    let startIndex = wrapper.editor.getOffsetAt(start);
+    let endIndex = wrapper.editor.getOffsetAt(end);
+
+    if (startIndex > endIndex) {
+      [startIndex, endIndex] = [endIndex, startIndex];
+    }
+
+    let previewText = text.slice(startIndex, endIndex);
+    if (previewText.length > 140) {
+      return previewText.slice(0, 140) + '...';
+    }
+
+    return previewText;
+  }
+
+  getElement(target: CodeEditorWrapper) {
+    return target.node;
+  }
+
+  private _tracker: WidgetTracker;
+  private _path: string;
+}
+
 export namespace HTMLElementCommentFactory {
   export interface IOptions extends ACommentFactory.IOptions {
     root?: HTMLElement;
@@ -273,7 +397,7 @@ export namespace HTMLElementCommentFactory {
 
 export namespace ACommentFactory {
   export interface IOptions {
-    type: string; // cell or cell-selection
+    type: string; // cell or cell-selection or text-selection
   }
 
   export interface IReplyOptions {

@@ -13,17 +13,20 @@ import { getIdentity } from './utils';
 import { CommentPanel, ICommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
+import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import { CommentRegistry, ICommentRegistry } from './registry';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import { DocumentRegistry, DocumentWidget } from '@jupyterlab/docregistry';
 import {
   CellCommentFactory,
   CellSelectionCommentFactory,
-  TestCommentFactory
+  TestCommentFactory,
+  TextSelectionCommentFactory
 } from './factory';
 import { Menu } from '@lumino/widgets';
 import { CommentFileModelFactory, ICommentOptions } from './model';
 import { ICellComment } from './commentformat';
+import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
 
 namespace CommandIDs {
   export const addComment = 'jl-comments:add-comment';
@@ -222,13 +225,19 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
 export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
   id: 'jupyterlab-comments:commenting-api',
   autoStart: true,
-  requires: [ICommentRegistry, ILabShell, IDocumentManager],
+  requires: [
+    ICommentRegistry,
+    ILabShell,
+    IDocumentManager,
+    IRenderMimeRegistry
+  ],
   provides: ICommentPanel,
   activate: (
     app: JupyterFrontEnd,
     registry: ICommentRegistry,
     shell: ILabShell,
-    docManager: IDocumentManager
+    docManager: IDocumentManager,
+    renderer: IRenderMimeRegistry
   ): CommentPanel => {
     const filetype: DocumentRegistry.IFileType = {
       contentType: 'file',
@@ -243,14 +252,24 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       namespace: 'comment-widgets'
     });
 
-    void registry.addFactory(new TestCommentFactory());
-
-    const panel = new CommentPanel({
-      commands: app.commands,
-      registry,
-      docManager,
-      shell
+    const editorTracker = new WidgetTracker<CodeEditorWrapper>({
+      namespace: 'code-editor-wrappers'
     });
+
+    void registry.addFactory(new TestCommentFactory());
+    void registry.addFactory(
+      new TextSelectionCommentFactory({ type: 'text-selection' }, editorTracker)
+    );
+
+    const panel = new CommentPanel(
+      {
+        commands: app.commands,
+        registry,
+        docManager,
+        shell
+      },
+      renderer
+    );
 
     // Create the directory holding the comments.
     void panel.pathExists(panel.pathPrefix).then(exists => {
@@ -285,15 +304,45 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     // Add the panel to the shell's right area.
     shell.add(panel, 'right', { rank: 600 });
 
-    // panel.revealed.connect(() => panel.update());
     shell.currentChanged.connect((_, args) => {
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
-        const path = docWidget.context.path;
-        if (path !== '') {
-          void panel.loadModel(docWidget.context.path);
-        }
+        void panel.loadModel(docWidget.context.path);
       }
+    });
+
+    //commenting stuff for non-notebook/json files
+    shell.currentChanged.connect((_, changed) => {
+      if (changed.newValue == null || panel.model == null) {
+        return;
+      }
+
+      let invalids = ['json', 'ipynb'];
+      let editorWidget = (changed.newValue as DocumentWidget)
+        .content as CodeEditorWrapper;
+      if (
+        invalids.includes(changed.newValue.title.label.split('.').pop()!) ||
+        editorWidget.editor == null
+      ) {
+        return;
+      }
+      if (!editorTracker.has(editorWidget)) {
+        editorTracker.add(editorWidget).catch(() => {
+          console.warn('could not add widget');
+        });
+      }
+      editorWidget.editor.focus();
+
+      editorWidget.node.oncontextmenu = () => {
+        void InputDialog.getText({ title: 'Enter Comment' }).then(value =>
+          panel.model?.addComment({
+            type: 'text-selection',
+            text: value.value ?? 'invalid!',
+            source: editorWidget,
+            identity: getIdentity(panel.model.awareness)
+          })
+        );
+      };
     });
 
     panel.modelChanged.connect((_, fileWidget) => {
@@ -309,39 +358,6 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     // Reveal the comment panel when a comment is added.
     panel.commentAdded.connect(() => shell.activateById(panel.id));
-
-    // app.commands.addCommand('addComment', {
-    //   label: 'Add Document Comment',
-    //   execute: () => {
-    //     const model = panel.model!;
-    //     model.addComment({
-    //       text: UUID.uuid4(),
-    //       type: 'test',
-    //       target: null,
-    //       identity: randomIdentity()
-    //     });
-    //     panel.update();
-    //   },
-    //   isEnabled: () => panel.model != null
-    // });
-
-    // app.commands.addCommand('saveCommentFile', {
-    //   label: 'Save Comment File',
-    //   execute: () => void panel.fileWidget!.context.save(),
-    //   isEnabled: () => panel.model != null
-    // });
-
-    // app.contextMenu.addItem({
-    //   command: 'addComment',
-    //   selector: '.lm-Widget',
-    //   rank: 0
-    // });
-
-    // app.contextMenu.addItem({
-    //   command: 'saveCommentFile',
-    //   selector: '.lm-Widget',
-    //   rank: 1
-    // });
 
     return panel;
   }
@@ -368,7 +384,6 @@ function addCommands(
       }).then(value => {
         if (value.value != null) {
           const { target, type, source } = args;
-
           let comment: ICommentOptions;
           if (source != null) {
             comment = {
