@@ -7,7 +7,7 @@ import {
 import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { PartialJSONValue, Token } from '@lumino/coreutils';
-import { YNotebook } from '@jupyterlab/shared-models';
+import { YFile, YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
 import { getIdentity } from './utils';
 import { CommentPanel, ICommentPanel } from './panel';
@@ -303,6 +303,40 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     // Add the panel to the shell's right area.
     shell.add(panel, 'right', { rank: 600 });
+    const button = panel.button;
+
+    function openButton(x: number, y: number, anchor: HTMLElement): void {
+      button.open(
+        x,
+        y,
+        () => {
+          let editorWidget = (shell.currentWidget as DocumentWidget)
+            .content as CodeEditorWrapper;
+
+          if (editorWidget == null) {
+            return;
+          }
+
+          const model = panel.model;
+          if (model == null) {
+            return;
+          }
+
+          const comments = model.comments;
+          let index = comments.length;
+
+          panel.mockComment(
+            {
+              identity: getIdentity(model.awareness),
+              type: 'text-selection',
+              source: editorWidget
+            },
+            index
+          );
+        },
+        anchor
+      );
+    }
 
     shell.currentChanged.connect((_, args) => {
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
@@ -311,8 +345,18 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       }
     });
 
+    let currAwareness: Awareness | null = null;
+    let handler: () => void;
+    let onMouseup: (event: MouseEvent) => void;
+
     //commenting stuff for non-notebook/json files
     shell.currentChanged.connect((_, changed) => {
+      if (currAwareness != null && handler != null && onMouseup != null) {
+        document.removeEventListener('mouseup', onMouseup);
+        currAwareness.off('change', handler);
+        button.close();
+      }
+
       if (changed.newValue == null || panel.model == null) {
         return;
       }
@@ -333,7 +377,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       }
       editorWidget.editor.focus();
 
-      editorWidget.node.oncontextmenu = () => {
+      /*editorWidget.node.oncontextmenu = () => {
         void InputDialog.getText({ title: 'Enter Comment' }).then(value =>
           panel.model?.addComment({
             type: 'text-selection',
@@ -342,7 +386,35 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
             identity: getIdentity(panel.model.awareness)
           })
         );
+      };*/
+
+      onMouseup = (_: MouseEvent): void => {
+        const { right } = editorWidget.node.getBoundingClientRect();
+        const { start, end } = editorWidget.editor.getSelection();
+        let coord1, coord2;
+        coord1 = editorWidget.editor.getCoordinateForPosition(start);
+        coord2 = editorWidget.editor.getCoordinateForPosition(end);
+        const node = editorWidget.parent?.parent?.node ?? editorWidget.node;
+        openButton(right - 10, (coord1.top + coord2.bottom) / 2 - 10, node);
       };
+
+      handler = (): void => {
+        const { start, end } = editorWidget.editor.getSelection();
+
+        if (start.column !== end.column || start.line !== end.line) {
+          document.addEventListener('mouseup', onMouseup, { once: true });
+        } else {
+          button.close();
+        }
+      };
+
+      if (currAwareness != null) {
+        currAwareness.off('change', handler);
+      }
+
+      currAwareness = (editorWidget.editor.model.sharedModel as YFile)
+        .awareness;
+      currAwareness.on('change', handler);
     });
 
     panel.modelChanged.connect((_, fileWidget) => {

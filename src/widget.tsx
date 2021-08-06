@@ -276,7 +276,6 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   if (comment == null) {
     return <div className="jc-Error" />;
   }
-
   return (
     <div className={className} onClick={eventHandler} onKeyDown={eventHandler}>
       <JCCommentWithReplies
