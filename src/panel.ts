@@ -203,11 +203,9 @@ export class CommentPanel extends Panel implements ICommentPanel {
     let index = 0;
 
     for (let change of changes) {
-      console.log('changin!: ', change);
       if (change.retain != null) {
         index += change.retain;
       } else if (change.insert != null) {
-        console.log('innnnsert: ', change.insert);
         change.insert.forEach(comment =>
           fileWidget.insertComment(comment, index++)
         );
