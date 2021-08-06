@@ -963,7 +963,6 @@ export class CommentFileWidget extends Panel {
     const widget = factory.createWidget(comment, this.model);
 
     if (widget != null) {
-      console.log('inserting here!');
       this.insertWidget(index, widget);
       this.render_all(widget, this.renderer);
       this._commentAdded.emit(widget);

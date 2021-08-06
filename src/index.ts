@@ -25,7 +25,7 @@ import {
 } from './factory';
 import { Menu } from '@lumino/widgets';
 import { CommentFileModelFactory, ICommentOptions } from './model';
-import { ICellComment, ITextSelectionComment } from './commentformat';
+import { ICellComment } from './commentformat';
 import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
 
 namespace CommandIDs {
@@ -324,12 +324,6 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
           const comments = model.comments;
           let index = comments.length;
-          for (let i = comments.length; i > 0; i--) {
-            const comment = comments.get(i - 1) as ITextSelectionComment;
-            if (comment.target.editorID === editorWidget.id) {
-              index = i;
-            }
-          }
 
           panel.mockComment(
             {
@@ -422,10 +416,6 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
         .awareness;
       currAwareness.on('change', handler);
     });
-
-    commentTracker.widgetAdded.connect((_, widget) =>
-      console.log('widget tracked', widget)
-    );
 
     panel.modelChanged.connect((_, fileWidget) => {
       if (fileWidget != null) {
