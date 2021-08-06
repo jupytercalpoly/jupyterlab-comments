@@ -59,7 +59,7 @@ export function getIdentity(awareness: Awareness): IIdentity {
       id: awareness.clientID,
       name: userInfo['name'],
       color: userInfo['color'],
-      icon: Math.floor(Math.random() * UserIcons.length)
+      icon: userInfo['icon']
     };
   }
 

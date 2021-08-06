@@ -13,7 +13,7 @@ import { Cell } from '@jupyterlab/cells';
 import { CommentFileModel } from './model';
 import { CommentWidget } from './widget';
 import { INotebookTracker } from '@jupyterlab/notebook';
-import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
+import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
 import { DocumentWidget } from '@jupyterlab/docregistry';
 //import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 
@@ -185,7 +185,11 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
     // Currently runs O(N^2) when all widgets are disposed at once.
 
     widget.disposed.connect(() => {
-      const sels = selectionsMap.get(cell.model.id) ?? [];
+      const tempSels = selectionsMap.get(cell.model.id);
+      let sels: CodeEditor.ITextSelection[] = [];
+      if(tempSels != null) {
+        sels = JSON.parse(JSON.stringify(tempSels))
+      }
       const newSels = sels.filter(sel => sel.uuid !== comment.id);
       selectionsMap.set(cell.model.id, newSels);
     });
@@ -304,7 +308,9 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
     if (widget == null) {
       return null;
     }
-    let tempSelections = wrapper!.editor.model.selections.get(
+    const selectionsMap = wrapper.editor.model.selections;
+
+    let tempSelections = selectionsMap.get(
       (wrapper.parent as DocumentWidget)?.context.path
     );
     let selections = [];
@@ -325,18 +331,23 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
       uuid: comment.id
     });
 
-    wrapper!.editor.model.selections.set(
+    selectionsMap.set(
       (wrapper.parent as DocumentWidget)?.context.path,
       selections
     );
 
     widget.disposed.connect(() => {
-      const sels =
-        wrapper!.editor.model.selections.get(
+      console.warn('disposing');
+      const tempSels =
+        selectionsMap.get(
           (wrapper.parent as DocumentWidget)?.context.path
-        ) ?? [];
+        );
+      let sels : CodeEditor.ITextSelection[] = [];
+      if(tempSels != null) {
+        sels = JSON.parse(JSON.stringify(tempSels));
+      }
       const newSels = sels.filter(sel => sel.uuid !== comment.id);
-      wrapper!.editor.model.selections.set(
+      selectionsMap.set(
         (wrapper.parent as DocumentWidget)?.context.path,
         newSels
       );

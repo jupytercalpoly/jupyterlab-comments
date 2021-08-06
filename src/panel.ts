@@ -198,14 +198,16 @@ export class CommentPanel extends Panel implements ICommentPanel {
     //const toDelete: Widget[] = [];
 
     for (let change of changes) {
-      console.log('changin!');
+      console.log('changin!: ', change);
       if (change.retain != null) {
         index += change.retain;
       } else if (change.insert != null) {
+        console.log('innnnsert: ', change.insert);
         change.insert.forEach(comment =>
           fileWidget.insertComment(comment, index++)
         );
       } else if (change.delete != null) {
+        console.log('deleeet: ', widgets.slice(index, index + change.delete));
         widgets
           .slice(index, index + change.delete)
           .forEach(widget => widget.dispose());
