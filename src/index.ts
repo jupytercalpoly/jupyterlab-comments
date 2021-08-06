@@ -7,7 +7,7 @@ import {
 import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { PartialJSONValue, Token } from '@lumino/coreutils';
-import { YFile, YNotebook } from '@jupyterlab/shared-models';
+import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
 import { getIdentity } from './utils';
 import { CommentPanel, ICommentPanel } from './panel';
@@ -304,25 +304,12 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     // Add the panel to the shell's right area.
     shell.add(panel, 'right', { rank: 600 });
 
-    // panel.revealed.connect(() => panel.update());
     shell.currentChanged.connect((_, args) => {
-      console.warn('yes?: ', args.newValue instanceof DocumentWidget);
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
-        const path = docWidget.context.path;
-        if (path !== '') {
-          void panel.loadModel(docWidget.context.path);
-        }
-      } else {
-        try {
-          void panel.loadModel('');
-        } catch (e) {
-          console.warn('no file for Launcher!');
-        }
+        void panel.loadModel(docWidget.context.path);
       }
     });
-
-    let currAwareness: Awareness | null = null;
 
     //commenting stuff for non-notebook/json files
     shell.currentChanged.connect((_, changed) => {
@@ -356,20 +343,6 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
           })
         );
       };
-
-      const handler = (): void => {
-        //handler will be populated in the future the log is there so that the linter
-        //does not call an error
-        console.log('');
-      };
-
-      if (currAwareness != null) {
-        currAwareness.off('change', handler);
-      }
-
-      currAwareness = (editorWidget.editor.model.sharedModel as YFile)
-        .awareness;
-      currAwareness.on('change', handler);
     });
 
     panel.modelChanged.connect((_, fileWidget) => {
@@ -385,39 +358,6 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     // Reveal the comment panel when a comment is added.
     panel.commentAdded.connect(() => shell.activateById(panel.id));
-
-    // app.commands.addCommand('addComment', {
-    //   label: 'Add Document Comment',
-    //   execute: () => {
-    //     const model = panel.model!;
-    //     model.addComment({
-    //       text: UUID.uuid4(),
-    //       type: 'test',
-    //       target: null,
-    //       identity: randomIdentity()
-    //     });
-    //     panel.update();
-    //   },
-    //   isEnabled: () => panel.model != null
-    // });
-
-    // app.commands.addCommand('saveCommentFile', {
-    //   label: 'Save Comment File',
-    //   execute: () => void panel.fileWidget!.context.save(),
-    //   isEnabled: () => panel.model != null
-    // });
-
-    // app.contextMenu.addItem({
-    //   command: 'addComment',
-    //   selector: '.lm-Widget',
-    //   rank: 0
-    // });
-
-    // app.contextMenu.addItem({
-    //   command: 'saveCommentFile',
-    //   selector: '.lm-Widget',
-    //   rank: 1
-    // });
 
     return panel;
   }

@@ -1,20 +1,15 @@
 import { ReactWidget, UseSignal } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { ellipsesIcon } from '@jupyterlab/ui-components';
-import {
-  IComment,
-  IIdentity,
-  IReply /*, ITextSelectionComment */
-} from './commentformat';
+import { IComment, IIdentity, IReply } from './commentformat';
 import { getIdentity } from './utils';
 import { Menu, Panel } from '@lumino/widgets';
 import { ISignal, Signal } from '@lumino/signaling';
-import { ACommentFactory /*, TextSelectionCommentFactory */ } from './factory';
+import { ACommentFactory } from './factory';
 import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
 import { IRenderMimeRegistry, renderMarkdown } from '@jupyterlab/rendermime';
-//import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
 import { PartialJSONValue } from '@lumino/coreutils';
 import { UserIcons } from './icons';
 
@@ -133,13 +128,14 @@ function JCComment(props: CommentProps): JSX.Element {
       )}
 
       <Jdiv
-        className="jc-Body jc-EditInputArea"
+        className="jc-Body"
         contentEditable={editable}
         suppressContentEditableWarning={true}
         jcEventArea="body"
-        onFocus={(e: React.MouseEvent) => {
+        onFocus={(event: React.MouseEvent) => {
+          const e = event.target as HTMLElement;
+          e.innerHTML = `<p>${comment.text}</p>`;
           document.execCommand('selectAll', false, undefined);
-          (e.target as HTMLElement).innerHTML = `<p>${comment.text}</p>`;
         }}
       >
         {comment.text}
@@ -180,13 +176,13 @@ function JCReply(props: ReplyProps): JSX.Element {
       <div className="jc-ReplySpacer" />
 
       <Jdiv
-        className="jc-Body jc-EditInputArea"
+        className="jc-Body"
         contentEditable={editable}
         suppressContentEditableWarning={true}
         jcEventArea="body"
         onFocus={(e: React.MouseEvent) => {
-          document.execCommand('selectAll', false, undefined);
           (e.target as HTMLElement).innerHTML = `<p>${reply.text}</p>`;
+          document.execCommand('selectAll', false, undefined);
         }}
       >
         {reply.text}
@@ -513,6 +509,10 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     if (event.key === 'Escape') {
       this.replyAreaHidden = true;
       return;
+    } else if (event.key === 'Tab') {
+      event.preventDefault();
+      document.execCommand('insertHTML', false, '&#009');
+      return;
     } else if (event.key !== 'Enter') {
       return;
     } else if (event.shiftKey) {
@@ -546,6 +546,10 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     const target = event.target as HTMLDivElement;
 
     switch (event.key) {
+      case 'Tab':
+        event.preventDefault();
+        document.execCommand('insertHTML', false, '&#009');
+        break;
       case 'Escape':
         event.preventDefault();
         event.stopPropagation();
@@ -966,10 +970,7 @@ export class CommentFileWidget extends Panel {
     }
   }
 
-  onUpdateRequest(msg: Message): void {
-    console.log('entering update request!');
-    super.onUpdateRequest(msg);
-
+  initialize(): void {
     while (this.widgets.length > 0) {
       this.widgets[0].dispose();
     }
