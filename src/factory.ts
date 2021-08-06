@@ -318,7 +318,6 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
       selections = JSON.parse(JSON.stringify(tempSelections));
     }
 
-    console.log('selections: ', selections);
     const { start, end } = comment.target as any as ISelection;
     selections.push({
       start,

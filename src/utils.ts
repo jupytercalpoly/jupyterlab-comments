@@ -54,7 +54,12 @@ export function getIdentity(awareness: Awareness): IIdentity {
   }
 
   const userInfo = localState['user'];
-  if (userInfo != null && 'name' in userInfo && 'color' in userInfo) {
+  if (
+    userInfo != null &&
+    'name' in userInfo &&
+    'color' in userInfo &&
+    'icon' in userInfo
+  ) {
     return {
       id: awareness.clientID,
       name: userInfo['name'],

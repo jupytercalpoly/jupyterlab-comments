@@ -147,6 +147,10 @@ export class CommentPanel extends Panel implements ICommentPanel {
       return;
     }
 
+    if (sourcePath === '') {
+      return;
+    }
+
     this._loadingModel = true;
 
     if (this._fileWidget != null) {
@@ -157,28 +161,30 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
     const path =
       this.pathPrefix + hashString(sourcePath).toString() + '.comment';
+
     const context = await this.getContext(path);
-    const content = new CommentFileWidget({ context }, this.renderer);
-
-    this._fileWidget = content;
-    this.model!.changed.connect(this._boundOnChange);
-
-    this.addWidget(content);
-    content.commentAdded.connect((_, widget) =>
-      this._commentAdded.emit(widget)
-    );
-
-    const { name, color, icon } = this._localIdentity;
-    this.model!.awareness.setLocalStateField('user', {
-      name,
-      color,
-      icon
-    });
 
     void context.ready.then(() => {
-      this._modelChanged.emit(content);
+      const content = new CommentFileWidget({ context }, this.renderer);
+      this._fileWidget = content;
+      this.addWidget(content);
+
+      content.commentAdded.connect((_, widget) =>
+        this._commentAdded.emit(widget)
+      );
+
+      this.model!.changed.connect(this._boundOnChange);
+
+      const { name, color, icon } = this._localIdentity;
+      this.model!.awareness.setLocalStateField('user', {
+        name,
+        color,
+        icon
+      });
+
       this.update();
-      content.update();
+      content.initialize();
+      this._modelChanged.emit(content);
     });
 
     this._loadingModel = false;
@@ -195,7 +201,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
     const widgets = fileWidget.widgets;
     let index = 0;
-    //const toDelete: Widget[] = [];
 
     for (let change of changes) {
       console.log('changin!: ', change);
@@ -207,21 +212,15 @@ export class CommentPanel extends Panel implements ICommentPanel {
           fileWidget.insertComment(comment, index++)
         );
       } else if (change.delete != null) {
-        console.log('deleeet: ', widgets.slice(index, index + change.delete));
         widgets
           .slice(index, index + change.delete)
           .forEach(widget => widget.dispose());
-        //toDelete.push(...widgets.slice(index, index + change.delete));
-
-        //index += change.delete;
       } else if (change.update != null) {
         for (let i = 0; i < change.update; i++) {
           widgets[index++].update();
         }
       }
     }
-
-    //toDelete.forEach(widget => widget.dispose());
   }
 
   get ymodel(): YDocument<any> | undefined {

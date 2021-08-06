@@ -344,20 +344,10 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       );
     }
 
-    // panel.revealed.connect(() => panel.update());
     shell.currentChanged.connect((_, args) => {
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
-        const path = docWidget.context.path;
-        if (path !== '') {
-          void panel.loadModel(docWidget.context.path);
-        }
-      } else {
-        try {
-          void panel.loadModel('');
-        } catch (e) {
-          console.warn('no file for Launcher!');
-        }
+        void panel.loadModel(docWidget.context.path);
       }
     });
 
@@ -450,39 +440,6 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     // Reveal the comment panel when a comment is added.
     panel.commentAdded.connect(() => shell.activateById(panel.id));
-
-    // app.commands.addCommand('addComment', {
-    //   label: 'Add Document Comment',
-    //   execute: () => {
-    //     const model = panel.model!;
-    //     model.addComment({
-    //       text: UUID.uuid4(),
-    //       type: 'test',
-    //       target: null,
-    //       identity: randomIdentity()
-    //     });
-    //     panel.update();
-    //   },
-    //   isEnabled: () => panel.model != null
-    // });
-
-    // app.commands.addCommand('saveCommentFile', {
-    //   label: 'Save Comment File',
-    //   execute: () => void panel.fileWidget!.context.save(),
-    //   isEnabled: () => panel.model != null
-    // });
-
-    // app.contextMenu.addItem({
-    //   command: 'addComment',
-    //   selector: '.lm-Widget',
-    //   rank: 0
-    // });
-
-    // app.contextMenu.addItem({
-    //   command: 'saveCommentFile',
-    //   selector: '.lm-Widget',
-    //   rank: 1
-    // });
 
     return panel;
   }
