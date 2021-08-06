@@ -11,7 +11,7 @@ import { ICommentRegistry } from './registry';
 import { ILabShell } from '@jupyterlab/application';
 import { PanelHeader } from './panelHeaderWidget';
 import { IDocumentManager } from '@jupyterlab/docmanager';
-import { Context } from '@jupyterlab/docregistry';
+import { Context, DocumentRegistry } from '@jupyterlab/docregistry';
 import { hashString, randomIdentity } from './utils';
 import { CommentFileModel } from './model';
 import { CommentsPanelIcon } from './icons';
@@ -141,12 +141,29 @@ export class CommentPanel extends Panel implements ICommentPanel {
     return context;
   }
 
-  async loadModel(sourcePath: string): Promise<void> {
+  private _onPathChanged(
+    _: DocumentRegistry.IContext<DocumentRegistry.IModel>,
+    newPath: string
+  ): void {
+    const commentContext = this._fileWidget?.context;
+    if (commentContext == null) {
+      return;
+    }
+
+    void commentContext
+      .rename(hashString(newPath).toString() + '.comment')
+      .then(() => void commentContext.save());
+  }
+
+  async loadModel(
+    context: DocumentRegistry.IContext<DocumentRegistry.IModel>
+  ): Promise<void> {
     // Lock to prevent multiple loads at the same time.
     if (this._loadingModel) {
       return;
     }
 
+    const sourcePath = context.path;
     if (sourcePath === '') {
       return;
     }
@@ -154,6 +171,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this._loadingModel = true;
 
     if (this._fileWidget != null) {
+      Signal.disconnectReceiver(this._onPathChanged);
       this.model!.changed.disconnect(this._boundOnChange);
       const oldWidget = this._fileWidget;
       void oldWidget.context.save().then(() => oldWidget.dispose());
@@ -162,10 +180,14 @@ export class CommentPanel extends Panel implements ICommentPanel {
     const path =
       this.pathPrefix + hashString(sourcePath).toString() + '.comment';
 
-    const context = await this.getContext(path);
+    const commentContext = await this.getContext(path);
 
-    void context.ready.then(() => {
-      const content = new CommentFileWidget({ context }, this.renderer);
+    void commentContext.ready.then(() => {
+      const content = new CommentFileWidget(
+        { context: commentContext },
+        this.renderer
+      );
+      context.pathChanged.connect(this._onPathChanged, this);
       this._fileWidget = content;
       this.addWidget(content);
 

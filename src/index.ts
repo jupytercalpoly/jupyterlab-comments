@@ -341,7 +341,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     shell.currentChanged.connect((_, args) => {
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
-        void panel.loadModel(docWidget.context.path);
+        void panel.loadModel(docWidget.context);
       }
     });
 
