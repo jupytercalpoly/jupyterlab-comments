@@ -25,7 +25,7 @@ import {
 } from './factory';
 import { Menu } from '@lumino/widgets';
 import { CommentFileModelFactory, ICommentOptions } from './model';
-import { ICellComment } from './commentformat';
+import { ICellComment, ITextSelectionComment } from './commentformat';
 import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
 
 namespace CommandIDs {
@@ -324,6 +324,35 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
           const comments = model.comments;
           let index = comments.length;
+          let { start, end } = editorWidget.editor.getSelection();
+          //backwards selection compatibility
+          if (
+            start.line > end.line ||
+            (start.line === end.line && start.column > end.column)
+          ) {
+            [start, end] = [end, start];
+          }
+
+          for (let i = comments.length; i > 0; i--) {
+            const comment = comments.get(i - 1) as ITextSelectionComment;
+            let sel = comment.target;
+            let commentStart = sel.start;
+            //backwards selection compatibility
+            if (
+              sel.start.line > sel.end.line ||
+              (sel.end.line === sel.start.line &&
+                sel.start.column > sel.end.column)
+            ) {
+              commentStart = sel.end;
+            }
+            if (
+              start.line < commentStart.line ||
+              (start.line === commentStart.line &&
+                start.column <= commentStart.column)
+            ) {
+              index = i - 1;
+            }
+          }
 
           panel.mockComment(
             {
