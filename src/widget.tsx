@@ -240,7 +240,6 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   };
 
   return (
-    // <Jdiv className={'jc-CommentWithReplies ' + className} onFocus={() => document.execCommand('selectAll', false, undefined)}>
     <Jdiv className={'jc-CommentWithReplies ' + className}>
       <JCComment
         comment={comment}
@@ -991,10 +990,11 @@ export class CommentFileWidget extends Panel {
     let nodes = widget.node.getElementsByClassName('jc-Body');
 
     Array.from(nodes).forEach(element => {
+      (element as HTMLElement).className = 'jc-customBody';
       renderMarkdown({
         host: element as HTMLElement,
         source: (element as HTMLElement).innerText,
-        trusted: true,
+        trusted: false,
         latexTypesetter: registry.latexTypesetter,
         linkHandler: registry.linkHandler,
         resolver: registry.resolver,
