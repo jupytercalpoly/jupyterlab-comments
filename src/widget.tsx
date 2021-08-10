@@ -426,6 +426,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       this.node.focus();
     }
 
+    // this.editID = ""
     this._collapseOtherComments();
   }
 
@@ -484,7 +485,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
    */
   protected _handleBodyClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
-    this.openEditActive();
+    // this.openEditActive();
   }
 
   /**
@@ -531,6 +532,8 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       },
       this.commentID
     );
+
+    // this.editID = ''
 
     target.textContent = '';
     this.replyAreaHidden = true;
@@ -782,9 +785,7 @@ export namespace CommentWidget {
   export interface IOptions<T> {
     id: string;
     model: CommentFileModel;
-
     target: T;
-
     factory: ACommentFactory;
   }
 
