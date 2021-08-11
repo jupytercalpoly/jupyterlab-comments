@@ -333,24 +333,17 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
             [start, end] = [end, start];
           }
 
-          for (let i = comments.length; i > 0; i--) {
-            const comment = comments.get(i - 1) as ITextSelectionComment;
+          for (let i = 0; i < comments.length; i++) {
+            const comment = comments.get(i) as ITextSelectionComment;
             let sel = comment.target;
             let commentStart = sel.start;
-            //backwards selection compatibility
-            if (
-              sel.start.line > sel.end.line ||
-              (sel.end.line === sel.start.line &&
-                sel.start.column > sel.end.column)
-            ) {
-              commentStart = sel.end;
-            }
             if (
               start.line < commentStart.line ||
               (start.line === commentStart.line &&
                 start.column <= commentStart.column)
             ) {
-              index = i - 1;
+              index = i;
+              break;
             }
           }
 
@@ -370,7 +363,9 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     shell.currentChanged.connect((_, args) => {
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
-        void panel.loadModel(docWidget.context);
+        docWidget.context.ready.then(() => {
+          void panel.loadModel(docWidget.context);
+        })
       }
     });
 
@@ -380,16 +375,15 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     //commenting stuff for non-notebook/json files
     shell.currentChanged.connect((_, changed) => {
+
       if (currAwareness != null && handler != null && onMouseup != null) {
         document.removeEventListener('mouseup', onMouseup);
         currAwareness.off('change', handler);
         button.close();
       }
-
-      if (changed.newValue == null || panel.model == null) {
+      if (changed.newValue == null /*|| panel.model == null*/) {
         return;
       }
-
       let invalids = ['json', 'ipynb'];
       let editorWidget = (changed.newValue as DocumentWidget)
         .content as CodeEditorWrapper;
