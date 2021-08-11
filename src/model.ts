@@ -77,27 +77,38 @@ export class CommentFileModel implements DocumentRegistry.IModel {
 
   private _commentsObserver = (events: Y.YEvent[]): void => {
     for (let event of events) {
-      this._changed.emit(event.delta as any);
+      const delta = event.delta as CommentFileModel.IChange[];
+
+      // Converts a deletion followed by an insertion into an update
+      // Normally, yjs doesn't propagate changes to the contents of a YArray,
+      // only insertions and deletions.
+      // Parsing a deletion/insertion pair into an update allows clients to
+      // communicate when a comment has been changed over yjs.
+      let lastInserted = 0;
+      for (let i = 0; i < delta.length; i++) {
+        let d = delta[i];
+        if (d.insert != null) {
+          lastInserted = d.insert.length;
+        } else if (d.delete != null) {
+          if (lastInserted === d.delete) {
+            delta.splice(i - 1, 2, { update: lastInserted });
+          }
+          lastInserted = 0;
+        } else {
+          lastInserted = 0;
+        }
+      }
+
+      this._changed.emit(delta);
     }
   };
 
-  // private _emitUpdate(index: number): void {
-  //   this._changed.emit([
-  //     { retain: index },
-  //     { update: 1 }
-  //   ]);
-
-  //   this._contentChanged.emit();
-  // }
-
   private _updateComment(comment: IComment, index: number): void {
     const comments = this.comments;
-    // this.ymodel.ydoc.transact(() => {
-    //   comments.delete(index);
-    //   comments.insert(index, [comment]);
-    // });
-    comments.delete(index);
-    comments.insert(index, [comment]);
+    this.ymodel.ydoc.transact(() => {
+      comments.delete(index);
+      comments.insert(index, [comment]);
+    });
     this._contentChanged.emit();
   }
 
