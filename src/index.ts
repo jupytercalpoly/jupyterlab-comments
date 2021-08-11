@@ -363,9 +363,13 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     shell.currentChanged.connect((_, args) => {
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
-        docWidget.context.ready.then(() => {
-          void panel.loadModel(docWidget.context);
-        })
+        docWidget.context.ready
+          .then(() => {
+            void panel.loadModel(docWidget.context);
+          })
+          .catch(() => {
+            console.warn('unable to load');
+          });
       }
     });
 
@@ -375,7 +379,6 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
     //commenting stuff for non-notebook/json files
     shell.currentChanged.connect((_, changed) => {
-
       if (currAwareness != null && handler != null && onMouseup != null) {
         document.removeEventListener('mouseup', onMouseup);
         currAwareness.off('change', handler);
