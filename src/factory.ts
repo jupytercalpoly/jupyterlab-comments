@@ -187,8 +187,8 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
     widget.disposed.connect(() => {
       const tempSels = selectionsMap.get(cell.model.id);
       let sels: CodeEditor.ITextSelection[] = [];
-      if(tempSels != null) {
-        sels = JSON.parse(JSON.stringify(tempSels))
+      if (tempSels != null) {
+        sels = JSON.parse(JSON.stringify(tempSels));
       }
       const newSels = sels.filter(sel => sel.uuid !== comment.id);
       selectionsMap.set(cell.model.id, newSels);
@@ -337,12 +337,11 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
 
     widget.disposed.connect(() => {
       console.warn('disposing');
-      const tempSels =
-        selectionsMap.get(
-          (wrapper.parent as DocumentWidget)?.context.path
-        );
-      let sels : CodeEditor.ITextSelection[] = [];
-      if(tempSels != null) {
+      const tempSels = selectionsMap.get(
+        (wrapper.parent as DocumentWidget)?.context.path
+      );
+      let sels: CodeEditor.ITextSelection[] = [];
+      if (tempSels != null) {
         sels = JSON.parse(JSON.stringify(tempSels));
       }
       const newSels = sels.filter(sel => sel.uuid !== comment.id);
@@ -356,7 +355,13 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
   }
 
   targetToJSON(wrapper: CodeEditorWrapper): PartialJSONValue {
-    const { start, end } = wrapper.editor.getSelection();
+    let { start, end } = wrapper.editor.getSelection();
+    if (
+      start.line > end.line ||
+      (start.line === end.line && start.column > end.column)
+    ) {
+      [start, end] = [end, start];
+    }
     return {
       editorID: (wrapper.parent as DocumentWidget).context.path,
       start,

@@ -25,7 +25,7 @@ import {
 } from './factory';
 import { Menu } from '@lumino/widgets';
 import { CommentFileModelFactory, ICommentOptions } from './model';
-import { ICellComment } from './commentformat';
+import { ICellComment, ITextSelectionComment } from './commentformat';
 import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
 
 namespace CommandIDs {
@@ -324,6 +324,28 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
 
           const comments = model.comments;
           let index = comments.length;
+          let { start, end } = editorWidget.editor.getSelection();
+          //backwards selection compatibility
+          if (
+            start.line > end.line ||
+            (start.line === end.line && start.column > end.column)
+          ) {
+            [start, end] = [end, start];
+          }
+
+          for (let i = 0; i < comments.length; i++) {
+            const comment = comments.get(i) as ITextSelectionComment;
+            let sel = comment.target;
+            let commentStart = sel.start;
+            if (
+              start.line < commentStart.line ||
+              (start.line === commentStart.line &&
+                start.column <= commentStart.column)
+            ) {
+              index = i;
+              break;
+            }
+          }
 
           panel.mockComment(
             {
@@ -341,7 +363,13 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     shell.currentChanged.connect((_, args) => {
       if (args.newValue != null && args.newValue instanceof DocumentWidget) {
         const docWidget = args.newValue as DocumentWidget;
-        void panel.loadModel(docWidget.context);
+        docWidget.context.ready
+          .then(() => {
+            void panel.loadModel(docWidget.context);
+          })
+          .catch(() => {
+            console.warn('unable to load');
+          });
       }
     });
 
@@ -356,11 +384,9 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
         currAwareness.off('change', handler);
         button.close();
       }
-
-      if (changed.newValue == null || panel.model == null) {
+      if (changed.newValue == null /*|| panel.model == null*/) {
         return;
       }
-
       let invalids = ['json', 'ipynb'];
       let editorWidget = (changed.newValue as DocumentWidget)
         .content as CodeEditorWrapper;
