@@ -5,7 +5,7 @@ import {
 } from '@jupyterlab/application';
 
 import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
-import { INotebookTracker } from '@jupyterlab/notebook';
+import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { PartialJSONValue, Token } from '@lumino/coreutils';
 import { YFile, YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
@@ -26,7 +26,7 @@ import {
 import { Menu } from '@lumino/widgets';
 import { CommentFileModelFactory, ICommentOptions } from './model';
 import { ICellComment } from './commentformat';
-import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
+import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
 
 namespace CommandIDs {
   export const addComment = 'jl-comments:add-comment';
@@ -78,101 +78,6 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
     void registry.addFactory(new CellCommentFactory(nbTracker));
     void registry.addFactory(new CellSelectionCommentFactory(nbTracker));
 
-    const button = panel.button;
-
-    function openButton(x: number, y: number, anchor: HTMLElement): void {
-      button.open(
-        x,
-        y,
-        () => {
-          const cell = nbTracker.activeCell;
-          if (cell == null) {
-            return;
-          }
-
-          const model = panel.model;
-          if (model == null) {
-            return;
-          }
-
-          const comments = model.comments;
-          let index = comments.length;
-          for (let i = comments.length; i > 0; i--) {
-            const comment = comments.get(i - 1) as ICellComment;
-            if (comment.target.cellID === cell.model.id) {
-              index = i;
-            }
-          }
-
-          panel.mockComment(
-            {
-              identity: getIdentity(model.awareness),
-              type: 'cell-selection',
-              source: cell
-            },
-            index
-          );
-        },
-        anchor
-      );
-    }
-
-    let currAwareness: Awareness;
-    let awarenessHandler: () => void;
-    let onMouseup: (event: MouseEvent) => void;
-
-    // This updates the indicator and scrolls to the comments of the selected cell
-    // when the active cell changes.
-    nbTracker.activeCellChanged.connect((_, cell: Cell | null) => {
-      // Remove the old awareness handler if one exists.
-      if (
-        currAwareness != null &&
-        awarenessHandler != null &&
-        onMouseup != null
-      ) {
-        document.removeEventListener('mouseup', onMouseup);
-        currAwareness.off('change', awarenessHandler);
-        button.close();
-      }
-
-      if (cell == null || panel.model == null) {
-        return;
-      }
-
-      // Scroll to the first comment associated with the currently selected cell.
-      for (let comment of panel.model.comments) {
-        if (comment.type === 'cell' || comment.type === 'cell-selection') {
-          const cellComment = comment as ICellComment;
-          if (cellComment.target.cellID === cell.model.id) {
-            panel.scrollToComment(cellComment.id);
-            break;
-          }
-        }
-      }
-
-      // Open add comment button when mouse is released after selection
-      onMouseup = (_: MouseEvent): void => {
-        const { right, top, height } =
-          cell.editorWidget.node.getBoundingClientRect();
-        const node = nbTracker.currentWidget!.content.node;
-        openButton(right - 10, top + height / 2 - 10, node);
-      };
-
-      awarenessHandler = (): void => {
-        const { start, end } = cell.editor.getSelection();
-
-        if (start.column !== end.column || start.line !== end.line) {
-          document.addEventListener('mouseup', onMouseup, { once: true });
-        } else {
-          button.close();
-        }
-      };
-
-      currAwareness = (nbTracker.currentWidget!.model!.sharedModel as YNotebook)
-        .awareness;
-      currAwareness.on('change', awarenessHandler);
-    });
-
     app.commands.addCommand(CommandIDs.addNotebookComment, {
       label: 'Add Comment',
       execute: () => {
@@ -195,13 +100,11 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
           }
         }
 
-        let type;
         const { start, end } = cell.editor.getSelection();
-        if (start.column === end.column && start.line === end.line) {
-          type = 'cell';
-        } else {
-          type = 'cell-selection';
-        }
+        const type =
+          start.column === end.column && start.line === end.line
+            ? 'cell'
+            : 'cell-selection';
 
         panel.mockComment(
           {
@@ -212,6 +115,92 @@ const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
           index
         );
       }
+    });
+
+    // This updates the indicator and scrolls to the comments of the selected cell
+    // when the active cell changes.
+    let currentCell: Cell | null = null;
+    nbTracker.activeCellChanged.connect((_, cell: Cell | null) => {
+      // Clean up old mouseup listener
+      document.removeEventListener('mouseup', onMouseup);
+
+      currentCell = cell;
+      panel.button.close();
+
+      // panel.model can be null when the notebook is first loaded
+      if (cell == null || panel.model == null) {
+        return;
+      }
+
+      // Scroll to the first comment associated with the currently selected cell.
+      for (let comment of panel.model.comments) {
+        if (comment.type === 'cell-selection' || comment.type === 'cell') {
+          const cellComment = comment as ICellComment;
+          if (cellComment.target.cellID === cell.model.id) {
+            panel.scrollToComment(cellComment.id);
+            break;
+          }
+        }
+      }
+    });
+
+    let currentSelection: CodeEditor.IRange;
+
+    // Opens add comment button on the current cell when the mouse is released
+    // after a text selection
+    const onMouseup = (_: MouseEvent): void => {
+      if (currentCell == null) {
+        return;
+      }
+
+      const editor = currentCell.editor;
+      const { top } = editor.getCoordinateForPosition(currentSelection.start);
+      const { bottom } = editor.getCoordinateForPosition(currentSelection.end);
+      const { right } = currentCell.editorWidget.node.getBoundingClientRect();
+
+      const node = nbTracker.currentWidget!.content.node;
+
+      panel.button.open(
+        right - 10,
+        (top + bottom) / 2 - 10,
+        () => app.commands.execute(CommandIDs.addNotebookComment),
+        node
+      );
+    };
+
+    // Adds a single-run mouseup listener whenever a text selection is made in a cell
+    const awarenessHandler = (): void => {
+      if (currentCell == null) {
+        return;
+      }
+
+      currentSelection = currentCell.editor.getSelection();
+      const { start, end } = currentSelection;
+
+      if (start.column !== end.column || start.line !== end.line) {
+        document.addEventListener('mouseup', onMouseup, { once: true });
+      } else {
+        panel.button.close();
+      }
+    };
+
+    let lastAwareness: Awareness | null = null;
+    nbTracker.currentChanged.connect((_, notebook: NotebookPanel | null) => {
+      if (notebook == null) {
+        lastAwareness = null;
+        return;
+      }
+
+      // Clean up old awareness handler
+      if (lastAwareness != null) {
+        lastAwareness.off('change', awarenessHandler);
+      }
+
+      // Add new awareness handler
+      const model = notebook.model!.sharedModel as YNotebook;
+      model.awareness.on('change', awarenessHandler);
+
+      lastAwareness = model.awareness;
     });
 
     app.contextMenu.addItem({
@@ -261,15 +250,13 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       new TextSelectionCommentFactory({ type: 'text-selection' }, editorTracker)
     );
 
-    const panel = new CommentPanel(
-      {
-        commands: app.commands,
-        registry,
-        docManager,
-        shell
-      },
+    const panel = new CommentPanel({
+      commands: app.commands,
+      registry,
+      docManager,
+      shell,
       renderer
-    );
+    });
 
     // Create the directory holding the comments.
     void panel.pathExists(panel.pathPrefix).then(exists => {
@@ -377,23 +364,11 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       }
       editorWidget.editor.focus();
 
-      /*editorWidget.node.oncontextmenu = () => {
-        void InputDialog.getText({ title: 'Enter Comment' }).then(value =>
-          panel.model?.addComment({
-            type: 'text-selection',
-            text: value.value ?? 'invalid!',
-            source: editorWidget,
-            identity: getIdentity(panel.model.awareness)
-          })
-        );
-      };*/
-
       onMouseup = (_: MouseEvent): void => {
         const { right } = editorWidget.node.getBoundingClientRect();
         const { start, end } = editorWidget.editor.getSelection();
-        let coord1, coord2;
-        coord1 = editorWidget.editor.getCoordinateForPosition(start);
-        coord2 = editorWidget.editor.getCoordinateForPosition(end);
+        const coord1 = editorWidget.editor.getCoordinateForPosition(start);
+        const coord2 = editorWidget.editor.getCoordinateForPosition(end);
         const node = editorWidget.parent?.parent?.node ?? editorWidget.node;
         openButton(right - 10, (coord1.top + coord2.bottom) / 2 - 10, node);
       };
@@ -417,6 +392,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       currAwareness.on('change', handler);
     });
 
+    // Update comment widget tracker when model changes
     panel.modelChanged.connect((_, fileWidget) => {
       if (fileWidget != null) {
         fileWidget.widgets.forEach(
@@ -429,7 +405,26 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     });
 
     // Reveal the comment panel when a comment is added.
-    panel.commentAdded.connect(() => shell.activateById(panel.id));
+    panel.commentAdded.connect((_, comment) => {
+      const identity = comment.identity;
+
+      // If you didn't make the comment, ignore it
+      // Comparing ids would be better but they're not synchronized across Docs/awarenesses
+      if (identity == null || identity.name !== panel.localIdentity.name) {
+        return;
+      }
+
+      // Automatically opens panel when a document with comments is opened,
+      // or when the local user adds a new comment
+      if (!panel.isVisible) {
+        shell.activateById(panel.id);
+        if (comment.text === '') {
+          comment.openEditActive();
+        }
+      }
+
+      panel.scrollToComment(comment.id);
+    });
 
     return panel;
   }
