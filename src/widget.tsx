@@ -100,7 +100,7 @@ function JCComment(props: CommentProps): JSX.Element {
 
   return (
     <Jdiv
-      className={'jc-Comment ' + className}
+      className={'jc-Comment jc-mod-focus-border' + className}
       id={comment.id}
       jcEventArea="other"
     >
@@ -152,7 +152,7 @@ function JCReply(props: ReplyProps): JSX.Element {
 
   return (
     <Jdiv
-      className={'jc-Comment jc-Reply ' + className}
+      className={'jc-Comment jc-Reply jc-mod-focus-border' + className}
       id={reply.id}
       jcEventArea="other"
     >
@@ -215,13 +215,16 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
     } else {
       return (
         <div className={'jc-Replies'}>
-          <Jdiv className="jc-Replies-breaker" jcEventArea="collapser">
+          <Jdiv
+            className="jc-Replies-breaker jc-mod-focus-border"
+            jcEventArea="collapser"
+          >
             <div className="jc-Replies-breaker-left">expand thread</div>
             <div className="jc-RepliesSpacer" />
             <div className="jc-Replies-breaker-right">
               <hr />
               <hr />
-              <div className="jc-Replies-breaker-number">
+              <div className="jc-Replies-breaker-number jc-mod-focus-border">
                 {comment.replies.length - 1}
               </div>
             </div>
@@ -256,7 +259,7 @@ function JCReplyArea(props: ReplyAreaProps): JSX.Element {
 
   return (
     <Jdiv
-      className={'jc-ReplyInputArea ' + className}
+      className={'jc-ReplyInputArea jc-mod-focus-border' + className}
       contentEditable={true}
       hidden={hidden}
       jcEventArea="reply"
