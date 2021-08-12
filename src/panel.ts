@@ -64,14 +64,14 @@ export interface ICommentPanel extends Panel {
 export class CommentPanel extends Panel implements ICommentPanel {
   renderer: IRenderMimeRegistry;
 
-  constructor(options: CommentPanel.IOptions, renderer: IRenderMimeRegistry) {
+  constructor(options: CommentPanel.IOptions) {
     super();
 
     this.id = `CommentPanel-${UUID.uuid4()}`;
     this.title.icon = CommentsPanelIcon;
     this.addClass('jc-CommentPanel');
 
-    const { docManager, registry, shell } = options;
+    const { docManager, registry, shell, renderer } = options;
 
     this._registry = registry;
     this._commentMenu = new Menu({ commands: options.commands });
@@ -366,6 +366,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
     });
 
     this.fileWidget!.insertWidget(index, widget);
+    this._commentAdded.emit(widget);
   }
 
   updateIdentity(id: number, newName: string): void {
@@ -434,5 +435,6 @@ export namespace CommentPanel {
     commands: CommandRegistry;
     registry: ICommentRegistry;
     shell: ILabShell;
+    renderer: IRenderMimeRegistry;
   }
 }

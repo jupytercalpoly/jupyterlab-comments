@@ -2,7 +2,6 @@
   --jc-dropdown-size: 25px;
 
   --jc-comment-profile-pic-size: 32px;
-  --jc-reply-profile-pic-size: 26px;
 
   --jc-reply-pic-size: 24px;
 
@@ -17,8 +16,8 @@
   --jc-timestamp-font-size: smaller;
   --jc-timestamp-font-weight: regular;
 
-  --jc-nametag-font-size: normal;
-  --jc-nametag-font-weight: 500;
+  --jc-nametag-font-size: var(--jp-ui-font-size1);
+  --jc-nametag-font-weight: 450;
 
   --var-jc-linesep: 2px;
 }
@@ -56,6 +55,7 @@
 }
 
 .jc-Body {
+  font-size: 0.833rem;
   outline: none;
   border: none;
   appearance: none;
@@ -65,7 +65,7 @@
   white-space: pre-wrap;
   margin-top: var(--var-jc-linesep);
   line-height: 1.2em;
-  padding: 3px;
+  padding: 3px 1px;
 }
 
 .jc-Body strong {
@@ -98,9 +98,13 @@
   z-index: 2;
   border-top: var(--jc-comment-border);
   position: relative;
+  cursor: pointer;
 }
 
-.jc-CommentWidget:focus-within .jc-Replies-breaker {
+.jc-CommentWidget:focus-within .jc-mod-focus-border {
+  border-color: var(--jp-brand-color1);
+}
+.jc-CommentWidget:focus-within {
   border-color: var(--jp-brand-color1);
 }
 
@@ -206,17 +210,6 @@
   border-radius: 5px;
 }
 
-.jc-CommentWidget:focus-within {
-  border-color: var(--jp-brand-color1);
-}
-
-.jc-CommentWidget:focus-within .jc-Comment {
-  border-color: var(--jp-brand-color1);
-}
-.jc-CommentWidget:focus-within .jc-ReplyInputArea {
-  border-color: var(--jp-brand-color1);
-}
-
 .jc-ReplyInputArea:empty:before {
   content: attr(data-placeholder);
   color: var(--jp-ui-font-color3);
@@ -281,6 +274,7 @@
   font-size: var(--jp-ui-font-size0);
   display: flex;
   justify-content: start;
+  font-size: var(--jp-ui-font-size0);
 }
 .jc-panelHeader-editIcon {
   transform: scale(0.72);
