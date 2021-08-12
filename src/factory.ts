@@ -355,7 +355,13 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
   }
 
   targetToJSON(wrapper: CodeEditorWrapper): PartialJSONValue {
-    const { start, end } = wrapper.editor.getSelection();
+    let { start, end } = wrapper.editor.getSelection();
+    if (
+      start.line > end.line ||
+      (start.line === end.line && start.column > end.column)
+    ) {
+      [start, end] = [end, start];
+    }
     return {
       editorID: (wrapper.parent as DocumentWidget).context.path,
       start,
