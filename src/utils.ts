@@ -20,8 +20,21 @@ export function randomIdentity(): IIdentity {
   };
 }
 
-export function randomColor() : string {
-  const validColors = ["#eb5351", "#ea357a", "#f57c00", "#dca927", "#24be61", "#8ed97c", "#ff709b", "#d170ff", "#7b61ff", "#4176ff", "#70c3ff", "#a8b84a"];
+export function randomColor(): string {
+  const validColors = [
+    '#eb5351',
+    '#ea357a',
+    '#f57c00',
+    '#dca927',
+    '#24be61',
+    '#8ed97c',
+    '#ff709b',
+    '#d170ff',
+    '#7b61ff',
+    '#4176ff',
+    '#70c3ff',
+    '#a8b84a'
+  ];
   return validColors[Math.floor(Math.random() * validColors.length)];
 }
 
