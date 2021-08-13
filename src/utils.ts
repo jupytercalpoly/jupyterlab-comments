@@ -1,6 +1,6 @@
 import { Awareness } from 'y-protocols/awareness';
 import { IIdentity } from './commentformat';
-import { getAnonymousUserName, getRandomColor } from '@jupyterlab/docprovider';
+import { getAnonymousUserName } from '@jupyterlab/docprovider';
 import { UserIcons } from './icons';
 
 export const emptyIdentity: IIdentity = {
@@ -15,9 +15,27 @@ export function randomIdentity(): IIdentity {
   return {
     id: count--,
     name: getAnonymousUserName(),
-    color: getRandomColor(),
+    color: randomColor(),
     icon: Math.floor(Math.random() * UserIcons.length)
   };
+}
+
+export function randomColor(): string {
+  const validColors = [
+    '#eb5351',
+    '#ea357a',
+    '#f57c00',
+    '#dca927',
+    '#24be61',
+    '#8ed97c',
+    '#ff709b',
+    '#d170ff',
+    '#7b61ff',
+    '#4176ff',
+    '#70c3ff',
+    '#a8b84a'
+  ];
+  return validColors[Math.floor(Math.random() * validColors.length)];
 }
 
 export function setIdentityName(awareness: Awareness, name: string): boolean {
