@@ -181,7 +181,7 @@ function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
       }).then(() => {
         SetRenderElement(
           <div
-            className="jc-customBody"
+            className="jc-MarkdownBody"
             dangerouslySetInnerHTML={{
               __html: (node as HTMLElement).innerHTML
             }}
@@ -1038,7 +1038,6 @@ export class CommentFileWidget extends Panel {
 
     if (widget != null) {
       this.insertWidget(index, widget);
-      // this.render_all(widget, this.renderer);
       this._commentAdded.emit(widget);
     }
   }
@@ -1053,28 +1052,6 @@ export class CommentFileWidget extends Panel {
 
   addComment(comment: IComment) {
     this.insertComment(comment, this.widgets.length);
-  }
-
-  /**
-   * Render markdown and LaTeX in a comment widget
-   */
-  render_all(widget: CommentWidget<any>, registry: IRenderMimeRegistry): void {
-    let nodes = widget.node.getElementsByClassName('jc-Body');
-
-    Array.from(nodes).forEach(element => {
-      // (element as HTMLElement).className = 'jc-customBody';
-      (element as HTMLElement).classList.add('jc-customBody');
-      renderMarkdown({
-        host: element as HTMLElement,
-        source: (element as HTMLElement).innerText,
-        trusted: false,
-        latexTypesetter: registry.latexTypesetter,
-        linkHandler: registry.linkHandler,
-        resolver: registry.resolver,
-        sanitizer: registry.sanitizer,
-        shouldTypeset: widget.isAttached
-      }).catch(() => console.warn('render Markdown failed'));
-    });
   }
 
   get model(): CommentFileModel {

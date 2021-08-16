@@ -55,13 +55,13 @@
 }
 
 /* comment */
-.jc-customBody {
+.jc-MarkdownBody {
   margin: 0;
   padding: 0;
 } 
 
 /* replies */
-.jc-customBody > *{
+.jc-MarkdownBody > *{
   display: inline-block;
   margin: 0;
   padding: 0;
