@@ -93,15 +93,38 @@ function JCPreview(props: PreviewProps): JSX.Element {
   );
 }
 
-/**
- * A React component that renders a single comment or reply.
- *
- * @param comment - the comment object to render. Note: Replies will
- * not be rendered.
- *
- * @param className - a string that will be used as the className of the
- * container element.
- */
+function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
+  const { registry, commentWidget, text } = props;
+  let node: HTMLElement = document.createElement('div');
+  const [renderElement, SetRenderElement] = React.useState(<div></div>);
+
+  React.useEffect(() => {
+    const markdownRender = async () => {
+      void renderMarkdown({
+        host: node as HTMLElement,
+        source: text,
+        trusted: false,
+        latexTypesetter: registry.latexTypesetter,
+        linkHandler: registry.linkHandler,
+        resolver: registry.resolver,
+        sanitizer: registry.sanitizer,
+        shouldTypeset: commentWidget.isAttached
+      }).then(() => {
+        SetRenderElement(
+          <div
+            className="jc-MarkdownBody"
+            dangerouslySetInnerHTML={{
+              __html: (node as HTMLElement).innerHTML
+            }}
+          ></div>
+        );
+      });
+    };
+    void markdownRender();
+  }, []);
+  return renderElement;
+}
+
 function JCComment(props: CommentProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
@@ -152,7 +175,7 @@ function JCComment(props: CommentProps): JSX.Element {
           document.execCommand('selectAll', false, undefined);
         }}
       >
-       <JMarkdownRenderer
+        <JMarkdownRenderer
           text={comment.text}
           registry={renderer}
           commentWidget={commentWidget}
@@ -160,38 +183,6 @@ function JCComment(props: CommentProps): JSX.Element {
       </Jdiv>
     </Jdiv>
   );
-}
-
-function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
-  const { registry, commentWidget, text } = props;
-  let node: HTMLElement = document.createElement('div');
-  const [renderElement, SetRenderElement] = React.useState(<div></div>);
-
-  React.useEffect(() => {
-    const markdownRender = async () => {
-      void renderMarkdown({
-        host: node as HTMLElement,
-        source: text,
-        trusted: false,
-        latexTypesetter: registry.latexTypesetter,
-        linkHandler: registry.linkHandler,
-        resolver: registry.resolver,
-        sanitizer: registry.sanitizer,
-        shouldTypeset: commentWidget.isAttached
-      }).then(() => {
-        SetRenderElement(
-          <div
-            className="jc-MarkdownBody"
-            dangerouslySetInnerHTML={{
-              __html: (node as HTMLElement).innerHTML
-            }}
-          ></div>
-        );
-      });
-    };
-    void markdownRender();
-  }, []);
-  return renderElement;
 }
 
 function JCReply(props: ReplyProps): JSX.Element {
