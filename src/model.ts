@@ -45,7 +45,12 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * Serialize the model to JSON.
    */
   toJSON(): PartialJSONValue {
-    return this.comments.toJSON();
+    return this.comments.map((comment: IComment) => {
+      const factory = this.registry.getFactory(comment.type);
+      const json = factory!.toJSON(comment);
+      console.log('json', json);
+      return json;
+    });
   }
 
   /**
@@ -54,6 +59,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   fromJSON(value: PartialJSONValue): void {
     this.ymodel.transact(() => {
       const comments = this.comments;
+      console.log('fromJSON: comments', comments);
       comments.delete(0, comments.length);
       comments.push(value as any as IComment[]);
     });
@@ -415,6 +421,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   }
 
   get contentChanged(): ISignal<this, void> {
+    this.dirty = true;
     return this._contentChanged;
   }
 

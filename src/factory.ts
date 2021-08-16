@@ -170,9 +170,8 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
     }
 
     const cellSelectionComment = json as unknown as ICellSelectionComment;
-    console.log('cellSelectionComment before', cellSelectionComment);
     const { from, to } = range as CodeMirror.MarkerRange;
-    console.log('from, to', from, to);
+    console.log('from, to', mark, from, to);
     cellSelectionComment.target.start = this._toCodeEditorPosition(from);
     cellSelectionComment.target.end = this._toCodeEditorPosition(to);
 
