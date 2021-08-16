@@ -54,13 +54,26 @@
   margin-left: 10px;
 }
 
+/* comment */
+.jc-MarkdownBody {
+  margin: 0;
+  padding: 0;
+} 
+
+/* replies */
+.jc-MarkdownBody > *{
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+}
+
 .jc-Body {
   font-size: 0.833rem;
   outline: none;
   border: none;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+  /* appearance: none; */
+  /* -webkit-appearance: none; */
+  /* -moz-appearance: none; */
   background-color: transparent;
   white-space: pre-wrap;
   margin-top: var(--var-jc-linesep);
