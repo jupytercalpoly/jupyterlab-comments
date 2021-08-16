@@ -121,13 +121,13 @@ function ReactMarkdownRenderer(props: ReactMarkdownRendererProps): JSX.Element {
     const markdownRender = async () => {
       await renderMarkdown({
         host: node as HTMLElement,
-        source: source,
         trusted: false,
-        latexTypesetter: latexTypesetter,
-        linkHandler: linkHandler,
-        resolver: resolver,
-        sanitizer: sanitizer,
-        shouldTypeset: shouldTypeset
+        source,
+        latexTypesetter,
+        linkHandler,
+        resolver,
+        sanitizer,
+        shouldTypeset
       });
       SetRenderElement(
         <div
