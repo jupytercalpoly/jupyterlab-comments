@@ -1,5 +1,6 @@
 import {
   ICellSelectionComment,
+  // ICellSelectionComment,
   IComment,
   IIdentity,
   IReply,
@@ -7,15 +8,16 @@ import {
   ITextSelectionComment
 } from './commentformat';
 import { WidgetTracker } from '@jupyterlab/apputils';
-import { PartialJSONValue, UUID } from '@lumino/coreutils';
-import { getCommentTimeString } from './utils';
+import { PartialJSONObject, PartialJSONValue, UUID } from '@lumino/coreutils';
+import { getCommentTimeString, truncate } from './utils';
 import { Cell } from '@jupyterlab/cells';
 import { CommentFileModel } from './model';
 import { CommentWidget } from './widget';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
 import { DocumentWidget } from '@jupyterlab/docregistry';
-//import { CodeMirrorEditor } from '@jupyterlab/codemirror';
+import { CodeMirrorEditor } from '@jupyterlab/codemirror';
+import * as CodeMirror from 'codemirror';
 
 export abstract class ACommentFactory<T = any> {
   constructor(options: ACommentFactory.IOptions) {
@@ -26,6 +28,13 @@ export abstract class ACommentFactory<T = any> {
   abstract targetToJSON(target: T): PartialJSONValue;
   abstract targetFromJSON(json: PartialJSONValue): T | undefined;
   abstract getPreviewText(comment: IComment, target: T): string;
+
+  /**
+   * Serializes a comment to JSON
+   */
+  toJSON(comment: IComment): PartialJSONValue {
+    return comment as unknown as PartialJSONObject;
+  }
 
   getElement(target: T): HTMLElement | undefined {
     return;
@@ -136,6 +145,60 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
     this._tracker = tracker;
   }
 
+  toJSON(comment: IComment): PartialJSONValue {
+    const cell = this.targetFromJSON(comment.target);
+    if (cell == null) {
+      return 'error: cell not found';
+    }
+
+    const json = super.toJSON(comment);
+
+    const mark = this._marks.get(comment.id);
+    if (mark == null) {
+      console.warn(
+        'no mark found--serializing based on initial text selection position'
+      );
+      return json;
+    }
+
+    const range = mark.find();
+    if (range == null) {
+      console.warn(
+        'mark no longer exists in cell--serializing based on initial text selection position'
+      );
+      return json;
+    }
+
+    const cellSelectionComment = json as unknown as ICellSelectionComment;
+    console.log('cellSelectionComment before', cellSelectionComment);
+    const { from, to } = range as CodeMirror.MarkerRange;
+    console.log('from, to', from, to);
+    cellSelectionComment.target.start = this._toCodeEditorPosition(from);
+    cellSelectionComment.target.end = this._toCodeEditorPosition(to);
+
+    console.log('cellSelectionComment after', cellSelectionComment);
+
+    return cellSelectionComment as unknown as PartialJSONObject;
+  }
+
+  private _toCodeMirrorPosition(
+    pos: CodeEditor.IPosition
+  ): CodeMirror.Position {
+    return {
+      line: pos.line,
+      ch: pos.column
+    };
+  }
+
+  private _toCodeEditorPosition(
+    pos: CodeMirror.Position
+  ): CodeEditor.IPosition {
+    return {
+      line: pos.line,
+      column: pos.ch
+    };
+  }
+
   createWidget(
     comment: IComment,
     model: CommentFileModel,
@@ -152,46 +215,33 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
       return null;
     }
 
-    // Add the selection to the cell's selections map.
-    //const selections = cell!.model.selections.get(cell!.model.id) ?? [];
+    const cellSelectionComment = comment as ICellSelectionComment;
 
-    /*let tempSelections = cell!.editor.model.selections.get(cell!.model.id);
-    let selections = [];
-    if (tempSelections != null) {
-      selections = JSON.parse(JSON.stringify(tempSelections));
-    }*/
-    const selectionsMap = cell.editor.model.selections;
-    //const selections = selectionsMap.get(cell.model.id) ?? [];
-    let tempSelections = selectionsMap.get(cell.model.id);
-    let selections = [];
-    if (tempSelections != null) {
-      selections = JSON.parse(JSON.stringify(tempSelections));
-    }
-    const { start, end } = comment.target as any as ISelection;
+    const color = comment.identity.color;
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
 
-    selections.push({
-      start,
-      end,
-      style: {
-        className: 'jc-Highlight',
-        color: 'black',
-        displayName: comment.identity.name
-      },
-      uuid: comment.id
+    const { start, end } = cellSelectionComment.target;
+    const forward =
+      start.line < end.line ||
+      (start.line === end.line && start.column <= end.column);
+    const anchor = this._toCodeMirrorPosition(forward ? start : end);
+    const head = this._toCodeMirrorPosition(forward ? end : start);
+
+    const doc = (cell.editor as CodeMirrorEditor).doc;
+    const mark = doc.markText(anchor, head, {
+      className: 'jc-Highlight',
+      title: `${comment.identity.name}: ${truncate(comment.text, 140)}`,
+      css: `background-color: rgba( ${r}, ${g}, ${b}, 0.15)`,
+      attributes: { id: `CommentMark-${comment.id}` }
     });
-    selectionsMap.set(cell.model.id, selections);
 
-    // Remove selections when widget is disposed.
-    // Currently runs O(N^2) when all widgets are disposed at once.
+    this._marks.set(comment.id, mark);
 
     widget.disposed.connect(() => {
-      const tempSels = selectionsMap.get(cell.model.id);
-      let sels: CodeEditor.ITextSelection[] = [];
-      if (tempSels != null) {
-        sels = JSON.parse(JSON.stringify(tempSels));
-      }
-      const newSels = sels.filter(sel => sel.uuid !== comment.id);
-      selectionsMap.set(cell.model.id, newSels);
+      this._marks.delete(comment.id);
+      mark.clear();
     });
 
     return widget;
@@ -227,24 +277,40 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
       return '';
     }
 
-    const mainText = cell.model.value.text;
-    const selectionComment = comment as ICellSelectionComment;
-    const { start, end } = selectionComment.target;
-
-    let startIndex = lineToIndex(mainText, start.line, start.column);
-    let endIndex = lineToIndex(mainText, end.line, end.column);
-
-    if (startIndex > endIndex) {
-      [startIndex, endIndex] = [endIndex, startIndex];
+    const mark = this._marks.get(comment.id);
+    if (mark == null) {
+      return this._getMockCommentPreviewText(
+        comment as ICellSelectionComment,
+        cell
+      );
     }
 
-    let previewText: string = mainText.slice(startIndex, endIndex);
-
-    if (previewText.length > 140) {
-      return previewText.slice(0, 140) + '...';
+    const range = mark.find();
+    if (range == null) {
+      return '';
     }
 
-    return previewText;
+    const doc = (cell.editor as CodeMirrorEditor).doc;
+    const { from, to } = range as CodeMirror.MarkerRange;
+    const text = doc.getRange(from, to);
+
+    return truncate(text, 140);
+  }
+
+  private _getMockCommentPreviewText(
+    comment: ICellSelectionComment,
+    cell: Cell
+  ): string {
+    const doc = (cell.editor as CodeMirrorEditor).doc;
+    const { start, end } = comment.target;
+    const forward =
+      start.line < end.line ||
+      (start.line === end.line && start.column <= end.column);
+    const from = this._toCodeMirrorPosition(forward ? start : end);
+    const to = this._toCodeMirrorPosition(forward ? end : start);
+    const text = doc.getRange(from, to);
+
+    return truncate(text, 140);
   }
 
   getElement(target: Cell): HTMLElement | undefined {
@@ -252,6 +318,7 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
   }
 
   private _tracker: INotebookTracker;
+  private _marks = new Map<string, CodeMirror.TextMarker>();
 }
 
 export class HTMLElementCommentFactory extends ACommentFactory<HTMLElement> {
