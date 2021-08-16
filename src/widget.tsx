@@ -9,7 +9,11 @@ import { ACommentFactory } from './factory';
 import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
-import { IRenderMimeRegistry, renderMarkdown } from '@jupyterlab/rendermime';
+import {
+  IRenderMime,
+  IRenderMimeRegistry,
+  renderMarkdown
+} from '@jupyterlab/rendermime';
 import { PartialJSONValue } from '@lumino/coreutils';
 import { UserIcons } from './icons';
 
@@ -23,23 +27,32 @@ type ReactRenderElement =
 type JMarkdownRendererProps = {
   text: string;
   registry: IRenderMimeRegistry;
-  commentWidget: CommentWidget<any>;
+  isAttached: boolean;
+};
+
+type ReactMarkdownRendererProps = {
+  source: string;
+  latexTypesetter: IRenderMime.ILatexTypesetter | null;
+  linkHandler: IRenderMime.ILinkHandler | null;
+  resolver: IRenderMime.IResolver | null;
+  sanitizer: IRenderMime.ISanitizer;
+  shouldTypeset: boolean;
 };
 
 type CommentProps = {
   renderer: IRenderMimeRegistry;
-  commentWidget: CommentWidget<any>;
   comment: IComment;
   className?: string;
   editable?: boolean;
   target?: any;
   factory: ACommentFactory;
+  isAttached: boolean;
 };
 
 type CommentWithRepliesProps = {
   renderer: IRenderMimeRegistry;
+  isAttached: boolean;
   collapsed: boolean;
-  commentWidget: CommentWidget<any>;
   comment: IComment;
   editID: string;
   activeID: string;
@@ -67,7 +80,7 @@ type PreviewProps = {
 type ReplyProps = {
   reply: IReply;
   renderer: IRenderMimeRegistry;
-  commentWidget: CommentWidget<any>;
+  isAttached: boolean;
   className?: string;
   editable?: boolean;
 };
@@ -93,36 +106,55 @@ function JCPreview(props: PreviewProps): JSX.Element {
   );
 }
 
-function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
-  const { registry, commentWidget, text } = props;
+function ReactMarkdownRenderer(props: ReactMarkdownRendererProps): JSX.Element {
+  const {
+    source,
+    latexTypesetter,
+    linkHandler,
+    resolver,
+    sanitizer,
+    shouldTypeset
+  } = props;
   let node: HTMLElement = document.createElement('div');
   const [renderElement, SetRenderElement] = React.useState(<div></div>);
-
   React.useEffect(() => {
     const markdownRender = async () => {
-      void renderMarkdown({
+      await renderMarkdown({
         host: node as HTMLElement,
-        source: text,
+        source: source,
         trusted: false,
-        latexTypesetter: registry.latexTypesetter,
-        linkHandler: registry.linkHandler,
-        resolver: registry.resolver,
-        sanitizer: registry.sanitizer,
-        shouldTypeset: commentWidget.isAttached
-      }).then(() => {
-        SetRenderElement(
-          <div
-            className="jc-MarkdownBody"
-            dangerouslySetInnerHTML={{
-              __html: (node as HTMLElement).innerHTML
-            }}
-          ></div>
-        );
+        latexTypesetter: latexTypesetter,
+        linkHandler: linkHandler,
+        resolver: resolver,
+        sanitizer: sanitizer,
+        shouldTypeset: shouldTypeset
       });
+      SetRenderElement(
+        <div
+          className="jc-MarkdownBody"
+          dangerouslySetInnerHTML={{
+            __html: (node as HTMLElement).innerHTML
+          }}
+        ></div>
+      );
     };
     void markdownRender();
   }, []);
   return renderElement;
+}
+
+function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
+  const { registry, isAttached, text } = props;
+  return (
+    <ReactMarkdownRenderer
+      source={text}
+      latexTypesetter={registry.latexTypesetter}
+      linkHandler={registry.linkHandler}
+      resolver={registry.resolver}
+      sanitizer={registry.sanitizer}
+      shouldTypeset={isAttached}
+    />
+  );
 }
 
 function JCComment(props: CommentProps): JSX.Element {
@@ -133,7 +165,8 @@ function JCComment(props: CommentProps): JSX.Element {
   const factory = props.factory;
   const icon = UserIcons[comment.identity.icon] ?? UserIcons[0];
   const renderer = props.renderer;
-  const commentWidget = props.commentWidget;
+  // const commentWidget = props.commentWidget;
+  const isAttached = props.isAttached;
 
   return (
     <Jdiv
@@ -178,7 +211,7 @@ function JCComment(props: CommentProps): JSX.Element {
         <JMarkdownRenderer
           text={comment.text}
           registry={renderer}
-          commentWidget={commentWidget}
+          isAttached={isAttached}
         />
       </Jdiv>
     </Jdiv>
@@ -191,7 +224,7 @@ function JCReply(props: ReplyProps): JSX.Element {
   const editable = props.editable;
   const icon = UserIcons[reply.identity.icon] ?? UserIcons[0];
   const renderer = props.renderer;
-  const commentWidget = props.commentWidget;
+  const isAttached = props.isAttached;
 
   return (
     <Jdiv
@@ -231,7 +264,7 @@ function JCReply(props: ReplyProps): JSX.Element {
         <JMarkdownRenderer
           text={reply.text}
           registry={renderer}
-          commentWidget={commentWidget}
+          isAttached={isAttached}
         />
       </Jdiv>
     </Jdiv>
@@ -246,7 +279,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   const factory = props.factory;
   const collapsed = props.collapsed;
   const renderer = props.renderer;
-  const commentWidget = props.commentWidget;
+  const isAttached = props.isAttached;
 
   let RepliesComponent = (): JSX.Element => {
     if (!collapsed || comment.replies.length < 4) {
@@ -255,7 +288,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
           {comment.replies.map(reply => (
             <JCReply
               reply={reply}
-              commentWidget={commentWidget}
+              isAttached={isAttached}
               editable={editID === reply.id}
               renderer={renderer}
               key={reply.id}
@@ -283,7 +316,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
           <JCReply
             reply={comment.replies[comment.replies.length - 1]}
             editable={editID === comment.replies[comment.replies.length - 1].id}
-            commentWidget={commentWidget}
+            isAttached={isAttached}
             renderer={renderer}
             key={comment.replies[comment.replies.length - 1].id}
           />
@@ -296,7 +329,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
     <Jdiv className={'jc-CommentWithReplies ' + className}>
       <JCComment
         comment={comment}
-        commentWidget={commentWidget}
+        isAttached={isAttached}
         editable={editID === comment.id}
         renderer={renderer}
         target={target}
@@ -336,7 +369,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   return (
     <div className={className} onClick={eventHandler} onKeyDown={eventHandler}>
       <JCCommentWithReplies
-        commentWidget={commentWidget}
+        isAttached={commentWidget.isAttached}
         comment={comment}
         renderer={commentWidget.renderer}
         editID={commentWidget.editID}
