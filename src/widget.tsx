@@ -21,14 +21,14 @@ type ReactRenderElement =
   | React.ReactElement<any>;
 
 type JMarkdownRendererProps = {
-  reply: IReply;
-  // element: HTMLElement
+  text: string;
   registry: IRenderMimeRegistry;
   commentWidget: CommentWidget<any>;
-  // children: any;
 };
 
 type CommentProps = {
+  renderer: IRenderMimeRegistry;
+  commentWidget: CommentWidget<any>;
   comment: IComment;
   className?: string;
   editable?: boolean;
@@ -109,6 +109,8 @@ function JCComment(props: CommentProps): JSX.Element {
   const target = props.target;
   const factory = props.factory;
   const icon = UserIcons[comment.identity.icon] ?? UserIcons[0];
+  const renderer = props.renderer;
+  const commentWidget = props.commentWidget;
 
   return (
     <Jdiv
@@ -150,40 +152,26 @@ function JCComment(props: CommentProps): JSX.Element {
           document.execCommand('selectAll', false, undefined);
         }}
       >
-        {comment.text}
+       <JMarkdownRenderer
+          text={comment.text}
+          registry={renderer}
+          commentWidget={commentWidget}
+        />
       </Jdiv>
     </Jdiv>
   );
 }
 
 function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
-  const { registry, commentWidget, reply } = props;
-  let myNode: HTMLElement = document.createElement('div');
-  // let myNode: JSX.Element = React.createElement('div');
-  // children.classList.add('jc-customBody');
-  // let nodes = commentWidget.node.getElementsByClassName('jc-Body');
-  // Array.from(nodes).forEach(n => {
-  //   if((n as HTMLElement).innerText === reply.text) {
-  //     myNode = n;
-  //   }
-  // });
-  // myNode.classList.add('jc-customBody');
-
-  // if (myNode == null){
-  //   return;
-  // }
-  const [node] = React.useState(myNode);
-  const [fin, Setfin] = React.useState(<div></div>);
+  const { registry, commentWidget, text } = props;
+  let node: HTMLElement = document.createElement('div');
+  const [renderElement, SetRenderElement] = React.useState(<div></div>);
 
   React.useEffect(() => {
-    const doRender = async () => {
+    const markdownRender = async () => {
       void renderMarkdown({
-        // host: children as HTMLElement,
-        // host: myNode as HTMLElement,
         host: node as HTMLElement,
-        // source: (children as HTMLElement).innerText,
-        // host: commentWidget.node as HTMLElement,
-        source: reply.text,
+        source: text,
         trusted: false,
         latexTypesetter: registry.latexTypesetter,
         linkHandler: registry.linkHandler,
@@ -191,9 +179,7 @@ function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
         sanitizer: registry.sanitizer,
         shouldTypeset: commentWidget.isAttached
       }).then(() => {
-        console.log(node);
-        console.log((node as HTMLElement).innerHTML);
-        Setfin(
+        SetRenderElement(
           <div
             className="jc-customBody"
             dangerouslySetInnerHTML={{
@@ -203,31 +189,9 @@ function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
         );
       });
     };
-    void doRender();
+    void markdownRender();
   }, []);
-
-  // }).catch(() => console.warn('render Markdown failed'));
-  // return <div>{reply.text}</div>;
-  // return <div>{(children as HTMLElement).innerText}</div>;
-  // return <div dangerouslySetInnerHTML={{ __html: (children as HTMLElement).innerHTML.trim() }}></div>;
-  // children.appendChild(myNode);
-  // console.log(myNode)
-  // console.log(myNode.innerHTML);
-
-  // myNode.className = "jc-customBody"
-
-  // console.log(children);
-  // (children as HTMLElement).innerHTML = myNode.innerHTML;
-  // console.log(children);
-
-  //  return (
-  // <div className="jc-customBody" dangerouslySetInnerHTML= {{ __html : (myNode as HTMLElement).innerHTML }}></div>
-  // <div
-  //   className="jc-customBody"
-  //   dangerouslySetInnerHTML={{ __html: (node as HTMLElement).innerHTML }}
-  // ></div>
-  // );
-  return fin;
+  return renderElement;
 }
 
 function JCReply(props: ReplyProps): JSX.Element {
@@ -274,13 +238,10 @@ function JCReply(props: ReplyProps): JSX.Element {
         }}
       >
         <JMarkdownRenderer
-          reply={reply}
+          text={reply.text}
           registry={renderer}
           commentWidget={commentWidget}
         />
-        {/* <div>{reply.text}</div> */}
-        {/* </JMarkdownRenderer> */}
-        {/* {reply.text as any as HTMLElement} */}
       </Jdiv>
     </Jdiv>
   );
@@ -344,7 +305,9 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
     <Jdiv className={'jc-CommentWithReplies ' + className}>
       <JCComment
         comment={comment}
+        commentWidget={commentWidget}
         editable={editID === comment.id}
+        renderer={renderer}
         target={target}
         factory={factory}
       />
