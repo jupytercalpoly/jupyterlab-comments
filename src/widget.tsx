@@ -30,6 +30,10 @@ type JMarkdownRendererProps = {
   isAttached: boolean;
 };
 
+type SubmitButtonsProps = {
+  hidden: boolean | undefined;
+};
+
 type ReactMarkdownRendererProps = {
   source: string;
   latexTypesetter: IRenderMime.ILatexTypesetter | null;
@@ -157,6 +161,16 @@ function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
   );
 }
 
+function SubmitButtons(props: SubmitButtonsProps): JSX.Element {
+  const { hidden } = props;
+  return (
+    <div hidden={hidden} className="jc-SubmitButtons">
+      <div>Submit</div>
+      <div>Cancel</div>
+    </div>
+  );
+}
+
 function JCComment(props: CommentProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
@@ -165,7 +179,6 @@ function JCComment(props: CommentProps): JSX.Element {
   const factory = props.factory;
   const icon = UserIcons[comment.identity.icon] ?? UserIcons[0];
   const renderer = props.renderer;
-  // const commentWidget = props.commentWidget;
   const isAttached = props.isAttached;
 
   return (
@@ -213,6 +226,7 @@ function JCComment(props: CommentProps): JSX.Element {
           registry={renderer}
           isAttached={isAttached}
         />
+        <SubmitButtons hidden={!editable} />
       </Jdiv>
     </Jdiv>
   );
@@ -266,6 +280,7 @@ function JCReply(props: ReplyProps): JSX.Element {
           registry={renderer}
           isAttached={isAttached}
         />
+        <SubmitButtons hidden={!editable} />
       </Jdiv>
     </Jdiv>
   );
