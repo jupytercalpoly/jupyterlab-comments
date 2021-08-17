@@ -87,8 +87,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this._panelHeader = panelHeader;
     this.renderer = renderer;
 
-    this._boundOnChange = this._onChange.bind(this);
-
     this._localIdentity = randomIdentity();
   }
 
@@ -101,50 +99,40 @@ export class CommentPanel extends Panel implements ICommentPanel {
     if (awareness != null && awareness !== this.panelHeader.awareness) {
       this.panelHeader.awareness = awareness;
     }
-
-    // this._fileWidget.update();
   }
 
-  async pathExists(path: string): Promise<boolean> {
+  pathExists(path: string): Promise<boolean> {
     const contents = this._docManager.services.contents;
-
-    try {
-      void (await contents.get(path));
-      return true;
-    } catch (e) {
-      return false;
-    }
+    return contents
+      .get(path, { content: false })
+      .then(() => true)
+      .catch(() => false);
   }
 
   async getContext(path: string): Promise<Context> {
-    const factory = this._docManager.registry.getModelFactory('comment-file');
-    const preference = this._docManager.registry.getKernelPreference(
+    const docManager = this._docManager;
+    const factory = docManager.registry.getModelFactory('comment-file');
+    const preference = docManager.registry.getKernelPreference(
       path,
-      'comment-factory',
-      undefined
+      'comment-factory'
     );
 
-    let context: Context;
-    let isNew: boolean = false;
-    // @ts-ignore
-    context = this._docManager._findContext(path, 'comment-file') || null;
-    if (context == null) {
-      isNew = !(await this.pathExists(path));
+    const context: Context =
       // @ts-ignore
-      context = this._docManager._createContext(path, factory, preference);
-    }
+      docManager._findContext(path, 'comment-file') ??
+      // @ts-ignore
+      docManager._createContext(path, factory, preference);
 
-    void this._docManager.services.ready.then(
-      () => void context!.initialize(isNew)
-    );
-
+    await docManager.services.ready;
+    const exists = await this.pathExists(path);
+    void context.initialize(!exists);
     return context;
   }
 
-  private _onPathChanged(
+  private async _onPathChanged(
     _: DocumentRegistry.IContext<DocumentRegistry.IModel>,
     newPath: string
-  ): void {
+  ): Promise<void> {
     const commentContext = this._fileWidget?.context;
     if (commentContext == null) {
       return;
@@ -152,9 +140,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
     this._sourcePath = newPath;
 
-    void commentContext
-      .rename(hashString(newPath).toString() + '.comment')
-      .then(() => void commentContext.save());
+    await commentContext.rename(hashString(newPath).toString() + '.comment');
+    await commentContext.save();
   }
 
   async loadModel(
@@ -166,7 +153,12 @@ export class CommentPanel extends Panel implements ICommentPanel {
     }
 
     const sourcePath = context.path;
-    if (sourcePath === '') {
+    // Attempting to load model for a non-document widget
+    if (
+      sourcePath === '' ||
+      (this._sourcePath && this._sourcePath === sourcePath)
+    ) {
+      console.log('sourcePath is emtpy or same as old sourcePath; returning');
       return;
     }
 
@@ -176,42 +168,45 @@ export class CommentPanel extends Panel implements ICommentPanel {
 
     if (this._fileWidget != null) {
       Signal.disconnectReceiver(this._onPathChanged);
-      this.model!.changed.disconnect(this._boundOnChange);
+      this.model!.changed.disconnect(this._onChange, this);
       const oldWidget = this._fileWidget;
-      void oldWidget.context.save().then(() => oldWidget.dispose());
+      oldWidget.hide();
+      await oldWidget.context.save();
+      console.log('done saving', oldWidget);
+      oldWidget.dispose();
     }
 
     const path =
       this.pathPrefix + hashString(sourcePath).toString() + '.comment';
 
     const commentContext = await this.getContext(path);
+    await commentContext.ready;
 
-    void commentContext.ready.then(() => {
-      const content = new CommentFileWidget(
-        { context: commentContext },
-        this.renderer
-      );
-      context.pathChanged.connect(this._onPathChanged, this);
-      this._fileWidget = content;
-      this.addWidget(content);
+    const content = new CommentFileWidget(
+      { context: commentContext },
+      this.renderer
+    );
 
-      content.commentAdded.connect((_, widget) =>
-        this._commentAdded.emit(widget)
-      );
+    context.pathChanged.connect(this._onPathChanged, this);
+    this._fileWidget = content;
+    this.addWidget(content);
 
-      this.model!.changed.connect(this._boundOnChange);
+    content.commentAdded.connect((_, widget) =>
+      this._commentAdded.emit(widget)
+    );
 
-      const { name, color, icon } = this._localIdentity;
-      this.model!.awareness.setLocalStateField('user', {
-        name,
-        color,
-        icon
-      });
+    this.model!.changed.connect(this._onChange, this);
 
-      this.update();
-      content.initialize();
-      this._modelChanged.emit(content);
+    const { name, color, icon } = this._localIdentity;
+    this.model!.awareness.setLocalStateField('user', {
+      name,
+      color,
+      icon
     });
+
+    this.update();
+    content.initialize();
+    this._modelChanged.emit(content);
 
     this._loadingModel = false;
   }
@@ -430,10 +425,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
   private _pathPrefix: string = 'comments/';
   private _button = new NewCommentButton();
   private _loadingModel = false;
-  private _boundOnChange: (
-    _: CommentFileModel,
-    changes: CommentFileModel.IChange[]
-  ) => void;
   private _localIdentity: IIdentity;
   private _sourcePath: string | null = null;
 }

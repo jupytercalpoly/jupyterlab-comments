@@ -1,10 +1,10 @@
 import { CodeEditor } from '@jupyterlab/codeeditor';
-import { PartialJSONValue } from '@lumino/coreutils';
+import { PartialJSONObject, PartialJSONValue } from '@lumino/coreutils';
 
 /**
- * A type for the identity of a commentor.
+ * A type for the identity of a commenter.
  */
-export interface IIdentity {
+export interface IIdentity extends PartialJSONObject {
   id: number;
   name: string;
   color: string;
@@ -19,7 +19,7 @@ export interface ISelection extends IComment {
   end: CodeEditor.IPosition;
 }
 
-export interface IBaseComment {
+export interface IBaseComment extends PartialJSONObject {
   id: string;
   type: string;
   identity: IIdentity;

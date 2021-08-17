@@ -4,9 +4,9 @@ import {
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
 
-import { InputDialog, WidgetTracker } from '@jupyterlab/apputils';
+import { WidgetTracker } from '@jupyterlab/apputils';
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
-import { PartialJSONValue, Token } from '@lumino/coreutils';
+import { Token } from '@lumino/coreutils';
 import { YFile, YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
 import { getIdentity } from './utils';
@@ -24,7 +24,7 @@ import {
   TextSelectionCommentFactory
 } from './factory';
 import { Menu } from '@lumino/widgets';
-import { CommentFileModelFactory, ICommentOptions } from './model';
+import { CommentFileModelFactory } from './model';
 import { ICellComment, ITextSelectionComment } from './commentformat';
 import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
 
@@ -34,6 +34,7 @@ namespace CommandIDs {
   export const editComment = 'jl-comments:edit-comment';
   export const replyToComment = 'jl-comments:reply-to-comment';
   export const addNotebookComment = 'jl-comments:add-notebook-comment';
+  export const save = 'jl-comments:save';
 }
 
 const ICommentRegistry = new Token<ICommentRegistry>(
@@ -452,6 +453,11 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       panel.scrollToComment(comment.id);
     });
 
+    app.contextMenu.addItem({
+      command: CommandIDs.save,
+      selector: '.jc-CommentPanel'
+    });
+
     return panel;
   }
 };
@@ -461,44 +467,16 @@ function addCommands(
   commentTracker: CommentTracker,
   panel: ICommentPanel
 ): void {
-  app.commands.addCommand(CommandIDs.addComment, {
-    label: 'Add Comment',
-    execute: async args => {
-      const model = panel.model;
-      if (model == null) {
-        return;
-      }
-      if (!('target' in args && args.target != null)) {
+  app.commands.addCommand(CommandIDs.save, {
+    label: 'Save Comments',
+    execute: () => {
+      const fileWidget = panel.fileWidget;
+      if (fileWidget == null) {
         return;
       }
 
-      void InputDialog.getText({
-        title: 'Enter Comment'
-      }).then(value => {
-        if (value.value != null) {
-          const { target, type, source } = args;
-          let comment: ICommentOptions;
-          if (source != null) {
-            comment = {
-              type: type as string,
-              text: value.value,
-              identity: getIdentity(model.awareness),
-              source
-            };
-          } else if (target != null) {
-            comment = {
-              type: type as string,
-              text: value.value,
-              identity: getIdentity(model.awareness),
-              target: target as PartialJSONValue
-            };
-          } else {
-            return;
-          }
-
-          model.addComment(comment);
-        }
-      });
+      void fileWidget.context.save();
+      console.log('saved');
     }
   });
 
