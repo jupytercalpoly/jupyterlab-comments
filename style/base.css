@@ -350,3 +350,12 @@
   width: 120px;
   background-color: red;
 }
+
+.jc-DirtyIndicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--jp-ui-font-color2);
+  margin-left: 8px;
+}

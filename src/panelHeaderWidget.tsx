@@ -11,6 +11,9 @@ import { editIcon, refreshIcon, saveIcon } from '@jupyterlab/ui-components';
 import { ISignal, Signal } from '@lumino/signaling';
 import { ILabShell } from '@jupyterlab/application';
 import { CommentPanel } from './panel';
+import { IChangedArgs } from '@jupyterlab/coreutils';
+import { CommentFileWidget } from './widget';
+import { CommentFileModel } from './model';
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
  */
@@ -22,6 +25,56 @@ type IdentityProps = {
   awareness: Awareness | undefined;
   panel: CommentPanel;
 };
+
+type FileTitleProps = {
+  panel: CommentPanel;
+};
+
+function FileTitle(props: FileTitleProps): JSX.Element {
+  const panel = props.panel;
+
+  const [isDirty, SetIsDirty] = React.useState(panel.model?.dirty ?? false);
+  const [tooltip, SetTooltip] = React.useState(
+    panel.fileWidget?.context.path ?? ''
+  );
+  const [filename, SetFilename] = React.useState(panel.sourcePath ?? '');
+
+  const dirtySignalHandler = (_: any, change: IChangedArgs<any>): void => {
+    if (change.name === 'dirty') {
+      SetIsDirty(change.newValue);
+    }
+  };
+
+  const modelChangedHandler = (
+    _: any,
+    widget: CommentFileWidget | undefined
+  ): void => {
+    Signal.disconnectAll(dirtySignalHandler);
+
+    SetTooltip(widget?.context.path ?? '');
+    SetFilename(panel.sourcePath ?? '');
+
+    if (widget == null) {
+      return;
+    }
+
+    const model = widget.context.model as CommentFileModel;
+    model.stateChanged.connect(dirtySignalHandler);
+  };
+
+  React.useEffect(() => {
+    panel.modelChanged.connect(modelChangedHandler);
+
+    return () => void panel.modelChanged.disconnect(modelChangedHandler);
+  });
+
+  return (
+    <div title={tooltip}>
+      <span className="jc-panelHeader-filename">{filename}</span>
+      {isDirty && <div className="jc-DirtyIndicator" />}
+    </div>
+  );
+}
 
 function UserIdentity(props: IdentityProps): JSX.Element {
   const { awareness, panel } = props;
@@ -115,18 +168,7 @@ export class PanelHeader extends ReactWidget {
               <UserIdentity awareness={this._awareness} panel={this._panel} />
             )}
           </UseSignal>
-          <UseSignal signal={this._panel.modelChanged}>
-            {() => {
-              const text = this._panel.sourcePath ?? '';
-              const tooltip = this._panel.fileWidget?.context.path ?? '';
-
-              return (
-                <p className="jc-panelHeader-filename" title={tooltip}>
-                  {text}
-                </p>
-              );
-            }}
-          </UseSignal>
+          <FileTitle panel={this._panel} />
         </div>
 
         <div className="jc-panelHeader-right">
