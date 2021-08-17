@@ -2,13 +2,13 @@
 
 ![Github Actions Status](https://github.com/jupytercalpoly/jupyterlab-comments/workflows/Build/badge.svg)[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupytercalpoly/jupyterlab-comments/main?urlpath=lab)
 
-Chat and comment in JupyterLab.
+Comment on files and notebooks in JupyterLab
 
 Extension is currently pre-alpha status.
 
 ## Requirements
 
-- JupyterLab >= 3.1.0b0
+- JupyterLab >= 3.1.3
 
 ## Contributing
 
