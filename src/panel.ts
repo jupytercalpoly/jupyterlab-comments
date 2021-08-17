@@ -150,6 +150,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
       return;
     }
 
+    this._sourcePath = newPath;
+
     void commentContext
       .rename(hashString(newPath).toString() + '.comment')
       .then(() => void commentContext.save());
@@ -167,6 +169,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
     if (sourcePath === '') {
       return;
     }
+
+    this._sourcePath = sourcePath;
 
     this._loadingModel = true;
 
@@ -333,6 +337,10 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this._pathPrefix = newValue;
   }
 
+  get sourcePath(): string | null {
+    return this._sourcePath;
+  }
+
   mockComment(
     options: CommentFileWidget.IMockCommentOptions,
     index: number
@@ -427,6 +435,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
     changes: CommentFileModel.IChange[]
   ) => void;
   private _localIdentity: IIdentity;
+  private _sourcePath: string | null = null;
 }
 
 export namespace CommentPanel {

@@ -6,13 +6,10 @@ import { getIdentity, setIdentityName } from './utils';
 
 import { Awareness } from 'y-protocols/awareness';
 
-import { CommentsHubIcon } from './icons';
-
-import { caretDownEmptyThinIcon, editIcon } from '@jupyterlab/ui-components';
+import { editIcon, refreshIcon, saveIcon } from '@jupyterlab/ui-components';
 
 import { ISignal, Signal } from '@lumino/signaling';
 import { ILabShell } from '@jupyterlab/application';
-import { DocumentWidget } from '@jupyterlab/docregistry';
 import { CommentPanel } from './panel';
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
@@ -86,46 +83,66 @@ function UserIdentity(props: IdentityProps): JSX.Element {
 export class PanelHeader extends ReactWidget {
   constructor(options: PanelHeader.IOptions) {
     super();
-    const { shell, panel } = options;
-    this._shell = shell;
+    const { panel } = options;
     this._panel = panel;
     this.addClass('jc-panelHeader');
   }
 
   render(): ReactRenderElement {
+    const save = () => {
+      const fileWidget = this._panel.fileWidget;
+      if (fileWidget == null) {
+        return;
+      }
+
+      void fileWidget.context.save();
+    };
+
+    const refresh = () => {
+      const fileWidget = this._panel.fileWidget;
+      if (fileWidget == null) {
+        return;
+      }
+
+      fileWidget.initialize();
+    };
+
     return (
-      <>
+      <React.Fragment>
         <div className="jc-panelHeader-left">
           <UseSignal signal={this._renderNeeded}>
             {() => (
               <UserIdentity awareness={this._awareness} panel={this._panel} />
             )}
           </UseSignal>
-          <UseSignal signal={this._shell.currentChanged}>
-            {(_, change) => {
-              const docWidget = change?.newValue;
-              const text =
-                docWidget instanceof DocumentWidget
-                  ? docWidget.context.path
-                  : '';
+          <UseSignal signal={this._panel.modelChanged}>
+            {() => {
+              const text = this._panel.sourcePath ?? '';
+              const tooltip = this._panel.fileWidget?.context.path ?? '';
 
-              return <p className="jc-panelHeader-filename">{text}</p>;
+              return (
+                <p className="jc-panelHeader-filename" title={tooltip}>
+                  {text}
+                </p>
+              );
             }}
           </UseSignal>
         </div>
 
         <div className="jc-panelHeader-right">
-          <div className="jc-panelHeader-dropdown">
-            <p>All</p>
-            <div>
-              <caretDownEmptyThinIcon.react />
-            </div>
+          {/* Inline style added to align icons */}
+          <div
+            title="Save comments"
+            onClick={save}
+            style={{ position: 'relative', bottom: '2px' }}
+          >
+            <saveIcon.react className="jc-Button" />
           </div>
-          <div>
-            <CommentsHubIcon.react />
+          <div title="Refresh comments" onClick={refresh}>
+            <refreshIcon.react className="jc-Button" />
           </div>
         </div>
-      </>
+      </React.Fragment>
     );
   }
 
@@ -145,7 +162,6 @@ export class PanelHeader extends ReactWidget {
   }
 
   private _awareness: Awareness | undefined;
-  private _shell: ILabShell;
   private _panel: CommentPanel;
   private _renderNeeded = new Signal<this, void>(this);
 }
