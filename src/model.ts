@@ -58,7 +58,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
       comments.push(value as any as IComment[]);
     });
 
-    this._contentChanged.emit();
+    this._signalContentChange();
   }
 
   /**
@@ -109,7 +109,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
       comments.delete(index);
       comments.insert(index, [comment]);
     });
-    this._contentChanged.emit();
+    this._signalContentChange();
   }
 
   /**
@@ -149,7 +149,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
 
     this.comments.insert(index, [comment]);
     // Delta emitted by listener
-    this._contentChanged.emit();
+    this._signalContentChange();
   }
 
   /**
@@ -163,7 +163,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
 
     this.comments.push([comment]);
     // Delta emitted by listener
-    this._contentChanged.emit();
+    this._signalContentChange();
   }
 
   /**
@@ -209,7 +209,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
 
     this.comments.delete(loc.index);
     // Delta emitted by listener
-    this._contentChanged.emit();
+    this._signalContentChange();
   }
 
   /**
@@ -432,6 +432,11 @@ export class CommentFileModel implements DocumentRegistry.IModel {
       newValue,
       name
     });
+  }
+
+  private _signalContentChange(): void {
+    this.dirty = true;
+    this._contentChanged.emit();
   }
 
   // These are never used--just here to satisfy the interface requirements.

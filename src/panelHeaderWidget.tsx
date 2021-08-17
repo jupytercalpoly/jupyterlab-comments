@@ -6,14 +6,14 @@ import { getIdentity, setIdentityName } from './utils';
 
 import { Awareness } from 'y-protocols/awareness';
 
-import { CommentsHubIcon } from './icons';
-
-import { caretDownEmptyThinIcon, editIcon } from '@jupyterlab/ui-components';
+import { editIcon, refreshIcon, saveIcon } from '@jupyterlab/ui-components';
 
 import { ISignal, Signal } from '@lumino/signaling';
 import { ILabShell } from '@jupyterlab/application';
-import { DocumentWidget } from '@jupyterlab/docregistry';
 import { CommentPanel } from './panel';
+import { IChangedArgs } from '@jupyterlab/coreutils';
+import { CommentFileWidget } from './widget';
+import { CommentFileModel } from './model';
 /**
  * This type comes from @jupyterlab/apputils/vdom.ts but isn't exported.
  */
@@ -25,6 +25,56 @@ type IdentityProps = {
   awareness: Awareness | undefined;
   panel: CommentPanel;
 };
+
+type FileTitleProps = {
+  panel: CommentPanel;
+};
+
+function FileTitle(props: FileTitleProps): JSX.Element {
+  const panel = props.panel;
+
+  const [isDirty, SetIsDirty] = React.useState(panel.model?.dirty ?? false);
+  const [tooltip, SetTooltip] = React.useState(
+    panel.fileWidget?.context.path ?? ''
+  );
+  const [filename, SetFilename] = React.useState(panel.sourcePath ?? '');
+
+  const dirtySignalHandler = (_: any, change: IChangedArgs<any>): void => {
+    if (change.name === 'dirty') {
+      SetIsDirty(change.newValue);
+    }
+  };
+
+  const modelChangedHandler = (
+    _: any,
+    widget: CommentFileWidget | undefined
+  ): void => {
+    Signal.disconnectAll(dirtySignalHandler);
+
+    SetTooltip(widget?.context.path ?? '');
+    SetFilename(panel.sourcePath ?? '');
+
+    if (widget == null) {
+      return;
+    }
+
+    const model = widget.context.model as CommentFileModel;
+    model.stateChanged.connect(dirtySignalHandler);
+  };
+
+  React.useEffect(() => {
+    panel.modelChanged.connect(modelChangedHandler);
+
+    return () => void panel.modelChanged.disconnect(modelChangedHandler);
+  });
+
+  return (
+    <div title={tooltip}>
+      <span className="jc-panelHeader-filename">{filename}</span>
+      {isDirty && <div className="jc-DirtyIndicator" />}
+    </div>
+  );
+}
 
 function UserIdentity(props: IdentityProps): JSX.Element {
   const { awareness, panel } = props;
@@ -86,46 +136,55 @@ function UserIdentity(props: IdentityProps): JSX.Element {
 export class PanelHeader extends ReactWidget {
   constructor(options: PanelHeader.IOptions) {
     super();
-    const { shell, panel } = options;
-    this._shell = shell;
+    const { panel } = options;
     this._panel = panel;
     this.addClass('jc-panelHeader');
   }
 
   render(): ReactRenderElement {
+    const save = () => {
+      const fileWidget = this._panel.fileWidget;
+      if (fileWidget == null) {
+        return;
+      }
+
+      void fileWidget.context.save();
+    };
+
+    const refresh = () => {
+      const fileWidget = this._panel.fileWidget;
+      if (fileWidget == null) {
+        return;
+      }
+
+      fileWidget.initialize();
+    };
+
     return (
-      <>
+      <React.Fragment>
         <div className="jc-panelHeader-left">
           <UseSignal signal={this._renderNeeded}>
             {() => (
               <UserIdentity awareness={this._awareness} panel={this._panel} />
             )}
           </UseSignal>
-          <UseSignal signal={this._shell.currentChanged}>
-            {(_, change) => {
-              const docWidget = change?.newValue;
-              const text =
-                docWidget instanceof DocumentWidget
-                  ? docWidget.context.path
-                  : '';
-
-              return <p className="jc-panelHeader-filename">{text}</p>;
-            }}
-          </UseSignal>
+          <FileTitle panel={this._panel} />
         </div>
 
         <div className="jc-panelHeader-right">
-          <div className="jc-panelHeader-dropdown">
-            <p>All</p>
-            <div>
-              <caretDownEmptyThinIcon.react />
-            </div>
+          {/* Inline style added to align icons */}
+          <div
+            title="Save comments"
+            onClick={save}
+            style={{ position: 'relative', bottom: '2px' }}
+          >
+            <saveIcon.react className="jc-Button" />
           </div>
-          <div>
-            <CommentsHubIcon.react />
+          <div title="Refresh comments" onClick={refresh}>
+            <refreshIcon.react className="jc-Button" />
           </div>
         </div>
-      </>
+      </React.Fragment>
     );
   }
 
@@ -145,7 +204,6 @@ export class PanelHeader extends ReactWidget {
   }
 
   private _awareness: Awareness | undefined;
-  private _shell: ILabShell;
   private _panel: CommentPanel;
   private _renderNeeded = new Signal<this, void>(this);
 }
