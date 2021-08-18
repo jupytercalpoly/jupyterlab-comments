@@ -97,6 +97,34 @@
   outline: 1px solid var(--jp-ui-font-color3);
 }
 
+.jc-SubmitButtons {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  /* margin-top: 10px; */
+  /* margin-bottom: 15px; */
+  padding: 5px;
+}
+
+.jc-SubmitButtons > * {
+  padding: 2px;
+  border: 1px solid #64B5F6;
+  /* border-color: black; */
+  border-radius: 8px;
+  font-size: small;
+  width: 66px;
+  text-align: center;
+}
+
+.jc-SubmitButton {
+  background-color:  #64B5F6;
+}
+
+.jc-SubmitButtonInactive {
+  background-color:  #adafb0;
+}
+
 .jc-Reply {
   white-space: pre-wrap;
   border-top: var(--jc-comment-border);
