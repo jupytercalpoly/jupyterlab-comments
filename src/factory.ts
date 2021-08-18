@@ -311,7 +311,6 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
     target?: CodeEditorWrapper
   ): CommentWidget<CodeEditorWrapper> | null {
     const wrapper = target ?? this.targetFromJSON(comment.target);
-    console.log('tracker', this._tracker);
     if (wrapper == null) {
       console.warn('no valid selection for: ', comment);
       return null;
