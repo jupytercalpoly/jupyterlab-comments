@@ -418,7 +418,6 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   }
 
   get contentChanged(): ISignal<this, void> {
-    this.dirty = true;
     return this._contentChanged;
   }
 

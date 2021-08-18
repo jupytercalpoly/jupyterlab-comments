@@ -142,15 +142,6 @@ export class PanelHeader extends ReactWidget {
   }
 
   render(): ReactRenderElement {
-    const save = () => {
-      const fileWidget = this._panel.fileWidget;
-      if (fileWidget == null) {
-        return;
-      }
-
-      void fileWidget.context.save();
-    };
-
     const refresh = () => {
       const fileWidget = this._panel.fileWidget;
       if (fileWidget == null) {
@@ -158,6 +149,16 @@ export class PanelHeader extends ReactWidget {
       }
 
       fileWidget.initialize();
+    };
+
+    const save = () => {
+      const fileWidget = this._panel.fileWidget;
+      if (fileWidget == null) {
+        return;
+      }
+
+      void fileWidget.context.save();
+      refresh();
     };
 
     return (
