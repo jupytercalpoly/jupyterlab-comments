@@ -1,7 +1,7 @@
 import { Menu, Panel, Widget } from '@lumino/widgets';
 import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
-import { CommentFileWidget, CommentWidget, MockCommentWidget } from './widget';
+import { CommentFileWidget, CommentWidget } from './widget';
 import { YDocument } from '@jupyterlab/shared-models';
 import { ISignal, Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
@@ -58,7 +58,7 @@ export interface ICommentPanel extends Panel {
   mockComment: (
     options: CommentFileWidget.IMockCommentOptions,
     index: number
-  ) => MockCommentWidget<any> | undefined;
+  ) => CommentWidget<any> | undefined;
 }
 
 export class CommentPanel extends Panel implements ICommentPanel {
@@ -337,7 +337,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
   mockComment(
     options: CommentFileWidget.IMockCommentOptions,
     index: number
-  ): MockCommentWidget<any> | undefined {
+  ): CommentWidget<any> | undefined {
     const model = this.model;
     if (model == null) {
       return;
@@ -359,11 +359,11 @@ export class CommentPanel extends Panel implements ICommentPanel {
       comment = factory.createComment({ ...options, text: '' });
     }
 
-    const widget = new MockCommentWidget({
+    const widget = new CommentWidget({
       comment,
-      factory,
       model,
-      target: source
+      target: source,
+      isMock: true
     });
 
     this.fileWidget!.insertWidget(index, widget);

@@ -5,7 +5,6 @@ import { IComment, IIdentity, IReply } from './commentformat';
 import { getIdentity } from './utils';
 import { Menu, Panel } from '@lumino/widgets';
 import { ISignal, Signal } from '@lumino/signaling';
-import { ACommentFactory } from './factory';
 import { CommentFileModel } from './model';
 import { Context } from '@jupyterlab/docregistry';
 import { Message } from '@lumino/messaging';
@@ -45,7 +44,7 @@ type CommentProps = {
   className?: string;
   editable?: boolean;
   target?: any;
-  factory: ACommentFactory;
+  preview?: string;
   isAttached: boolean;
 };
 
@@ -57,8 +56,7 @@ type CommentWithRepliesProps = {
   editID: string;
   activeID: string;
   className?: string;
-  target?: any;
-  factory: ACommentFactory;
+  preview?: string;
 };
 
 type CommentWrapperProps = {
@@ -69,12 +67,6 @@ type CommentWrapperProps = {
 type ReplyAreaProps = {
   hidden: boolean;
   className?: string;
-};
-
-type PreviewProps = {
-  comment: IComment;
-  target: any;
-  factory: ACommentFactory;
 };
 
 type ReplyProps = {
@@ -91,19 +83,6 @@ function Jdiv(props: any): JSX.Element {
 
 function Jspan(props: any): JSX.Element {
   return <span {...props}>{props.children}</span>;
-}
-
-function JCPreview(props: PreviewProps): JSX.Element {
-  const { comment, target, factory } = props;
-
-  let previewText = factory.getPreviewText(comment, target);
-
-  return (
-    <div className="jc-Preview">
-      <div className="jc-PreviewBar" />
-      <span className="jc-PreviewText">{previewText}</span>
-    </div>
-  );
 }
 
 function ReactMarkdownRenderer(props: ReactMarkdownRendererProps): JSX.Element {
@@ -158,15 +137,10 @@ function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
 }
 
 function JCComment(props: CommentProps): JSX.Element {
-  const comment = props.comment;
-  const className = props.className || '';
-  const editable = props.editable;
-  const target = props.target;
-  const factory = props.factory;
+  const { comment, editable, preview, renderer, isAttached } = props;
+  const className = props.className ?? '';
+  // TODO: Replace `UserIcons[0]` with an error icon (maybe just black circle?)
   const icon = UserIcons[comment.identity.icon] ?? UserIcons[0];
-  const renderer = props.renderer;
-  // const commentWidget = props.commentWidget;
-  const isAttached = props.isAttached;
 
   return (
     <Jdiv
@@ -193,8 +167,11 @@ function JCComment(props: CommentProps): JSX.Element {
 
       <span className="jc-Time">{comment.time}</span>
 
-      {target != null && (
-        <JCPreview comment={comment} target={target} factory={factory} />
+      {preview != null && (
+        <div className="jc-Preview">
+          <div className="jc-PreviewBar" />
+          <span className="jc-PreviewText">{preview}</span>
+        </div>
       )}
 
       <Jdiv
@@ -272,14 +249,8 @@ function JCReply(props: ReplyProps): JSX.Element {
 }
 
 function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
-  const comment = props.comment;
-  const className = props.className || '';
-  const editID = props.editID;
-  const target = props.target;
-  const factory = props.factory;
-  const collapsed = props.collapsed;
-  const renderer = props.renderer;
-  const isAttached = props.isAttached;
+  const { comment, editID, collapsed, renderer, isAttached, preview } = props;
+  const className = props.className ?? '';
 
   let RepliesComponent = (): JSX.Element => {
     if (!collapsed || comment.replies.length < 4) {
@@ -332,8 +303,7 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
         isAttached={isAttached}
         editable={editID === comment.id}
         renderer={renderer}
-        target={target}
-        factory={factory}
+        preview={preview}
       />
       <RepliesComponent />
     </Jdiv>
@@ -374,56 +344,73 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
         renderer={commentWidget.renderer}
         editID={commentWidget.editID}
         activeID={commentWidget.activeID}
-        target={commentWidget.target}
-        factory={commentWidget.factory}
         collapsed={commentWidget.collapsed}
+        preview={commentWidget.getPreview()}
       />
       <JCReplyArea hidden={commentWidget.replyAreaHidden} />
     </div>
   );
 }
 
-export interface ICommentWidget<T> {
+export interface ICommentWidget<T, C extends IComment = IComment> {
   revealReply: () => void;
   openEditActive: () => void;
   editActive: (text: string) => void;
   deleteActive: () => void;
-  comment: IComment | undefined;
+  comment: C;
   target: T;
-  replies: IReply[] | undefined;
+  replies: IReply[];
   commentID: string;
-  identity: IIdentity | undefined;
-  text: string | undefined;
-  type: string | undefined;
+  identity: IIdentity;
+  text: string;
+  type: string;
   menu: Menu | undefined;
   replyAreaHidden: boolean;
   activeID: string;
   renderer: IRenderMimeRegistry;
   editID: string;
-  factory: ACommentFactory;
   renderNeeded: ISignal<this, undefined>;
   handleEvent: (event: React.SyntheticEvent | Event) => void;
   collapsed: boolean;
+  isMock: boolean;
 }
 
 /**
  * A React widget that can render a comment and its replies.
  */
-export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
-  constructor(options: CommentWidget.IOptions<T>) {
+export class CommentWidget<T, C extends IComment = IComment>
+  extends ReactWidget
+  implements ICommentWidget<T>
+{
+  constructor(options: CommentWidget.IOptions<T, C>) {
     super();
 
-    const { id, target, model, factory } = options;
-    this._commentID = id;
-    this._activeID = id;
+    const { target, model, comment, isMock } = options;
+    this.id = comment.id;
+    this._commentID = comment.id;
+    this._activeID = comment.id;
     this._target = target;
-    this._factory = factory;
     this._model = model;
-
-    this.id = id;
+    this._comment = comment;
+    this._isMock = isMock ?? false;
 
     this.addClass('jc-CommentWidget');
     this.node.tabIndex = 0;
+  }
+
+  protected onAfterAttach(msg: Message): void {
+    super.onAfterAttach(msg);
+    if (this.isMock) {
+      this.openEditActive();
+    }
+  }
+
+  toJSON(): PartialJSONValue {
+    return this.comment as unknown as PartialJSONValue;
+  }
+
+  getPreview(): string | undefined {
+    return;
   }
 
   handleEvent(event: React.SyntheticEvent | Event): void {
@@ -503,7 +490,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
    * Scrolls to the comment's target, if it exists
    */
   private _scrollToTarget(): void {
-    const element = this.factory.getElement(this.comment!);
+    const element = this.element;
     if (element != null) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
@@ -537,7 +524,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
   protected _handleDropdownClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
     const menu = this.menu;
-    if (menu != null) {
+    if (menu != null && !this.isMock) {
       menu.open(event.pageX, event.pageY);
     }
   }
@@ -662,7 +649,13 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       case 'Escape':
         event.preventDefault();
         event.stopPropagation();
-        target.innerText = this.text!;
+
+        if (this.isMock) {
+          this.dispose();
+          break;
+        }
+
+        target.innerText = this.text;
         this.editID = '';
         target.blur();
         break;
@@ -670,19 +663,60 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
         if (event.shiftKey) {
           break;
         }
+
         event.preventDefault();
         event.stopPropagation();
+
+        if (this.isMock) {
+          if (target.innerText === '') {
+            this.dispose();
+          } else {
+            this.populate(target.innerText);
+          }
+          break;
+        }
+
         if (target.innerText === '') {
           target.innerText = this.text!;
         } else {
           this.editActive(target.innerText);
         }
+
         this.editID = '';
         target.blur();
         break;
       default:
         break;
     }
+  }
+
+  populate(text: string): void {
+    if (!this.isMock) {
+      return;
+    }
+
+    let index = 0;
+    let node = this.node as ChildNode;
+    while (node.previousSibling != null) {
+      index++;
+      node = node.previousSibling;
+    }
+
+    this.hide();
+
+    const { target, identity, type } = this.comment;
+
+    this.model.insertComment(
+      {
+        text,
+        identity,
+        type,
+        target
+      },
+      index
+    );
+
+    this.dispose();
   }
 
   render(): ReactRenderElement {
@@ -759,8 +793,13 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
   /**
    * The comment object being rendered by the widget.
    */
-  get comment(): IComment | undefined {
-    return this.model.getComment(this.commentID)?.comment;
+  get comment(): C {
+    if (this.isMock) {
+      return this._comment;
+    }
+
+    const loc = this.model.getComment(this.commentID);
+    return loc ? (loc.comment as C) : this._comment;
   }
 
   /**
@@ -773,29 +812,29 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
   /**
    * Information about the author of the comment.
    */
-  get identity(): IIdentity | undefined {
-    return this.comment?.identity;
+  get identity(): IIdentity {
+    return this.comment.identity;
   }
 
   /**
    * The type of the comment.
    */
-  get type(): string | undefined {
-    return this.comment?.type;
+  get type(): string {
+    return this.comment.type;
   }
 
   /**
    * The plain body text of the comment.
    */
-  get text(): string | undefined {
-    return this.comment?.text;
+  get text(): string {
+    return this.comment.text;
   }
 
   /**
    * An array of replies to the comment.
    */
-  get replies(): IReply[] | undefined {
-    return this.comment?.replies;
+  get replies(): IReply[] {
+    return this.comment.replies;
   }
 
   /**
@@ -865,10 +904,6 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     }
   }
 
-  get factory(): ACommentFactory {
-    return this._factory;
-  }
-
   get menu(): Menu | undefined {
     return this.model.commentMenu;
   }
@@ -877,25 +912,37 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     return (this.parent as CommentFileWidget).renderer;
   }
 
-  private _model: CommentFileModel;
+  get isMock(): boolean {
+    return this._isMock;
+  }
+  set isMock(newVal: boolean) {
+    this._isMock = newVal;
+  }
+
+  get element(): HTMLElement | undefined {
+    return;
+  }
+
+  protected _model: CommentFileModel;
+  protected _comment: C;
   private _commentID: string;
   private _target: T;
   private _activeID: string;
   private _replyAreaHidden: boolean = true;
   private _editID: string = '';
-  private _factory: ACommentFactory;
   private _renderNeeded: Signal<this, undefined> = new Signal<this, undefined>(
     this
   );
   private _collapsed: boolean = true;
+  private _isMock: boolean;
 }
 
 export namespace CommentWidget {
-  export interface IOptions<T> {
-    id: string;
+  export interface IOptions<T, C extends IComment = IComment> {
     model: CommentFileModel;
+    comment: C;
     target: T;
-    factory: ACommentFactory;
+    isMock?: boolean;
   }
 
   /**
@@ -945,103 +992,6 @@ export namespace CommentWidget {
 
     return isEventArea(area) ? area : 'other';
   }
-}
-
-export namespace MockCommentWidget {
-  export interface IOptions<T> {
-    model: CommentFileModel;
-    factory: ACommentFactory;
-    target: T;
-    comment: IComment;
-  }
-}
-
-export class MockCommentWidget<T> extends CommentWidget<T> {
-  constructor(options: MockCommentWidget.IOptions<T>) {
-    super({ ...options, id: options.comment.id });
-
-    const comment = options.comment;
-
-    this._comment = comment;
-
-    const commands = this.model.commentMenu?.commands;
-    if (commands == null) {
-      return;
-    }
-
-    this._menu = new Menu({ commands });
-  }
-
-  protected onAfterAttach(msg: Message): void {
-    super.onAfterAttach(msg);
-    this.openEditActive();
-  }
-
-  protected onAfterDetach(msg: Message): void {
-    super.onAfterDetach(msg);
-  }
-
-  populate(text: string): void {
-    let index = 0;
-    let node = this.node as ChildNode;
-    while (node.previousSibling != null) {
-      index++;
-      node = node.previousSibling;
-    }
-
-    this.hide();
-
-    const { target, identity, type } = this.comment;
-
-    this.model.insertComment(
-      {
-        text,
-        identity,
-        type,
-        target
-      },
-      index
-    );
-
-    this.dispose();
-  }
-
-  protected _handleBodyKeydown(event: React.KeyboardEvent): void {
-    if (this.editID === '') {
-      return;
-    }
-
-    const target = event.target as HTMLDivElement;
-
-    switch (event.key) {
-      case 'Escape':
-        this.dispose();
-        break;
-      case 'Enter':
-        if (event.shiftKey) {
-          break;
-        }
-        if (target.innerText === '') {
-          this.dispose();
-        } else {
-          this.populate(target.innerText);
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  get comment(): IComment {
-    return this._comment;
-  }
-
-  get menu(): Menu | undefined {
-    return this._menu;
-  }
-
-  private _comment: IComment;
-  private _menu: Menu | undefined;
 }
 
 /**
