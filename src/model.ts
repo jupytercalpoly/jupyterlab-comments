@@ -47,9 +47,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   toJSON(): PartialJSONValue {
     return this.comments.map((comment: IComment) => {
       const factory = this.registry.getFactory(comment.type);
-      const json = factory!.toJSON(comment);
-      console.log('json', json);
-      return json;
+      return factory!.toJSON(comment);
     });
   }
 
@@ -59,7 +57,6 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   fromJSON(value: PartialJSONValue): void {
     this.ymodel.transact(() => {
       const comments = this.comments;
-      console.log('fromJSON: comments', comments);
       comments.delete(0, comments.length);
       comments.push(value as any as IComment[]);
     });

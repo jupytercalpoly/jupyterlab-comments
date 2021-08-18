@@ -158,7 +158,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
       sourcePath === '' ||
       (this._sourcePath && this._sourcePath === sourcePath)
     ) {
-      console.log('sourcePath is emtpy or same as old sourcePath; returning');
       return;
     }
 
@@ -172,7 +171,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
       const oldWidget = this._fileWidget;
       oldWidget.hide();
       await oldWidget.context.save();
-      console.log('done saving', oldWidget);
       oldWidget.dispose();
     }
 

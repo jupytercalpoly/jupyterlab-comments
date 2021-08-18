@@ -476,7 +476,6 @@ function addCommands(
       }
 
       void fileWidget.context.save();
-      console.log('saved');
     }
   });
 
