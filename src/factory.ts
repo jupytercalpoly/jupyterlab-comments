@@ -336,6 +336,38 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
     return widget;
   }
 
+  toJSON(comment: IComment): PartialJSONValue {
+    const wrapper = this.targetFromJSON(comment.target);
+    if (wrapper == null) {
+      return 'error: code editor wrapper not found';
+    }
+
+    const json = super.toJSON(comment);
+
+    const mark = this._marks.get(comment.id);
+    if (mark == null) {
+      console.warn(
+        'no mark found--serializing based on initial text selection position'
+      );
+      return json;
+    }
+
+    const range = mark.find();
+    if (range == null) {
+      console.warn(
+        'mark no longer exists in code editor--serializing based on initial text selection position'
+      );
+      return json;
+    }
+
+    const textSelectionComment = json as unknown as ICellSelectionComment;
+    const { from, to } = range as CodeMirror.MarkerRange;
+    textSelectionComment.target.start = Private.toCodeEditorPosition(from);
+    textSelectionComment.target.end = Private.toCodeEditorPosition(to);
+
+    return textSelectionComment as unknown as PartialJSONObject;
+  }
+
   targetToJSON(wrapper: CodeEditorWrapper): PartialJSONValue {
     let { start, end } = wrapper.editor.getSelection();
     if (
