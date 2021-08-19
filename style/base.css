@@ -71,9 +71,9 @@
   font-size: 0.833rem;
   outline: none;
   border: none;
-  /* appearance: none; */
-  /* -webkit-appearance: none; */
-  /* -moz-appearance: none; */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   background-color: transparent;
   white-space: pre-wrap;
   margin-top: var(--var-jc-linesep);
@@ -96,6 +96,31 @@
 .jc-Body:focus {
   outline: 1px solid var(--jp-ui-font-color3);
 }
+
+.jc-SubmitButtons {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+}
+
+.jc-SubmitButtons > * {
+  padding: 2px;
+  border: 1px solid #64B5F6;
+  border-radius: 8px;
+  font-size: small;
+  width: 66px;
+  text-align: center;
+}
+
+.jc-SubmitButton {
+  background-color:  #64B5F6;
+}
+
+/* .jc-SubmitButtonInactive {
+  background-color:  #adafb0;
+} */
 
 .jc-Reply {
   white-space: pre-wrap;

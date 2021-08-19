@@ -30,6 +30,10 @@ type JMarkdownRendererProps = {
   isAttached: boolean;
 };
 
+type SubmitButtonsProps = {
+  hidden: boolean | undefined;
+};
+
 type ReactMarkdownRendererProps = {
   source: string;
   latexTypesetter: IRenderMime.ILatexTypesetter | null;
@@ -106,6 +110,10 @@ function JCPreview(props: PreviewProps): JSX.Element {
   );
 }
 
+/**
+ * Generalizable React Component that hooks into the markdown renderer that jupyterlab provides
+ */ 
+
 function ReactMarkdownRenderer(props: ReactMarkdownRendererProps): JSX.Element {
   const {
     source,
@@ -143,6 +151,10 @@ function ReactMarkdownRenderer(props: ReactMarkdownRendererProps): JSX.Element {
   return renderElement;
 }
 
+/**
+ * JMarkdownRender calls the generalizable ReactMarkdownRenderer for our implementation
+ */
+
 function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
   const { registry, isAttached, text } = props;
   return (
@@ -157,6 +169,24 @@ function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
   );
 }
 
+/**
+ * SubmitButtons returns the set of buttons (submit and cancel) that a comment/reply uses to take in input
+ */
+
+function SubmitButtons(props: SubmitButtonsProps): JSX.Element {
+  const { hidden } = props;
+  return (
+    <Jdiv hidden={hidden} className="jc-SubmitButtons">
+      <Jdiv hidden={hidden} className="jc-SubmitButton" jcEventArea="submit">
+        Submit
+      </Jdiv>
+      <Jdiv hidden={hidden} className="jc-CancelButton" jcEventArea="cancel">
+        Cancel
+      </Jdiv>
+    </Jdiv>
+  );
+}
+
 function JCComment(props: CommentProps): JSX.Element {
   const comment = props.comment;
   const className = props.className || '';
@@ -165,7 +195,6 @@ function JCComment(props: CommentProps): JSX.Element {
   const factory = props.factory;
   const icon = UserIcons[comment.identity.icon] ?? UserIcons[0];
   const renderer = props.renderer;
-  // const commentWidget = props.commentWidget;
   const isAttached = props.isAttached;
 
   return (
@@ -214,6 +243,7 @@ function JCComment(props: CommentProps): JSX.Element {
           isAttached={isAttached}
         />
       </Jdiv>
+      <SubmitButtons hidden={!editable} />
     </Jdiv>
   );
 }
@@ -267,6 +297,7 @@ function JCReply(props: ReplyProps): JSX.Element {
           isAttached={isAttached}
         />
       </Jdiv>
+      <SubmitButtons hidden={!editable} />
     </Jdiv>
   );
 }
@@ -284,57 +315,71 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   let RepliesComponent = (): JSX.Element => {
     if (!collapsed || comment.replies.length < 4) {
       return (
-        <div className={'jc-Replies'}>
-          {comment.replies.map(reply => (
-            <JCReply
-              reply={reply}
-              isAttached={isAttached}
-              editable={editID === reply.id}
-              renderer={renderer}
-              key={reply.id}
-            />
-          ))}
-        </div>
+        <>
+          <JCComment
+            comment={comment}
+            isAttached={isAttached}
+            editable={editID === comment.id}
+            renderer={renderer}
+            target={target}
+            factory={factory}
+          />
+          <div className={'jc-Replies'}>
+            {comment.replies.map(reply => (
+              <JCReply
+                reply={reply}
+                isAttached={isAttached}
+                editable={editID === reply.id}
+                renderer={renderer}
+                key={reply.id}
+              />
+            ))}
+          </div>
+        </>
       );
     } else {
       return (
-        <div className={'jc-Replies'}>
-          <Jdiv
-            className="jc-Replies-breaker jc-mod-focus-border"
-            jcEventArea="collapser"
-          >
-            <div className="jc-Replies-breaker-left">expand thread</div>
-            <div className="jc-RepliesSpacer" />
-            <div className="jc-Replies-breaker-right">
-              <hr />
-              <hr />
-              <div className="jc-Replies-breaker-number jc-mod-focus-border">
-                {comment.replies.length - 1}
-              </div>
-            </div>
-          </Jdiv>
-          <JCReply
-            reply={comment.replies[comment.replies.length - 1]}
-            editable={editID === comment.replies[comment.replies.length - 1].id}
+        <>
+          <JCComment
+            comment={comment}
             isAttached={isAttached}
+            editable={editID === comment.id}
             renderer={renderer}
-            key={comment.replies[comment.replies.length - 1].id}
+            target={target}
+            factory={factory}
           />
-        </div>
+          <div className={'jc-Replies'}>
+            <Jdiv
+              className="jc-Replies-breaker jc-mod-focus-border"
+              jcEventArea="collapser"
+            >
+              <div className="jc-Replies-breaker-left">expand thread</div>
+              <div className="jc-RepliesSpacer" />
+              <div className="jc-Replies-breaker-right">
+                <hr />
+                <hr />
+                <div className="jc-Replies-breaker-number jc-mod-focus-border">
+                  {comment.replies.length - 1}
+                </div>
+              </div>
+            </Jdiv>
+            <JCReply
+              reply={comment.replies[comment.replies.length - 1]}
+              editable={
+                editID === comment.replies[comment.replies.length - 1].id
+              }
+              isAttached={isAttached}
+              renderer={renderer}
+              key={comment.replies[comment.replies.length - 1].id}
+            />
+          </div>
+        </>
       );
     }
   };
 
   return (
     <Jdiv className={'jc-CommentWithReplies ' + className}>
-      <JCComment
-        comment={comment}
-        isAttached={isAttached}
-        editable={editID === comment.id}
-        renderer={renderer}
-        target={target}
-        factory={factory}
-      />
       <RepliesComponent />
     </Jdiv>
   );
@@ -345,14 +390,16 @@ function JCReplyArea(props: ReplyAreaProps): JSX.Element {
   const className = props.className || '';
 
   return (
-    <Jdiv
-      className={'jc-ReplyInputArea jc-mod-focus-border' + className}
-      contentEditable={true}
-      hidden={hidden}
-      jcEventArea="reply"
-      onFocus={() => document.execCommand('selectAll', false, undefined)}
-      data-placeholder="reply"
-    />
+    <div hidden={hidden}>
+      <Jdiv
+        className={'jc-ReplyInputArea jc-mod-focus-border' + className}
+        contentEditable={true}
+        jcEventArea="reply"
+        onFocus={() => document.execCommand('selectAll', false, undefined)}
+        data-placeholder="reply"
+      />
+      <SubmitButtons hidden={hidden} />
+    </div>
   );
 }
 
@@ -460,6 +507,12 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       case 'collapser':
         this._handleCollapserClick(event);
         break;
+      case 'submit':
+        this._handleSubmitClick(event);
+        break;
+      case 'cancel':
+        this._handleCancelClick(event);
+        break;
       case 'none':
         break;
       default:
@@ -517,8 +570,73 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       this.node.focus();
     }
 
-    // this.editID = ""
     this._collapseOtherComments();
+  }
+
+  /**
+   * Handle a click on the submit button when commenting.
+   */
+  protected _handleSubmitClick(event: React.MouseEvent): void {
+    this._setClickFocus(event);
+    const target = event.target as HTMLDivElement;
+    event.preventDefault();
+    event.stopPropagation();
+    const element = target.parentNode!.previousSibling as HTMLDivElement;
+
+    if (element == null) {
+      return;
+    }
+
+    // Code to be added for the change in color when inactive
+    // if (element.textContent == ''){
+    //   target.className = 'jc-SubmitButtonInactive'
+    //   return;
+    // }
+    if (element.classList.contains('jc-ReplyInputArea')) {
+      //  reply
+      if (element.innerText == ''){
+        return;
+      }
+      this.model.addReply(
+        {
+          identity: getIdentity(this.model.awareness),
+          text: element.innerText
+        },
+        this.commentID
+      );
+      this.editID = '';
+      element.textContent = '';
+      this.replyAreaHidden = true;
+      return;
+    }
+
+    if (element.innerText === '') {
+      element.innerText = this.text!;
+    } else {
+      this.editActive(element.innerText);
+    }
+    this.editID = '';
+  }
+
+  /**
+   * Handle a click on the cancel button when commenting.
+   */
+  protected _handleCancelClick(event: React.MouseEvent): void {
+    this._setClickFocus(event);
+
+    const target = event.target as HTMLDivElement;
+    event.preventDefault();
+    event.stopPropagation();
+    const element = target.parentNode!.previousSibling as HTMLDivElement;
+    if (element == null) {
+      return;
+    }
+
+    if (element.classList.contains('jc-ReplyInputArea')) {
+      this.replyAreaHidden = true;
+    }
+    this.editID = '';
+    element.blur();
   }
 
   /**
@@ -576,7 +694,6 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
    */
   protected _handleBodyClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
-    // this.openEditActive();
   }
 
   /**
@@ -609,25 +726,25 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     } else if (event.key !== 'Enter') {
       return;
     } else if (event.shiftKey) {
-      return;
+      const target = event.target as HTMLDivElement;
+      event.preventDefault();
+      event.stopPropagation();
+      if (target.innerText == ''){
+        return;
+      }
+
+      this.model.addReply(
+        {
+          identity: getIdentity(this.model.awareness),
+          text: target.innerText
+        },
+        this.commentID
+      );
+
+      this.editID = ''
+      target.textContent = '';
+      this.replyAreaHidden = true;
     }
-
-    const target = event.target as HTMLDivElement;
-    event.preventDefault();
-    event.stopPropagation();
-
-    this.model.addReply(
-      {
-        identity: getIdentity(this.model.awareness),
-        text: target.innerText
-      },
-      this.commentID
-    );
-
-    // this.editID = ''
-
-    target.textContent = '';
-    this.replyAreaHidden = true;
   }
 
   /**
@@ -654,17 +771,16 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
         break;
       case 'Enter':
         if (event.shiftKey) {
-          break;
+          event.preventDefault();
+          event.stopPropagation();
+          if (target.innerText === '') {
+            target.innerText = this.text!;
+          } else {
+            this.editActive(target.innerText);
+          }
+          this.editID = '';
+          target.blur();
         }
-        event.preventDefault();
-        event.stopPropagation();
-        if (target.innerText === '') {
-          target.innerText = this.text!;
-        } else {
-          this.editActive(target.innerText);
-        }
-        this.editID = '';
-        target.blur();
         break;
       default:
         break;
@@ -894,15 +1010,24 @@ export namespace CommentWidget {
     | 'reply'
     | 'other'
     | 'none'
-    | 'collapser';
+    | 'collapser'
+    | 'submit'
+    | 'cancel';
 
   /**
    * Whether a string is a type of `EventArea`
    */
   export function isEventArea(input: string): input is EventArea {
-    return ['dropdown', 'body', 'user', 'reply', 'other', 'collapser'].includes(
-      input
-    );
+    return [
+      'dropdown',
+      'body',
+      'user',
+      'reply',
+      'other',
+      'collapser',
+      'submit',
+      'cancel'
+    ].includes(input);
   }
 
   /**
@@ -991,12 +1116,39 @@ export class MockCommentWidget<T> extends CommentWidget<T> {
 
     this.dispose();
   }
+  protected _handleSubmitClick(event: React.MouseEvent): void {
+    if (this.editID == '') {
+      return;
+    }
+    const target = event.target as HTMLDivElement;
+    event.preventDefault();
+    event.stopPropagation();
+    console.log(target.parentElement);
+    console.log(target.parentNode?.previousSibling);
+    const element = target.parentNode!.previousSibling as HTMLDivElement;
+
+    if (element == null) {
+      return;
+    }
+    if (element.innerText === '') {
+      this.dispose();
+    } else {
+      this.populate(element.innerText);
+    }
+    this.editID = '';
+  }
+
+  /**
+   * Handle a click on the cancel button when commenting.
+   */
+  protected _handleCancelClick(event: React.MouseEvent): void {
+    this.dispose();
+  }
 
   protected _handleBodyKeydown(event: React.KeyboardEvent): void {
     if (this.editID === '') {
       return;
     }
-
     const target = event.target as HTMLDivElement;
 
     switch (event.key) {
@@ -1005,11 +1157,9 @@ export class MockCommentWidget<T> extends CommentWidget<T> {
         break;
       case 'Enter':
         if (event.shiftKey) {
-          break;
-        }
-        if (target.innerText === '') {
-          this.dispose();
-        } else {
+          if (target.innerText === ''){
+            this.dispose()
+          }
           this.populate(target.innerText);
         }
         break;
