@@ -110,6 +110,10 @@ function JCPreview(props: PreviewProps): JSX.Element {
   );
 }
 
+/**
+ * Generalizable React Component that hooks into the markdown renderer that jupyterlab provides
+ */ 
+
 function ReactMarkdownRenderer(props: ReactMarkdownRendererProps): JSX.Element {
   const {
     source,
@@ -147,6 +151,10 @@ function ReactMarkdownRenderer(props: ReactMarkdownRendererProps): JSX.Element {
   return renderElement;
 }
 
+/**
+ * JMarkdownRender calls the generalizable ReactMarkdownRenderer for our implementation
+ */
+
 function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
   const { registry, isAttached, text } = props;
   return (
@@ -161,6 +169,10 @@ function JMarkdownRenderer(props: JMarkdownRendererProps): JSX.Element {
   );
 }
 
+/**
+ * SubmitButtons returns the set of buttons (submit and cancel) that a comment/reply uses to take in input
+ */
+
 function SubmitButtons(props: SubmitButtonsProps): JSX.Element {
   const { hidden } = props;
   return (
@@ -171,8 +183,6 @@ function SubmitButtons(props: SubmitButtonsProps): JSX.Element {
       <Jdiv hidden={hidden} className="jc-CancelButton" jcEventArea="cancel">
         Cancel
       </Jdiv>
-      {/* <Jdiv className="jc-SubmitButton" jcEventArea="submit">Submit</Jdiv> */}
-      {/* <Jdiv className="jc-CancelButton" jcEventArea="cancel">Cancel</Jdiv> */}
     </Jdiv>
   );
 }
@@ -571,8 +581,6 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     const target = event.target as HTMLDivElement;
     event.preventDefault();
     event.stopPropagation();
-    console.log(target.parentElement);
-    console.log(target.parentNode?.previousSibling);
     const element = target.parentNode!.previousSibling as HTMLDivElement;
 
     if (element == null) {
@@ -727,8 +735,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
         this.commentID
       );
 
-      // this.editID = ''
-
+      this.editID = ''
       target.textContent = '';
       this.replyAreaHidden = true;
     }
