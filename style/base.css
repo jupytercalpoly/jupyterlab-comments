@@ -71,9 +71,9 @@
   font-size: 0.833rem;
   outline: none;
   border: none;
-  /* appearance: none; */
-  /* -webkit-appearance: none; */
-  /* -moz-appearance: none; */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   background-color: transparent;
   white-space: pre-wrap;
   margin-top: var(--var-jc-linesep);
@@ -102,15 +102,12 @@
   gap: 5px;
   align-items: center;
   justify-content: center;
-  /* margin-top: 10px; */
-  /* margin-bottom: 15px; */
-  padding: 5px;
+  padding: 3px;
 }
 
 .jc-SubmitButtons > * {
   padding: 2px;
   border: 1px solid #64B5F6;
-  /* border-color: black; */
   border-radius: 8px;
   font-size: small;
   width: 66px;
@@ -121,9 +118,9 @@
   background-color:  #64B5F6;
 }
 
-.jc-SubmitButtonInactive {
+/* .jc-SubmitButtonInactive {
   background-color:  #adafb0;
-}
+} */
 
 .jc-Reply {
   white-space: pre-wrap;

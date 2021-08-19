@@ -579,10 +579,11 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       return;
     }
 
-    if (element.textContent == ''){
-      target.className = 'jc-SubmitButtonInactive'
-      return;
-    }
+    // Code to be added for the change in color when inactive
+    // if (element.textContent == ''){
+    //   target.className = 'jc-SubmitButtonInactive'
+    //   return;
+    // }
     // the 'in' keyword doesn't seem to work
     if ('jc-ReplyInputArea' === element.classList[0]) {
       //  reply
@@ -625,8 +626,6 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       this.replyAreaHidden = true;
     }
     this.editID = '';
-    // this erases the content when cancel
-    // target.textContent = ''
     element.blur();
   }
 
