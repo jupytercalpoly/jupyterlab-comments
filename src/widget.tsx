@@ -594,6 +594,9 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     // }
     if (element.classList.contains('jc-ReplyInputArea')) {
       //  reply
+      if (element.innerText == ''){
+        return;
+      }
       this.model.addReply(
         {
           identity: getIdentity(this.model.awareness),
@@ -726,6 +729,9 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       const target = event.target as HTMLDivElement;
       event.preventDefault();
       event.stopPropagation();
+      if (target.innerText == ''){
+        return;
+      }
 
       this.model.addReply(
         {
