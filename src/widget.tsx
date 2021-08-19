@@ -404,7 +404,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
     return <div className="jc-Error" />;
   }
   return (
-    <div className={className} onClick={eventHandler}>
+    <div className={className} onClick={eventHandler} onKeyDown={eventHandler}>
       <JCCommentWithReplies
         isAttached={commentWidget.isAttached}
         comment={comment}
@@ -584,8 +584,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     //   target.className = 'jc-SubmitButtonInactive'
     //   return;
     // }
-    // the 'in' keyword doesn't seem to work
-    if ('jc-ReplyInputArea' === element.classList[0]) {
+    if (element.classList.contains('jc-ReplyInputArea')) {
       //  reply
       this.model.addReply(
         {
@@ -622,7 +621,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
       return;
     }
 
-    if ('jc-ReplyInputArea' === element.classList[0]) {
+    if (element.classList.contains('jc-ReplyInputArea')) {
       this.replyAreaHidden = true;
     }
     this.editID = '';
@@ -684,7 +683,6 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
    */
   protected _handleBodyClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
-    // this.openEditActive();
   }
 
   /**
@@ -717,25 +715,23 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     } else if (event.key !== 'Enter') {
       return;
     } else if (event.shiftKey) {
-      return;
+      const target = event.target as HTMLDivElement;
+      event.preventDefault();
+      event.stopPropagation();
+
+      this.model.addReply(
+        {
+          identity: getIdentity(this.model.awareness),
+          text: target.innerText
+        },
+        this.commentID
+      );
+
+      // this.editID = ''
+
+      target.textContent = '';
+      this.replyAreaHidden = true;
     }
-
-    const target = event.target as HTMLDivElement;
-    event.preventDefault();
-    event.stopPropagation();
-
-    this.model.addReply(
-      {
-        identity: getIdentity(this.model.awareness),
-        text: target.innerText
-      },
-      this.commentID
-    );
-
-    // this.editID = ''
-
-    target.textContent = '';
-    this.replyAreaHidden = true;
   }
 
   /**
@@ -762,17 +758,16 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
         break;
       case 'Enter':
         if (event.shiftKey) {
-          break;
+          event.preventDefault();
+          event.stopPropagation();
+          if (target.innerText === '') {
+            target.innerText = this.text!;
+          } else {
+            this.editActive(target.innerText);
+          }
+          this.editID = '';
+          target.blur();
         }
-        event.preventDefault();
-        event.stopPropagation();
-        if (target.innerText === '') {
-          target.innerText = this.text!;
-        } else {
-          this.editActive(target.innerText);
-        }
-        this.editID = '';
-        target.blur();
         break;
       default:
         break;
@@ -1108,12 +1103,39 @@ export class MockCommentWidget<T> extends CommentWidget<T> {
 
     this.dispose();
   }
+  protected _handleSubmitClick(event: React.MouseEvent): void {
+    if (this.editID == '') {
+      return;
+    }
+    const target = event.target as HTMLDivElement;
+    event.preventDefault();
+    event.stopPropagation();
+    console.log(target.parentElement);
+    console.log(target.parentNode?.previousSibling);
+    const element = target.parentNode!.previousSibling as HTMLDivElement;
+
+    if (element == null) {
+      return;
+    }
+    if (element.innerText === '') {
+      this.dispose();
+    } else {
+      this.populate(element.innerText);
+    }
+    this.editID = '';
+  }
+
+  /**
+   * Handle a click on the cancel button when commenting.
+   */
+  protected _handleCancelClick(event: React.MouseEvent): void {
+    this.dispose();
+  }
 
   protected _handleBodyKeydown(event: React.KeyboardEvent): void {
     if (this.editID === '') {
       return;
     }
-
     const target = event.target as HTMLDivElement;
 
     switch (event.key) {
@@ -1122,11 +1144,6 @@ export class MockCommentWidget<T> extends CommentWidget<T> {
         break;
       case 'Enter':
         if (event.shiftKey) {
-          break;
-        }
-        if (target.innerText === '') {
-          this.dispose();
-        } else {
           this.populate(target.innerText);
         }
         break;
