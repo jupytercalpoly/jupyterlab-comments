@@ -1157,7 +1157,7 @@ export class MockCommentWidget<T> extends CommentWidget<T> {
         break;
       case 'Enter':
         if (event.shiftKey) {
-          if (target.innerText == ''){
+          if (target.innerText === ''){
             this.dispose()
           }
           this.populate(target.innerText);
