@@ -1,49 +1,45 @@
-import { ACommentFactory } from './factory';
+import { CommentFactory, CommentWidgetFactory } from './factory';
 
 export interface ICommentRegistry {
-  getFactory: (id: string) => ACommentFactory | undefined;
-  addFactory: (factory: ACommentFactory) => void;
+  getFactory: (id: string) => CommentFactory | undefined;
+  addFactory: (factory: CommentFactory) => void;
 
-  readonly factories: Map<string, ACommentFactory>;
+  readonly factories: Map<string, CommentFactory>;
 }
 
 /**
  * A class that manages a map of `CommentFactory`s
  */
 export class CommentRegistry implements ICommentRegistry {
-  addFactory(factory: ACommentFactory): void {
+  addFactory(factory: CommentFactory): void {
     this.factories.set(factory.type, factory);
   }
 
-  getFactory(type: string): ACommentFactory<any> | undefined {
-    let factory: ACommentFactory<any> | undefined;
-
-    if (type === '') {
-      console.warn('empty factory type is not allowed');
-      return;
-    } else if (this._t1 === type) {
-      factory = this._f1;
-    } else if (this._t2 === type) {
-      factory = this._f2;
-      [this._f2, this._f1] = [this._f1, this._f2];
-      [this._t2, this._t1] = [this._t1, this._t2];
-    } else {
-      factory = this.factories.get(type);
-      [this._f2, this._t2] = [this._f1, this._t1];
-      [this._f1, this._t1] = [factory, type];
-    }
-
-    if (factory == null) {
-      console.warn('no factory found for comment with type', type);
-      return;
-    }
-
-    return factory;
+  getFactory(type: string): CommentFactory<any> | undefined {
+    return this.factories.get(type);
   }
 
-  private _t1: string = '';
-  private _t2: string = '';
-  private _f1: ACommentFactory<any> | undefined;
-  private _f2: ACommentFactory<any> | undefined;
-  readonly factories = new Map<string, ACommentFactory>();
+  readonly factories = new Map<string, CommentFactory>();
+}
+
+export interface ICommentWidgetRegistry {
+  getFactory: (id: string) => CommentWidgetFactory<any> | undefined;
+  addFactory: (factory: CommentWidgetFactory<any>) => void;
+
+  readonly factories: Map<string, CommentWidgetFactory<any>>;
+}
+
+/**
+ * A class that manages a map of `CommentWidgetFactory`s
+ */
+export class CommentWidgetRegistry implements ICommentWidgetRegistry {
+  addFactory(factory: CommentWidgetFactory<any>): void {
+    this.factories.set(factory.widgetType, factory);
+  }
+
+  getFactory(type: string): CommentWidgetFactory<any> | undefined {
+    return this.factories.get(type);
+  }
+
+  readonly factories = new Map<string, CommentWidgetFactory<any>>();
 }

@@ -255,56 +255,76 @@ function JCCommentWithReplies(props: CommentWithRepliesProps): JSX.Element {
   let RepliesComponent = (): JSX.Element => {
     if (!collapsed || comment.replies.length < 4) {
       return (
-        <div className={'jc-Replies'}>
-          {comment.replies.map(reply => (
-            <JCReply
-              reply={reply}
-              isAttached={isAttached}
-              editable={editID === reply.id}
-              renderer={renderer}
-              key={reply.id}
-            />
-          ))}
-        </div>
+        <React.Fragment>
+          <JCComment
+            comment={comment}
+            isAttached={isAttached}
+            editable={editID === comment.id}
+            renderer={renderer}
+            preview={preview}
+          />
+          <div className={'jc-Replies'}>
+            {comment.replies.map(reply => (
+              <JCReply
+                reply={reply}
+                isAttached={isAttached}
+                editable={editID === reply.id}
+                renderer={renderer}
+                key={reply.id}
+              />
+            ))}
+          </div>
+        </React.Fragment>
       );
     } else {
       return (
-        <div className={'jc-Replies'}>
-          <Jdiv
-            className="jc-Replies-breaker jc-mod-focus-border"
-            jcEventArea="collapser"
-          >
-            <div className="jc-Replies-breaker-left">expand thread</div>
-            <div className="jc-RepliesSpacer" />
-            <div className="jc-Replies-breaker-right">
-              <hr />
-              <hr />
-              <div className="jc-Replies-breaker-number jc-mod-focus-border">
-                {comment.replies.length - 1}
-              </div>
-            </div>
-          </Jdiv>
-          <JCReply
-            reply={comment.replies[comment.replies.length - 1]}
-            editable={editID === comment.replies[comment.replies.length - 1].id}
+        <React.Fragment>
+          <JCComment
+            comment={comment}
             isAttached={isAttached}
+            editable={editID === comment.id}
             renderer={renderer}
-            key={comment.replies[comment.replies.length - 1].id}
+            preview={preview}
           />
-        </div>
+          <div className={'jc-Replies'}>
+            <Jdiv
+              className="jc-Replies-breaker jc-mod-focus-border"
+              jcEventArea="collapser"
+            >
+              <div className="jc-Replies-breaker-left">expand thread</div>
+              <div className="jc-RepliesSpacer" />
+              <div className="jc-Replies-breaker-right">
+                <hr />
+                <hr />
+                <div className="jc-Replies-breaker-number jc-mod-focus-border">
+                  {comment.replies.length - 1}
+                </div>
+              </div>
+            </Jdiv>
+            <JCReply
+              reply={comment.replies[comment.replies.length - 1]}
+              editable={
+                editID === comment.replies[comment.replies.length - 1].id
+              }
+              isAttached={isAttached}
+              renderer={renderer}
+              key={comment.replies[comment.replies.length - 1].id}
+            />
+          </div>
+        </React.Fragment>
       );
     }
   };
 
   return (
     <Jdiv className={'jc-CommentWithReplies ' + className}>
-      <JCComment
+      {/* <JCComment
         comment={comment}
         isAttached={isAttached}
         editable={editID === comment.id}
         renderer={renderer}
         preview={preview}
-      />
+      /> */}
       <RepliesComponent />
     </Jdiv>
   );
@@ -704,14 +724,15 @@ export class CommentWidget<T, C extends IComment = IComment>
 
     this.hide();
 
-    const { target, identity, type } = this.comment;
+    const { identity, type } = this.comment;
+    const source = this.target;
 
     this.model.insertComment(
       {
         text,
         identity,
         type,
-        target
+        source
       },
       index
     );
@@ -1009,6 +1030,7 @@ export class CommentFileWidget extends Panel {
     const { context } = options;
     this._context = context;
     this._model = context.model as CommentFileModel;
+    this._model.widgets = this.widgets as readonly CommentWidget<any>[];
 
     this.id = `Comments-${context.path}`;
     this.addClass('jc-CommentFileWidget');
@@ -1017,7 +1039,7 @@ export class CommentFileWidget extends Panel {
   }
 
   insertComment(comment: IComment, index: number): void {
-    const factory = this.model.registry.getFactory(comment.type);
+    const factory = this.model.commentWidgetRegistry.getFactory(comment.type);
     if (factory == null) {
       return;
     }
@@ -1076,16 +1098,11 @@ export namespace CommentFileWidget {
     context: Context;
   }
 
-  export interface IBaseMockCommentOptions {
+  export interface IMockCommentOptions {
     identity: IIdentity;
     type: string;
+    source: any;
   }
-
-  export type IMockCommentOptions = (
-    | { target: PartialJSONValue }
-    | { source: any }
-  ) &
-    IBaseMockCommentOptions;
 }
 
 export namespace Private {

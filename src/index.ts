@@ -14,16 +14,25 @@ import { CommentPanel, ICommentPanel } from './panel';
 import { CommentWidget } from './widget';
 import { Cell } from '@jupyterlab/cells';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
-import { CommentRegistry, ICommentRegistry } from './registry';
+import {
+  CommentRegistry,
+  CommentWidgetRegistry,
+  ICommentRegistry,
+  ICommentWidgetRegistry
+} from './registry';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import { DocumentRegistry, DocumentWidget } from '@jupyterlab/docregistry';
 import {
   CellCommentFactory,
+  CellCommentWidgetFactory,
   CellSelectionCommentFactory,
-  TestCommentFactory,
-  TextSelectionCommentFactory
-} from './factory';
-import { Menu } from '@lumino/widgets';
+  CellSelectionCommentWidgetFactory
+} from './cellwidget';
+import {
+  TextSelectionCommentFactory,
+  TextSelectionCommentWidgetFactory
+} from './textwidget';
+import { Menu, Widget } from '@lumino/widgets';
 import { CommentFileModelFactory } from './model';
 import { ICellComment, ITextSelectionComment } from './commentformat';
 import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
@@ -41,19 +50,36 @@ const ICommentRegistry = new Token<ICommentRegistry>(
   'jupyterlab-comments:comment-registry'
 );
 
+const ICommentWidgetRegistry = new Token<ICommentWidgetRegistry>(
+  'jupyterlab-comment:comment-widget-registry'
+);
+
 export type CommentTracker = WidgetTracker<CommentWidget<any>>;
 
 /**
  * A plugin that provides a `CommentRegistry`
  */
 export const commentRegistryPlugin: JupyterFrontEndPlugin<ICommentRegistry> = {
-  id: 'jupyterlab-comments:registry',
+  id: 'jupyterlab-comments:comment-registry',
   autoStart: true,
   provides: ICommentRegistry,
   activate: (app: JupyterFrontEnd) => {
     return new CommentRegistry();
   }
 };
+
+/**
+ * A plugin that provides a `CommentWidgetRegistry`
+ */
+export const commentWidgetRegistryPlugin: JupyterFrontEndPlugin<ICommentWidgetRegistry> =
+  {
+    id: 'jupyterlab-comments:comment-widget-registry',
+    autoStart: true,
+    provides: ICommentWidgetRegistry,
+    activate: (app: JupyterFrontEnd) => {
+      return new CommentWidgetRegistry();
+    }
+  };
 
 const ICommentPanel = new Token<ICommentPanel>(
   'jupyterlab-comments:comment-panel'
@@ -69,15 +95,31 @@ const ICommentPanel = new Token<ICommentPanel>(
 const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-comments:plugin',
   autoStart: true,
-  requires: [INotebookTracker, ICommentPanel, ICommentRegistry],
+  requires: [
+    INotebookTracker,
+    ICommentPanel,
+    ICommentRegistry,
+    ICommentWidgetRegistry
+  ],
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
     panel: ICommentPanel,
-    registry: ICommentRegistry
+    commentRegistry: ICommentRegistry,
+    commentWidgetRegistry: ICommentWidgetRegistry
   ) => {
-    void registry.addFactory(new CellCommentFactory(nbTracker));
-    void registry.addFactory(new CellSelectionCommentFactory(nbTracker));
+    commentRegistry.addFactory(new CellCommentFactory());
+    commentRegistry.addFactory(new CellSelectionCommentFactory());
+
+    commentWidgetRegistry.addFactory(
+      new CellCommentWidgetFactory({ commentRegistry, tracker: nbTracker })
+    );
+    commentWidgetRegistry.addFactory(
+      new CellSelectionCommentWidgetFactory({
+        commentRegistry,
+        tracker: nbTracker
+      })
+    );
 
     app.commands.addCommand(CommandIDs.addNotebookComment, {
       label: 'Add Comment',
@@ -217,6 +259,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
   autoStart: true,
   requires: [
     ICommentRegistry,
+    ICommentWidgetRegistry,
     ILabShell,
     IDocumentManager,
     IRenderMimeRegistry
@@ -224,7 +267,8 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
   provides: ICommentPanel,
   activate: (
     app: JupyterFrontEnd,
-    registry: ICommentRegistry,
+    commentRegistry: ICommentRegistry,
+    commentWidgetRegistry: ICommentWidgetRegistry,
     shell: ILabShell,
     docManager: IDocumentManager,
     renderer: IRenderMimeRegistry
@@ -246,14 +290,19 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       namespace: 'code-editor-wrappers'
     });
 
-    void registry.addFactory(new TestCommentFactory());
-    void registry.addFactory(
-      new TextSelectionCommentFactory({ type: 'text-selection' }, editorTracker)
+    commentRegistry.addFactory(new TextSelectionCommentFactory());
+
+    commentWidgetRegistry.addFactory(
+      new TextSelectionCommentWidgetFactory({
+        commentRegistry,
+        tracker: editorTracker
+      })
     );
 
     const panel = new CommentPanel({
       commands: app.commands,
-      registry,
+      commentRegistry,
+      commentWidgetRegistry,
       docManager,
       shell,
       renderer
@@ -282,7 +331,8 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     commentMenu.addItem({ command: CommandIDs.replyToComment });
 
     const modelFactory = new CommentFileModelFactory({
-      registry,
+      commentRegistry,
+      commentWidgetRegistry,
       commentMenu
     });
 
@@ -356,7 +406,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
             void panel.loadModel(docWidget.context);
           })
           .catch(() => {
-            console.warn('unable to load');
+            console.warn('Unable to load panel');
           });
       }
     });
@@ -366,7 +416,7 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     let onMouseup: (event: MouseEvent) => void;
 
     //commenting stuff for non-notebook/json files
-    shell.currentChanged.connect((_, changed) => {
+    shell.currentChanged.connect(async (_, changed) => {
       if (currAwareness != null && handler != null && onMouseup != null) {
         document.removeEventListener('mouseup', onMouseup);
         currAwareness.off('change', handler);
@@ -375,20 +425,17 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
       if (changed.newValue == null /*|| panel.model == null*/) {
         return;
       }
-      let invalids = ['json', 'ipynb'];
-      let editorWidget = (changed.newValue as DocumentWidget)
-        .content as CodeEditorWrapper;
-      if (
-        invalids.includes(changed.newValue.title.label.split('.').pop()!) ||
-        editorWidget.editor == null
-      ) {
+      const editorWidget = Private.getEditor(changed.newValue);
+      console.log('editorWidget', editorWidget);
+      if (editorWidget == null) {
         return;
       }
+
       if (!editorTracker.has(editorWidget)) {
-        editorTracker.add(editorWidget).catch(() => {
-          console.warn('could not add widget');
-        });
+        await editorTracker.add(editorWidget);
+        console.log('added editor to tracker', editorWidget);
       }
+      editorWidget.node.focus();
       editorWidget.editor.focus();
 
       onMouseup = (_: MouseEvent): void => {
@@ -510,9 +557,25 @@ function addCommands(
   });
 }
 
+namespace Private {
+  export function getEditor(widget: Widget): CodeEditorWrapper | undefined {
+    if (!widget.hasClass('jp-Document')) {
+      return;
+    }
+
+    const content = (widget as DocumentWidget).content;
+    if (!content.hasClass('jp-FileEditor')) {
+      return;
+    }
+
+    return content as CodeEditorWrapper;
+  }
+}
+
 const plugins: JupyterFrontEndPlugin<any>[] = [
   notebookCommentsPlugin,
   commentRegistryPlugin,
+  commentWidgetRegistryPlugin,
   jupyterCommentingPlugin
 ];
 export default plugins;

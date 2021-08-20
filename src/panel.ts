@@ -7,7 +7,7 @@ import { ISignal, Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
-import { ICommentRegistry } from './registry';
+import { ICommentRegistry, ICommentWidgetRegistry } from './registry';
 import { ILabShell } from '@jupyterlab/application';
 import { PanelHeader } from './panelHeaderWidget';
 import { IDocumentManager } from '@jupyterlab/docmanager';
@@ -71,9 +71,16 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.title.icon = CommentsPanelIcon;
     this.addClass('jc-CommentPanel');
 
-    const { docManager, registry, shell, renderer } = options;
+    const {
+      docManager,
+      commentRegistry,
+      commentWidgetRegistry,
+      shell,
+      renderer
+    } = options;
 
-    this._registry = registry;
+    this._commentRegistry = commentRegistry;
+    this._commentWidgetRegistry = commentWidgetRegistry;
     this._commentMenu = new Menu({ commands: options.commands });
     this._docManager = docManager;
 
@@ -233,7 +240,9 @@ export class CommentPanel extends Panel implements ICommentPanel {
           .slice(index, index + change.delete)
           .forEach(widget => widget.dispose());
       } else if (change.update != null) {
+        console.log('recieved update');
         for (let i = 0; i < change.update; i++) {
+          console.log('\tupdating', widgets[index]);
           widgets[index++].update();
         }
       }
@@ -319,8 +328,12 @@ export class CommentPanel extends Panel implements ICommentPanel {
     return this.model?.awareness;
   }
 
-  get registry(): ICommentRegistry {
-    return this._registry;
+  get commentRegistry(): ICommentRegistry {
+    return this._commentRegistry;
+  }
+
+  get commentWidgetRegistry(): ICommentWidgetRegistry {
+    return this._commentWidgetRegistry;
   }
 
   get pathPrefix(): string {
@@ -343,26 +356,17 @@ export class CommentPanel extends Panel implements ICommentPanel {
       return;
     }
 
-    const factory = this.registry.getFactory(options.type);
+    const factory = this.commentRegistry.getFactory(options.type);
     if (factory == null) {
       return;
     }
 
-    let source;
-    let comment;
-    if ('target' in options) {
-      const target = options.target;
-      source = factory.targetFromJSON(target);
-      comment = factory.createComment({ ...options, text: '' }, target);
-    } else {
-      source = options.source;
-      comment = factory.createComment({ ...options, text: '' });
-    }
+    const comment = factory.createComment({ ...options, text: '' });
 
     const widget = new CommentWidget({
       comment,
       model,
-      target: source,
+      target: options.source,
       isMock: true
     });
 
@@ -415,7 +419,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
   private _revealed = new Signal<this, undefined>(this);
   private _commentMenu: Menu;
-  private _registry: ICommentRegistry;
+  private _commentRegistry: ICommentRegistry;
+  private _commentWidgetRegistry: ICommentWidgetRegistry;
   private _panelHeader: PanelHeader;
   private _fileWidget: CommentFileWidget | undefined = undefined;
   private _docManager: IDocumentManager;
@@ -431,7 +436,8 @@ export namespace CommentPanel {
   export interface IOptions {
     docManager: IDocumentManager;
     commands: CommandRegistry;
-    registry: ICommentRegistry;
+    commentRegistry: ICommentRegistry;
+    commentWidgetRegistry: ICommentWidgetRegistry;
     shell: ILabShell;
     renderer: IRenderMimeRegistry;
   }
