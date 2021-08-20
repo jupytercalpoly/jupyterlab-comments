@@ -234,7 +234,7 @@ function addCommands(
   });
 }
 
-const plugins = [
+const plugins: JupyterFrontEndPlugin<any>[] = [
   jupyterCommentingPlugin,
   commentRegistryPlugin,
   commentWidgetRegistryPlugin

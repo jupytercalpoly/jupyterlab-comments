@@ -7,12 +7,7 @@ import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
 import { Cell } from '@jupyterlab/cells';
-import {
-  getIdentity,
-  ICommentPanel,
-  ICommentRegistry,
-  ICommentWidgetRegistry
-} from '../api';
+import { getIdentity, ICommentPanel } from '../api';
 import {
   CellCommentFactory,
   CellSelectionCommentFactory
@@ -31,22 +26,18 @@ export namespace CommandIDs {
 /**
  * A plugin that allows notebooks to be commented on.
  */
-const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab-comments:plugin',
+export const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
+  id: 'jupyterlab-comments:notebook',
   autoStart: true,
-  requires: [
-    INotebookTracker,
-    ICommentPanel,
-    ICommentRegistry,
-    ICommentWidgetRegistry
-  ],
+  requires: [INotebookTracker, ICommentPanel],
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
-    panel: ICommentPanel,
-    commentRegistry: ICommentRegistry,
-    commentWidgetRegistry: ICommentWidgetRegistry
+    panel: ICommentPanel
   ) => {
+    const commentRegistry = panel.commentRegistry;
+    const commentWidgetRegistry = panel.commentWidgetRegistry;
+
     commentRegistry.addFactory(new CellCommentFactory());
     commentRegistry.addFactory(new CellSelectionCommentFactory());
 

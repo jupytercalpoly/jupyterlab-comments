@@ -15,7 +15,7 @@ import { YFile } from '@jupyterlab/shared-models';
 import { Widget } from '@lumino/widgets';
 
 export const textCommentingPlugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab-comments:commenting-api',
+  id: 'jupyterlab-comments:text',
   autoStart: true,
   requires: [ICommentPanel, ILabShell],
   activate: (app: JupyterFrontEnd, panel: ICommentPanel, shell: ILabShell) => {
