@@ -112,6 +112,16 @@ export class CommentPanel extends Panel implements ICommentPanel {
     await commentContext.save();
   }
 
+  private async _onSave(
+    _: any,
+    saveState: DocumentRegistry.SaveState
+  ): Promise<void> {
+    const fileWidget = this._fileWidget;
+    if (fileWidget != null && saveState === 'started') {
+      await fileWidget.context.save();
+    }
+  }
+
   async loadModel(
     context: DocumentRegistry.IContext<DocumentRegistry.IModel>
   ): Promise<void> {
@@ -138,8 +148,10 @@ export class CommentPanel extends Panel implements ICommentPanel {
       this.model!.changed.disconnect(this._onChange, this);
       const oldWidget = this._fileWidget;
       oldWidget.hide();
-      await oldWidget.context.save();
-      oldWidget.dispose();
+      if (!oldWidget.context.isDisposed) {
+        await oldWidget.context.save();
+        oldWidget.dispose();
+      }
     }
 
     const path =
@@ -154,6 +166,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
     );
 
     context.pathChanged.connect(this._onPathChanged, this);
+    context.saveState.connect(this._onSave, this);
+
     this._fileWidget = content;
     this.addWidget(content);
 
