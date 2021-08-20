@@ -3,7 +3,7 @@ import { UUID } from '@lumino/coreutils';
 import { getCommentTimeString } from './utils';
 import { CommentFileModel } from './model';
 import { CommentWidget } from './widget';
-import { ICommentRegistry } from './registry';
+import { ICommentRegistry } from './token';
 
 export abstract class CommentWidgetFactory<T, C extends IComment = IComment> {
   constructor(options: CommentWidgetFactory.IOptions) {

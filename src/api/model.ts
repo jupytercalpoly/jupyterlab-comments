@@ -1,6 +1,6 @@
 import { IComment, IIdentity, IReply } from './commentformat';
 import { CommentFactory } from './factory';
-import { ICommentRegistry, ICommentWidgetRegistry } from './registry';
+import { ICommentRegistry, ICommentWidgetRegistry } from './token';
 import { ISharedDocument, YDocument } from '@jupyterlab/shared-models';
 import * as Y from 'yjs';
 import { PartialJSONValue } from '@lumino/coreutils';

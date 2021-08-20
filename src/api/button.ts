@@ -91,7 +91,7 @@ export class NewCommentButton extends Widget {
     console.warn('no onClick function registered', this);
 }
 
-export namespace Private {
+namespace Private {
   export function createNode() {
     const node = document.createElement('div');
     node.className = 'jc-Indicator';

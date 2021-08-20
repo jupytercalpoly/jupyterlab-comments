@@ -7,9 +7,13 @@ import { ISignal, Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
-import { ICommentRegistry, ICommentWidgetRegistry } from './registry';
+import {
+  ICommentPanel,
+  ICommentRegistry,
+  ICommentWidgetRegistry
+} from './token';
 import { ILabShell } from '@jupyterlab/application';
-import { PanelHeader } from './panelHeaderWidget';
+import { PanelHeader } from './header';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import { Context, DocumentRegistry } from '@jupyterlab/docregistry';
 import { hashString, randomIdentity } from './utils';
@@ -17,49 +21,6 @@ import { CommentFileModel } from './model';
 import { CommentsPanelIcon } from './icons';
 import { NewCommentButton } from './button';
 import { IIdentity } from './commentformat';
-
-export interface ICommentPanel extends Panel {
-  /**
-   * Scroll the comment with the given id into view.
-   */
-  scrollToComment: (id: string) => void;
-
-  /**
-   * A signal emitted when a comment is added to the panel.
-   */
-  commentAdded: Signal<this, CommentWidget<any>>;
-
-  /**
-   * The dropdown menu for comment widgets.
-   */
-  commentMenu: Menu;
-
-  /**
-   * A signal emitted when the panel is about to be shown.
-   */
-  revealed: Signal<this, undefined>;
-
-  /**
-   * The current awareness associated with the panel.
-   */
-  awareness: Awareness | undefined;
-
-  /**
-   * The current `CommentFileModel` associated with the panel.
-   */
-  model: CommentFileModel | undefined;
-
-  button: NewCommentButton;
-
-  fileWidget: CommentFileWidget | undefined;
-
-  localIdentity: IIdentity;
-
-  mockComment: (
-    options: CommentFileWidget.IMockCommentOptions,
-    index: number
-  ) => CommentWidget<any> | undefined;
-}
 
 export class CommentPanel extends Panel implements ICommentPanel {
   renderer: IRenderMimeRegistry;

@@ -2,6 +2,7 @@ import { Awareness } from 'y-protocols/awareness';
 import { IIdentity } from './commentformat';
 import { getAnonymousUserName } from '@jupyterlab/docprovider';
 import { UserIcons } from './icons';
+import { CodeEditor } from '@jupyterlab/codeeditor';
 
 export const emptyIdentity: IIdentity = {
   id: 0,
@@ -128,4 +129,22 @@ export function hashString(s: string): number {
 
 export function truncate(text: string, maxLength: number): string {
   return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+}
+
+export function toCodeMirrorPosition(
+  pos: CodeEditor.IPosition
+): CodeMirror.Position {
+  return {
+    line: pos.line,
+    ch: pos.column
+  };
+}
+
+export function toCodeEditorPosition(
+  pos: CodeMirror.Position
+): CodeEditor.IPosition {
+  return {
+    line: pos.line,
+    column: pos.ch
+  };
 }

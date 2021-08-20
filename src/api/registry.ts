@@ -1,11 +1,5 @@
 import { CommentFactory, CommentWidgetFactory } from './factory';
-
-export interface ICommentRegistry {
-  getFactory: (id: string) => CommentFactory | undefined;
-  addFactory: (factory: CommentFactory) => void;
-
-  readonly factories: Map<string, CommentFactory>;
-}
+import { ICommentRegistry, ICommentWidgetRegistry } from './token';
 
 /**
  * A class that manages a map of `CommentFactory`s
@@ -20,13 +14,6 @@ export class CommentRegistry implements ICommentRegistry {
   }
 
   readonly factories = new Map<string, CommentFactory>();
-}
-
-export interface ICommentWidgetRegistry {
-  getFactory: (id: string) => CommentWidgetFactory<any> | undefined;
-  addFactory: (factory: CommentWidgetFactory<any>) => void;
-
-  readonly factories: Map<string, CommentWidgetFactory<any>>;
 }
 
 /**

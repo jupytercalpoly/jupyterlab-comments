@@ -1105,7 +1105,7 @@ export namespace CommentFileWidget {
   }
 }
 
-export namespace Private {
+namespace Private {
   /**
    * Get the ID of a comment that a target lies within.
    */
