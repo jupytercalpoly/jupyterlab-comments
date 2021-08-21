@@ -3,15 +3,26 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to JupyterLab Comments's documentation!
 ===============================================
+JupyterLab Comments's documentation
+===============================================
+
+-----------------------------------------------
+*Open up communication in JupyterLab*
+-----------------------------------------------
+
 
 WIP for now!
 
 .. toctree::
    introduction.md
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+   :caption: Getting Started:
+
+.. toctree::
+   users.md
+   developers.md
+   :caption: Pathways:
 
 
 
