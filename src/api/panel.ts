@@ -21,6 +21,7 @@ import { CommentFileModel } from './model';
 import { CommentsPanelIcon } from './icons';
 import { NewCommentButton } from './button';
 import { IIdentity } from './commentformat';
+import { Contents } from '@jupyterlab/services';
 
 export class CommentPanel extends Panel implements ICommentPanel {
   renderer: IRenderMimeRegistry;
@@ -56,6 +57,48 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.renderer = renderer;
 
     this._localIdentity = randomIdentity();
+
+    docManager.services.contents.fileChanged.connect(this._onFileChange, this);
+  }
+
+  private async _onFileChange(
+    contents: Contents.IManager,
+    change: Contents.IChangedArgs
+  ): Promise<void> {
+    const sourcePath = change?.oldValue?.path;
+    const commentsPath =
+      sourcePath != null ? this.getCommentPathFor(sourcePath) : undefined;
+
+    switch (change.type) {
+      case 'delete':
+        if (await this.pathExists(commentsPath!)) {
+          return contents.delete(commentsPath!);
+        }
+        break;
+      case 'rename':
+        const newPath = change.newValue!.path!;
+        if (!(await this.pathExists(commentsPath!))) {
+          return;
+        }
+        const newCommentsPath = this.getCommentPathFor(newPath);
+        if (this.sourcePath === sourcePath) {
+          this._sourcePath = newPath;
+        }
+        return void contents.rename(commentsPath!, newCommentsPath);
+      case 'save':
+        if (this.sourcePath === change.newValue!.path!) {
+          return this._fileWidget!.context.save();
+        }
+        break;
+    }
+  }
+
+  getCommentFileNameFor(sourcePath: string): string {
+    return hashString(sourcePath).toString() + '.comment';
+  }
+
+  getCommentPathFor(sourcePath: string): string {
+    return this.pathPrefix + this.getCommentFileNameFor(sourcePath);
   }
 
   onUpdateRequest(msg: Message): void {
@@ -97,31 +140,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
     return context;
   }
 
-  private async _onPathChanged(
-    _: DocumentRegistry.IContext<DocumentRegistry.IModel>,
-    newPath: string
-  ): Promise<void> {
-    const commentContext = this._fileWidget?.context;
-    if (commentContext == null) {
-      return;
-    }
-
-    this._sourcePath = newPath;
-
-    await commentContext.rename(hashString(newPath).toString() + '.comment');
-    await commentContext.save();
-  }
-
-  private async _onSave(
-    _: any,
-    saveState: DocumentRegistry.SaveState
-  ): Promise<void> {
-    const fileWidget = this._fileWidget;
-    if (fileWidget != null && saveState === 'started') {
-      await fileWidget.context.save();
-    }
-  }
-
   async loadModel(
     context: DocumentRegistry.IContext<DocumentRegistry.IModel>
   ): Promise<void> {
@@ -144,7 +162,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this._loadingModel = true;
 
     if (this._fileWidget != null) {
-      Signal.disconnectReceiver(this._onPathChanged);
       this.model!.changed.disconnect(this._onChange, this);
       const oldWidget = this._fileWidget;
       oldWidget.hide();
@@ -154,8 +171,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
       }
     }
 
-    const path =
-      this.pathPrefix + hashString(sourcePath).toString() + '.comment';
+    const path = this.getCommentPathFor(sourcePath);
 
     const commentContext = await this.getContext(path);
     await commentContext.ready;
@@ -164,9 +180,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
       { context: commentContext },
       this.renderer
     );
-
-    context.pathChanged.connect(this._onPathChanged, this);
-    context.saveState.connect(this._onSave, this);
 
     this._fileWidget = content;
     this.addWidget(content);

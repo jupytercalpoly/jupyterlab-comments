@@ -122,7 +122,7 @@ export const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
     // Opens add comment button on the current cell when the mouse is released
     // after a text selection
     const onMouseup = (_: MouseEvent): void => {
-      if (currentCell == null) {
+      if (currentCell == null || currentCell.isDisposed) {
         return;
       }
 
