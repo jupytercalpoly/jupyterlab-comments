@@ -614,6 +614,9 @@ export class CommentWidget<T, C extends IComment = IComment>
     }
 
     if (element.innerText === '') {
+      if (this.isMock) {
+        this.dispose();
+      }
       element.innerText = this.text!;
     } else {
       this.editActive(element.innerText);
@@ -630,6 +633,10 @@ export class CommentWidget<T, C extends IComment = IComment>
     const target = event.target as HTMLDivElement;
     event.preventDefault();
     event.stopPropagation();
+    if (this.isMock) {
+      this.dispose();
+    }
+
     const element = target.parentNode!.previousSibling as HTMLDivElement;
     if (element == null) {
       return;
