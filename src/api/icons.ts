@@ -6,30 +6,30 @@ import { LabIcon } from '@jupyterlab/ui-components';
 //     svgstr: '<svg>...</svg>'
 // });
 
-import userIcon0Svgstr from '../style/icons/user-icon-0.svg';
-import userIcon1Svgstr from '../style/icons/user-icon-1.svg';
-import userIcon2Svgstr from '../style/icons/user-icon-2.svg';
-import userIcon3Svgstr from '../style/icons/user-icon-3.svg';
-import userIcon4Svgstr from '../style/icons/user-icon-4.svg';
-import userIcon5Svgstr from '../style/icons/user-icon-5.svg';
-import userIcon6Svgstr from '../style/icons/user-icon-6.svg';
-import userIcon7Svgstr from '../style/icons/user-icon-7.svg';
-import userIcon8Svgstr from '../style/icons/user-icon-8.svg';
-import userIcon9Svgstr from '../style/icons/user-icon-9.svg';
-import userIcon10Svgstr from '../style/icons/user-icon-10.svg';
-import userIcon11Svgstr from '../style/icons/user-icon-11.svg';
-import userIcon12Svgstr from '../style/icons/user-icon-12.svg';
-import userIcon13Svgstr from '../style/icons/user-icon-13.svg';
-import userIcon14Svgstr from '../style/icons/user-icon-14.svg';
-import userIcon15Svgstr from '../style/icons/user-icon-15.svg';
-import userIcon16Svgstr from '../style/icons/user-icon-16.svg';
-import userIcon17Svgstr from '../style/icons/user-icon-17.svg';
-import userIcon18Svgstr from '../style/icons/user-icon-18.svg';
-import userIcon19Svgstr from '../style/icons/user-icon-19.svg';
-import userIcon20Svgstr from '../style/icons/user-icon-20.svg';
-import userIcon21Svgstr from '../style/icons/user-icon-21.svg';
-import userIcon22Svgstr from '../style/icons/user-icon-22.svg';
-import userIcon23Svgstr from '../style/icons/user-icon-23.svg';
+import userIcon0Svgstr from '../../style/icons/user-icon-0.svg';
+import userIcon1Svgstr from '../../style/icons/user-icon-1.svg';
+import userIcon2Svgstr from '../../style/icons/user-icon-2.svg';
+import userIcon3Svgstr from '../../style/icons/user-icon-3.svg';
+import userIcon4Svgstr from '../../style/icons/user-icon-4.svg';
+import userIcon5Svgstr from '../../style/icons/user-icon-5.svg';
+import userIcon6Svgstr from '../../style/icons/user-icon-6.svg';
+import userIcon7Svgstr from '../../style/icons/user-icon-7.svg';
+import userIcon8Svgstr from '../../style/icons/user-icon-8.svg';
+import userIcon9Svgstr from '../../style/icons/user-icon-9.svg';
+import userIcon10Svgstr from '../../style/icons/user-icon-10.svg';
+import userIcon11Svgstr from '../../style/icons/user-icon-11.svg';
+import userIcon12Svgstr from '../../style/icons/user-icon-12.svg';
+import userIcon13Svgstr from '../../style/icons/user-icon-13.svg';
+import userIcon14Svgstr from '../../style/icons/user-icon-14.svg';
+import userIcon15Svgstr from '../../style/icons/user-icon-15.svg';
+import userIcon16Svgstr from '../../style/icons/user-icon-16.svg';
+import userIcon17Svgstr from '../../style/icons/user-icon-17.svg';
+import userIcon18Svgstr from '../../style/icons/user-icon-18.svg';
+import userIcon19Svgstr from '../../style/icons/user-icon-19.svg';
+import userIcon20Svgstr from '../../style/icons/user-icon-20.svg';
+import userIcon21Svgstr from '../../style/icons/user-icon-21.svg';
+import userIcon22Svgstr from '../../style/icons/user-icon-22.svg';
+import userIcon23Svgstr from '../../style/icons/user-icon-23.svg';
 
 const userIconSvgstrs = [
   userIcon0Svgstr,

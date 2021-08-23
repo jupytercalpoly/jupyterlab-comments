@@ -1,6 +1,6 @@
 import { IComment, IIdentity, IReply } from './commentformat';
-import { ACommentFactory } from './factory';
-import { ICommentRegistry } from './registry';
+import { CommentFactory } from './factory';
+import { ICommentRegistry, ICommentWidgetRegistry } from './token';
 import { ISharedDocument, YDocument } from '@jupyterlab/shared-models';
 import * as Y from 'yjs';
 import { PartialJSONValue } from '@lumino/coreutils';
@@ -11,6 +11,7 @@ import { DocumentRegistry } from '@jupyterlab/docregistry';
 import { IModelDB, ModelDB } from '@jupyterlab/observables';
 import { IChangedArgs } from '@jupyterlab/coreutils';
 import { Contents } from '@jupyterlab/services';
+import { CommentWidget } from './widget';
 
 /**
  * The default model for comment files.
@@ -20,11 +21,17 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * Construct a new `CommentFileModel`.
    */
   constructor(options: CommentFileModel.IOptions) {
-    const { registry, commentMenu, isInitialized } = options;
+    const {
+      commentRegistry,
+      commentWidgetRegistry,
+      commentMenu,
+      isInitialized
+    } = options;
 
-    this.registry = registry;
+    this.commentRegistry = commentRegistry;
+    this.commentWidgetRegistry = commentWidgetRegistry;
     this._commentMenu = commentMenu;
-    this._isInitialized = !!isInitialized;
+    this._isInitialized = isInitialized ?? false;
 
     this.comments.observeDeep(this._commentsObserver);
   }
@@ -41,14 +48,20 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     this.comments.unobserveDeep(this._commentsObserver);
   }
 
+  widgets: readonly CommentWidget<any>[] | undefined;
+
   /**
    * Serialize the model to JSON.
    */
   toJSON(): PartialJSONValue {
-    return this.comments.map((comment: IComment) => {
-      const factory = this.registry.getFactory(comment.type);
-      return factory!.toJSON(comment);
-    });
+    if (this.widgets == null) {
+      console.warn(
+        'No comment widgets found for model. Serializing based on default IComment'
+      );
+      return this.comments.toJSON();
+    }
+
+    return this.widgets.map(widget => widget.toJSON());
   }
 
   /**
@@ -112,6 +125,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
       comments.delete(index);
       comments.insert(index, [comment]);
     });
+
     this._signalContentChange();
   }
 
@@ -122,13 +136,9 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * This will fail if there's no factory for the given comment type.
    */
   createComment(options: ICommentOptions): IComment | undefined {
-    const factory = this.registry.getFactory(options.type);
+    const factory = this.commentRegistry.getFactory(options.type);
     if (factory == null) {
       return;
-    }
-
-    if ('target' in options) {
-      return factory.createComment(options, options.target);
     }
 
     return factory.createComment(options);
@@ -138,7 +148,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * Create a reply from an `IReplyOptions` object.
    */
   createReply(options: Exclude<IReplyOptions, 'parentID'>): IReply {
-    return ACommentFactory.createReply(options);
+    return CommentFactory.createReply(options);
   }
 
   /**
@@ -358,7 +368,9 @@ export class CommentFileModel implements DocumentRegistry.IModel {
   /**
    * The registry containing the comment factories needed to create the model's comments.
    */
-  readonly registry: ICommentRegistry;
+  readonly commentRegistry: ICommentRegistry;
+
+  readonly commentWidgetRegistry: ICommentWidgetRegistry;
 
   /**
    * The underlying model handling RTC between clients.
@@ -459,7 +471,8 @@ export class CommentFileModel implements DocumentRegistry.IModel {
 
 export namespace CommentFileModel {
   export interface IOptions {
-    registry: ICommentRegistry;
+    commentRegistry: ICommentRegistry;
+    commentWidgetRegistry: ICommentWidgetRegistry;
     isInitialized?: boolean;
     commentMenu?: Menu;
   }
@@ -492,9 +505,10 @@ export class CommentFileModelFactory
   implements DocumentRegistry.IModelFactory<CommentFileModel>
 {
   constructor(options: CommentFileModelFactory.IOptions) {
-    const { registry, commentMenu } = options;
+    const { commentRegistry, commentWidgetRegistry, commentMenu } = options;
 
-    this._registry = registry;
+    this._commentRegistry = commentRegistry;
+    this._commentWidgetRegistry = commentWidgetRegistry;
     this._commentMenu = commentMenu;
   }
 
@@ -507,10 +521,12 @@ export class CommentFileModelFactory
     modelDB?: IModelDB,
     isInitialized?: boolean
   ): CommentFileModel {
-    const registry = this._registry;
+    const commentRegistry = this._commentRegistry;
+    const commentWidgetRegistry = this._commentWidgetRegistry;
     const commentMenu = this._commentMenu;
     return new CommentFileModel({
-      registry,
+      commentRegistry,
+      commentWidgetRegistry,
       commentMenu,
       isInitialized
     });
@@ -528,14 +544,16 @@ export class CommentFileModelFactory
     return this._isDisposed;
   }
 
-  private _registry: ICommentRegistry;
+  private _commentRegistry: ICommentRegistry;
+  private _commentWidgetRegistry: ICommentWidgetRegistry;
   private _commentMenu: Menu;
   private _isDisposed = false;
 }
 
 export namespace CommentFileModelFactory {
   export interface IOptions {
-    registry: ICommentRegistry;
+    commentRegistry: ICommentRegistry;
+    commentWidgetRegistry: ICommentWidgetRegistry;
     commentMenu: Menu;
   }
 }
@@ -543,16 +561,14 @@ export namespace CommentFileModelFactory {
 /**
  * Options object for creating a comment.
  */
-export interface ICommentOptionsBase {
+export interface ICommentOptions {
   text: string;
   identity: IIdentity;
   type: string;
   replies?: IReply[];
   id?: string; // defaults to UUID.uuid4();
+  source: any;
 }
-
-export type ICommentOptions = ({ target: PartialJSONValue } | { source: any }) &
-  ICommentOptionsBase;
 
 /**
  * Options object for creating a reply.

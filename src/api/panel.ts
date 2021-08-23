@@ -1,15 +1,19 @@
 import { Menu, Panel, Widget } from '@lumino/widgets';
 import { UUID } from '@lumino/coreutils';
 import { Message } from '@lumino/messaging';
-import { CommentFileWidget, CommentWidget, MockCommentWidget } from './widget';
+import { CommentFileWidget, CommentWidget } from './widget';
 import { YDocument } from '@jupyterlab/shared-models';
 import { ISignal, Signal } from '@lumino/signaling';
 import { CommandRegistry } from '@lumino/commands';
 import { Awareness } from 'y-protocols/awareness';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
-import { ICommentRegistry } from './registry';
+import {
+  ICommentPanel,
+  ICommentRegistry,
+  ICommentWidgetRegistry
+} from './token';
 import { ILabShell } from '@jupyterlab/application';
-import { PanelHeader } from './panelHeaderWidget';
+import { PanelHeader } from './header';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import { Context, DocumentRegistry } from '@jupyterlab/docregistry';
 import { hashString, randomIdentity } from './utils';
@@ -17,49 +21,7 @@ import { CommentFileModel } from './model';
 import { CommentsPanelIcon } from './icons';
 import { NewCommentButton } from './button';
 import { IIdentity } from './commentformat';
-
-export interface ICommentPanel extends Panel {
-  /**
-   * Scroll the comment with the given id into view.
-   */
-  scrollToComment: (id: string) => void;
-
-  /**
-   * A signal emitted when a comment is added to the panel.
-   */
-  commentAdded: Signal<this, CommentWidget<any>>;
-
-  /**
-   * The dropdown menu for comment widgets.
-   */
-  commentMenu: Menu;
-
-  /**
-   * A signal emitted when the panel is about to be shown.
-   */
-  revealed: Signal<this, undefined>;
-
-  /**
-   * The current awareness associated with the panel.
-   */
-  awareness: Awareness | undefined;
-
-  /**
-   * The current `CommentFileModel` associated with the panel.
-   */
-  model: CommentFileModel | undefined;
-
-  button: NewCommentButton;
-
-  fileWidget: CommentFileWidget | undefined;
-
-  localIdentity: IIdentity;
-
-  mockComment: (
-    options: CommentFileWidget.IMockCommentOptions,
-    index: number
-  ) => MockCommentWidget<any> | undefined;
-}
+import { Contents } from '@jupyterlab/services';
 
 export class CommentPanel extends Panel implements ICommentPanel {
   renderer: IRenderMimeRegistry;
@@ -71,9 +33,16 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.title.icon = CommentsPanelIcon;
     this.addClass('jc-CommentPanel');
 
-    const { docManager, registry, shell, renderer } = options;
+    const {
+      docManager,
+      commentRegistry,
+      commentWidgetRegistry,
+      shell,
+      renderer
+    } = options;
 
-    this._registry = registry;
+    this._commentRegistry = commentRegistry;
+    this._commentWidgetRegistry = commentWidgetRegistry;
     this._commentMenu = new Menu({ commands: options.commands });
     this._docManager = docManager;
 
@@ -88,6 +57,48 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this.renderer = renderer;
 
     this._localIdentity = randomIdentity();
+
+    docManager.services.contents.fileChanged.connect(this._onFileChange, this);
+  }
+
+  private async _onFileChange(
+    contents: Contents.IManager,
+    change: Contents.IChangedArgs
+  ): Promise<void> {
+    const sourcePath = change?.oldValue?.path;
+    const commentsPath =
+      sourcePath != null ? this.getCommentPathFor(sourcePath) : undefined;
+
+    switch (change.type) {
+      case 'delete':
+        if (await this.pathExists(commentsPath!)) {
+          return contents.delete(commentsPath!);
+        }
+        break;
+      case 'rename':
+        const newPath = change.newValue!.path!;
+        if (!(await this.pathExists(commentsPath!))) {
+          return;
+        }
+        const newCommentsPath = this.getCommentPathFor(newPath);
+        if (this.sourcePath === sourcePath) {
+          this._sourcePath = newPath;
+        }
+        return void contents.rename(commentsPath!, newCommentsPath);
+      case 'save':
+        if (this.sourcePath === change.newValue!.path!) {
+          return this._fileWidget!.context.save();
+        }
+        break;
+    }
+  }
+
+  getCommentFileNameFor(sourcePath: string): string {
+    return hashString(sourcePath).toString() + '.comment';
+  }
+
+  getCommentPathFor(sourcePath: string): string {
+    return this.pathPrefix + this.getCommentFileNameFor(sourcePath);
   }
 
   onUpdateRequest(msg: Message): void {
@@ -129,21 +140,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
     return context;
   }
 
-  private async _onPathChanged(
-    _: DocumentRegistry.IContext<DocumentRegistry.IModel>,
-    newPath: string
-  ): Promise<void> {
-    const commentContext = this._fileWidget?.context;
-    if (commentContext == null) {
-      return;
-    }
-
-    this._sourcePath = newPath;
-
-    await commentContext.rename(hashString(newPath).toString() + '.comment');
-    await commentContext.save();
-  }
-
   async loadModel(
     context: DocumentRegistry.IContext<DocumentRegistry.IModel>
   ): Promise<void> {
@@ -166,16 +162,16 @@ export class CommentPanel extends Panel implements ICommentPanel {
     this._loadingModel = true;
 
     if (this._fileWidget != null) {
-      Signal.disconnectReceiver(this._onPathChanged);
       this.model!.changed.disconnect(this._onChange, this);
       const oldWidget = this._fileWidget;
       oldWidget.hide();
-      await oldWidget.context.save();
-      oldWidget.dispose();
+      if (!oldWidget.context.isDisposed) {
+        await oldWidget.context.save();
+        oldWidget.dispose();
+      }
     }
 
-    const path =
-      this.pathPrefix + hashString(sourcePath).toString() + '.comment';
+    const path = this.getCommentPathFor(sourcePath);
 
     const commentContext = await this.getContext(path);
     await commentContext.ready;
@@ -185,7 +181,6 @@ export class CommentPanel extends Panel implements ICommentPanel {
       this.renderer
     );
 
-    context.pathChanged.connect(this._onPathChanged, this);
     this._fileWidget = content;
     this.addWidget(content);
 
@@ -319,8 +314,12 @@ export class CommentPanel extends Panel implements ICommentPanel {
     return this.model?.awareness;
   }
 
-  get registry(): ICommentRegistry {
-    return this._registry;
+  get commentRegistry(): ICommentRegistry {
+    return this._commentRegistry;
+  }
+
+  get commentWidgetRegistry(): ICommentWidgetRegistry {
+    return this._commentWidgetRegistry;
   }
 
   get pathPrefix(): string {
@@ -337,34 +336,30 @@ export class CommentPanel extends Panel implements ICommentPanel {
   mockComment(
     options: CommentFileWidget.IMockCommentOptions,
     index: number
-  ): MockCommentWidget<any> | undefined {
+  ): CommentWidget<any> | undefined {
     const model = this.model;
     if (model == null) {
       return;
     }
 
-    const factory = this.registry.getFactory(options.type);
-    if (factory == null) {
+    const commentFactory = this.commentRegistry.getFactory(options.type);
+    if (commentFactory == null) {
       return;
     }
 
-    let source;
-    let comment;
-    if ('target' in options) {
-      const target = options.target;
-      source = factory.targetFromJSON(target);
-      comment = factory.createComment({ ...options, text: '' }, target);
-    } else {
-      source = options.source;
-      comment = factory.createComment({ ...options, text: '' });
+    const comment = commentFactory.createComment({ ...options, text: '' });
+
+    const widgetFactory = this.commentWidgetRegistry.getFactory(options.type);
+    if (widgetFactory == null) {
+      return;
     }
 
-    const widget = new MockCommentWidget({
-      comment,
-      factory,
-      model,
-      target: source
-    });
+    const widget = widgetFactory.createWidget(comment, model, options.source);
+    if (widget == null) {
+      return;
+    }
+
+    widget.isMock = true;
 
     this.fileWidget!.insertWidget(index, widget);
     this._commentAdded.emit(widget);
@@ -415,7 +410,8 @@ export class CommentPanel extends Panel implements ICommentPanel {
   private _commentAdded = new Signal<this, CommentWidget<any>>(this);
   private _revealed = new Signal<this, undefined>(this);
   private _commentMenu: Menu;
-  private _registry: ICommentRegistry;
+  private _commentRegistry: ICommentRegistry;
+  private _commentWidgetRegistry: ICommentWidgetRegistry;
   private _panelHeader: PanelHeader;
   private _fileWidget: CommentFileWidget | undefined = undefined;
   private _docManager: IDocumentManager;
@@ -431,7 +427,8 @@ export namespace CommentPanel {
   export interface IOptions {
     docManager: IDocumentManager;
     commands: CommandRegistry;
-    registry: ICommentRegistry;
+    commentRegistry: ICommentRegistry;
+    commentWidgetRegistry: ICommentWidgetRegistry;
     shell: ILabShell;
     renderer: IRenderMimeRegistry;
   }

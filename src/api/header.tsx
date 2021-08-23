@@ -45,6 +45,11 @@ function FileTitle(props: FileTitleProps): JSX.Element {
     }
   };
 
+  const pathChangedHandler = (_: any, newPath: string): void => {
+    SetTooltip(panel.fileWidget?.context.path ?? '');
+    SetFilename(panel.sourcePath ?? '');
+  };
+
   const modelChangedHandler = (
     _: any,
     widget: CommentFileWidget | undefined
@@ -64,8 +69,15 @@ function FileTitle(props: FileTitleProps): JSX.Element {
 
   React.useEffect(() => {
     panel.modelChanged.connect(modelChangedHandler);
+    const fileWidget = panel.fileWidget;
+    if (fileWidget != null) {
+      fileWidget.context.pathChanged.connect(pathChangedHandler);
+    }
 
-    return () => void panel.modelChanged.disconnect(modelChangedHandler);
+    return () => {
+      Signal.disconnectAll(modelChangedHandler);
+      Signal.disconnectAll(pathChangedHandler);
+    };
   });
 
   return (
