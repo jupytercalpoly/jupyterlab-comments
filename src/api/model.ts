@@ -126,7 +126,6 @@ export class CommentFileModel implements DocumentRegistry.IModel {
       comments.insert(index, [comment]);
     });
 
-    console.log('update', comment);
     this._signalContentChange();
   }
 
