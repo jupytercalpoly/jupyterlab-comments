@@ -117,6 +117,19 @@ export const jupyterCommentingPlugin: JupyterFrontEndPlugin<ICommentPanel> = {
     commentMenu.addItem({ command: CommandIDs.editComment });
     commentMenu.addItem({ command: CommandIDs.replyToComment });
 
+    app.contextMenu.addItem({
+      command: CommandIDs.deleteComment,
+      selector: '.jc-Comment'
+    });
+    app.contextMenu.addItem({
+      command: CommandIDs.editComment,
+      selector: '.jc-Comment'
+    });
+    app.contextMenu.addItem({
+      command: CommandIDs.replyToComment,
+      selector: '.jc-Comment'
+    });
+
     const modelFactory = new CommentFileModelFactory({
       commentRegistry,
       commentWidgetRegistry,
