@@ -3,19 +3,18 @@ import {
   IComment,
   IIdentity,
   IReply,
-  ISelection,
   ITextSelectionComment
 } from './commentformat';
 import { WidgetTracker } from '@jupyterlab/apputils';
-import { PartialJSONValue, UUID } from '@lumino/coreutils';
-import { getCommentTimeString } from './utils';
+import { PartialJSONObject, PartialJSONValue, UUID } from '@lumino/coreutils';
+import { getCommentTimeString, truncate } from './utils';
 import { Cell } from '@jupyterlab/cells';
 import { CommentFileModel } from './model';
 import { CommentWidget } from './widget';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { CodeEditor, CodeEditorWrapper } from '@jupyterlab/codeeditor';
-import { DocumentWidget } from '@jupyterlab/docregistry';
-//import { CodeMirrorEditor } from '@jupyterlab/codemirror';
+import { CodeMirrorEditor } from '@jupyterlab/codemirror';
+import * as CodeMirror from 'codemirror';
 
 export abstract class ACommentFactory<T = any> {
   constructor(options: ACommentFactory.IOptions) {
@@ -27,7 +26,14 @@ export abstract class ACommentFactory<T = any> {
   abstract targetFromJSON(json: PartialJSONValue): T | undefined;
   abstract getPreviewText(comment: IComment, target: T): string;
 
-  getElement(target: T): HTMLElement | undefined {
+  /**
+   * Serializes a comment to JSON
+   */
+  toJSON(comment: IComment): PartialJSONValue {
+    return comment as unknown as PartialJSONObject;
+  }
+
+  getElement(comment: IComment, target?: T): HTMLElement | undefined {
     return;
   }
 
@@ -122,8 +128,8 @@ export class CellCommentFactory extends ACommentFactory<Cell> {
     return notebook.content.widgets.find(w => w.model.id === cellID);
   }
 
-  getElement(target: Cell): HTMLElement | undefined {
-    return target.node;
+  getElement(comment: IComment, target?: Cell): HTMLElement | undefined {
+    return target?.node ?? this.targetFromJSON(comment.target)?.node;
   }
 
   private _tracker: INotebookTracker;
@@ -134,6 +140,38 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
     super({ type: 'cell-selection' });
 
     this._tracker = tracker;
+  }
+
+  toJSON(comment: IComment): PartialJSONValue {
+    const cell = this.targetFromJSON(comment.target);
+    if (cell == null) {
+      return 'error: cell not found';
+    }
+
+    const json = super.toJSON(comment);
+
+    const mark = this._marks.get(comment.id);
+    if (mark == null) {
+      console.warn(
+        'no mark found--serializing based on initial text selection position'
+      );
+      return json;
+    }
+
+    const range = mark.find();
+    if (range == null) {
+      console.warn(
+        'mark no longer exists in cell--serializing based on initial text selection position'
+      );
+      return json;
+    }
+
+    const cellSelectionComment = json as unknown as ICellSelectionComment;
+    const { from, to } = range as CodeMirror.MarkerRange;
+    cellSelectionComment.target.start = Private.toCodeEditorPosition(from);
+    cellSelectionComment.target.end = Private.toCodeEditorPosition(to);
+
+    return cellSelectionComment as unknown as PartialJSONObject;
   }
 
   createWidget(
@@ -152,46 +190,16 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
       return null;
     }
 
-    // Add the selection to the cell's selections map.
-    //const selections = cell!.model.selections.get(cell!.model.id) ?? [];
+    const mark = Private.markCommentSelection(
+      (cell.editor as CodeMirrorEditor).doc,
+      comment as ITextSelectionComment
+    );
 
-    /*let tempSelections = cell!.editor.model.selections.get(cell!.model.id);
-    let selections = [];
-    if (tempSelections != null) {
-      selections = JSON.parse(JSON.stringify(tempSelections));
-    }*/
-    const selectionsMap = cell.editor.model.selections;
-    //const selections = selectionsMap.get(cell.model.id) ?? [];
-    let tempSelections = selectionsMap.get(cell.model.id);
-    let selections = [];
-    if (tempSelections != null) {
-      selections = JSON.parse(JSON.stringify(tempSelections));
-    }
-    const { start, end } = comment.target as any as ISelection;
-
-    selections.push({
-      start,
-      end,
-      style: {
-        className: 'jc-Highlight',
-        color: 'black',
-        displayName: comment.identity.name
-      },
-      uuid: comment.id
-    });
-    selectionsMap.set(cell.model.id, selections);
-
-    // Remove selections when widget is disposed.
-    // Currently runs O(N^2) when all widgets are disposed at once.
+    this._marks.set(comment.id, mark);
 
     widget.disposed.connect(() => {
-      const tempSels = selectionsMap.get(cell.model.id);
-      let sels: CodeEditor.ITextSelection[] = [];
-      if (tempSels != null) {
-        sels = JSON.parse(JSON.stringify(tempSels));
-      }
-      const newSels = sels.filter(sel => sel.uuid !== comment.id);
-      selectionsMap.set(cell.model.id, newSels);
+      this._marks.delete(comment.id);
+      mark.clear();
     });
 
     return widget;
@@ -227,31 +235,32 @@ export class CellSelectionCommentFactory extends ACommentFactory<Cell> {
       return '';
     }
 
-    const mainText = cell.model.value.text;
-    const selectionComment = comment as ICellSelectionComment;
-    const { start, end } = selectionComment.target;
-
-    let startIndex = lineToIndex(mainText, start.line, start.column);
-    let endIndex = lineToIndex(mainText, end.line, end.column);
-
-    if (startIndex > endIndex) {
-      [startIndex, endIndex] = [endIndex, startIndex];
+    const mark = this._marks.get(comment.id);
+    if (mark == null) {
+      return Private.getMockCommentPreviewText(
+        (cell.editor as CodeMirrorEditor).doc,
+        comment as ITextSelectionComment
+      );
     }
 
-    let previewText: string = mainText.slice(startIndex, endIndex);
-
-    if (previewText.length > 140) {
-      return previewText.slice(0, 140) + '...';
+    const range = mark.find();
+    if (range == null) {
+      return '';
     }
 
-    return previewText;
+    const doc = (cell.editor as CodeMirrorEditor).doc;
+    const { from, to } = range as CodeMirror.MarkerRange;
+    const text = doc.getRange(from, to);
+
+    return truncate(text, 140);
   }
 
-  getElement(target: Cell): HTMLElement | undefined {
-    return target.node;
+  getElement(comment: IComment, target?: Cell): HTMLElement | undefined {
+    return target?.node ?? this.targetFromJSON(comment.target)?.node;
   }
 
   private _tracker: INotebookTracker;
+  private _marks = new Map<string, CodeMirror.TextMarker>();
 }
 
 export class HTMLElementCommentFactory extends ACommentFactory<HTMLElement> {
@@ -262,8 +271,8 @@ export class HTMLElementCommentFactory extends ACommentFactory<HTMLElement> {
     console.log(this._root);
   }
 
-  getElement(target: HTMLElement): HTMLElement {
-    return target;
+  getElement(comment: IComment, target?: HTMLElement): HTMLElement | undefined {
+    return target ?? this.targetFromJSON(comment.target);
   }
 
   targetToJSON(target: HTMLElement): PartialJSONValue {
@@ -288,7 +297,10 @@ export class HTMLElementCommentFactory extends ACommentFactory<HTMLElement> {
 }
 
 export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapper> {
-  constructor(options: ACommentFactory.IOptions, tracker: WidgetTracker) {
+  constructor(
+    options: ACommentFactory.IOptions,
+    tracker: WidgetTracker<CodeEditorWrapper>
+  ) {
     super({ type: options.type });
     this._tracker = tracker;
   }
@@ -308,50 +320,52 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
     if (widget == null) {
       return null;
     }
-    const selectionsMap = wrapper.editor.model.selections;
 
-    let tempSelections = selectionsMap.get(
-      (wrapper.parent as DocumentWidget)?.context.path
+    const mark = Private.markCommentSelection(
+      (wrapper.editor as CodeMirrorEditor).doc,
+      comment as ITextSelectionComment
     );
-    let selections = [];
-    if (tempSelections != null) {
-      selections = JSON.parse(JSON.stringify(tempSelections));
-    }
 
-    const { start, end } = comment.target as any as ISelection;
-    selections.push({
-      start,
-      end,
-      style: {
-        className: 'jc-Highlight',
-        color: 'black',
-        displayName: comment.identity.name
-      },
-      uuid: comment.id
-    });
-
-    selectionsMap.set(
-      (wrapper.parent as DocumentWidget)?.context.path,
-      selections
-    );
+    this._marks.set(comment.id, mark);
 
     widget.disposed.connect(() => {
-      console.warn('disposing');
-      const tempSels = selectionsMap.get(
-        (wrapper.parent as DocumentWidget)?.context.path
-      );
-      let sels: CodeEditor.ITextSelection[] = [];
-      if (tempSels != null) {
-        sels = JSON.parse(JSON.stringify(tempSels));
-      }
-      const newSels = sels.filter(sel => sel.uuid !== comment.id);
-      selectionsMap.set(
-        (wrapper.parent as DocumentWidget)?.context.path,
-        newSels
-      );
+      this._marks.delete(comment.id);
+      mark.clear();
     });
 
     return widget;
+  }
+
+  toJSON(comment: IComment): PartialJSONValue {
+    const wrapper = this.targetFromJSON(comment.target);
+    if (wrapper == null) {
+      return 'error: code editor wrapper not found';
+    }
+
+    const json = super.toJSON(comment);
+
+    const mark = this._marks.get(comment.id);
+    if (mark == null) {
+      console.warn(
+        'no mark found--serializing based on initial text selection position'
+      );
+      return json;
+    }
+
+    const range = mark.find();
+    if (range == null) {
+      console.warn(
+        'mark no longer exists in code editor--serializing based on initial text selection position'
+      );
+      return json;
+    }
+
+    const textSelectionComment = json as unknown as ICellSelectionComment;
+    const { from, to } = range as CodeMirror.MarkerRange;
+    textSelectionComment.target.start = Private.toCodeEditorPosition(from);
+    textSelectionComment.target.end = Private.toCodeEditorPosition(to);
+
+    return textSelectionComment as unknown as PartialJSONObject;
   }
 
   targetToJSON(wrapper: CodeEditorWrapper): PartialJSONValue {
@@ -363,20 +377,13 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
       [start, end] = [end, start];
     }
     return {
-      editorID: (wrapper.parent as DocumentWidget).context.path,
       start,
       end
     };
   }
 
   targetFromJSON(json: PartialJSONValue): CodeEditorWrapper | undefined {
-    if (!(json instanceof Object && 'editorID' in json)) {
-      return;
-    }
-    return this._tracker.filter(
-      widget =>
-        (widget.parent as DocumentWidget).context.path === json['editorID']
-    )[0] as CodeEditorWrapper;
+    return this._tracker.currentWidget ?? undefined;
   }
 
   getPreviewText(comment: IComment, target?: CodeEditorWrapper): string {
@@ -386,30 +393,36 @@ export class TextSelectionCommentFactory extends ACommentFactory<CodeEditorWrapp
       return '';
     }
 
-    const text = wrapper.editor.model.value.text;
-    const textComment = comment as ITextSelectionComment;
-    const { start, end } = textComment.target;
+    const doc = (wrapper.editor as CodeMirrorEditor).doc;
 
-    let startIndex = wrapper.editor.getOffsetAt(start);
-    let endIndex = wrapper.editor.getOffsetAt(end);
-
-    if (startIndex > endIndex) {
-      [startIndex, endIndex] = [endIndex, startIndex];
+    const mark = this._marks.get(comment.id);
+    if (mark == null) {
+      return Private.getMockCommentPreviewText(
+        doc,
+        comment as ITextSelectionComment
+      );
     }
 
-    let previewText = text.slice(startIndex, endIndex);
-    if (previewText.length > 140) {
-      return previewText.slice(0, 140) + '...';
+    const range = mark.find();
+    if (range == null) {
+      return '';
     }
 
-    return previewText;
+    const { from, to } = range as CodeMirror.MarkerRange;
+    const text = doc.getRange(from, to);
+
+    return truncate(text, 140);
   }
 
-  getElement(target: CodeEditorWrapper) {
-    return target.node;
+  getElement(
+    comment: IComment,
+    target?: CodeEditorWrapper
+  ): HTMLElement | undefined {
+    return document.getElementById(`CommentMark-${comment.id}`) ?? undefined;
   }
 
-  private _tracker: WidgetTracker;
+  private _tracker: WidgetTracker<CodeEditorWrapper>;
+  private _marks = new Map<string, CodeMirror.TextMarker>();
 }
 
 export namespace HTMLElementCommentFactory {
@@ -435,12 +448,71 @@ export namespace ACommentFactory {
   }
 }
 
-//function that converts a line-column pairing to an index
-export function lineToIndex(str: string, line: number, col: number): number {
-  if (line == 0) {
-    return col;
-  } else {
-    let arr = str.split('\n');
-    return arr.slice(0, line).join('\n').length + col + 1;
+namespace Private {
+  //function that converts a line-column pairing to an index
+  export function lineToIndex(str: string, line: number, col: number): number {
+    if (line == 0) {
+      return col;
+    } else {
+      let arr = str.split('\n');
+      return arr.slice(0, line).join('\n').length + col + 1;
+    }
+  }
+
+  export function markCommentSelection(
+    doc: CodeMirror.Doc,
+    comment: ITextSelectionComment
+  ): CodeMirror.TextMarker {
+    const color = comment.identity.color;
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+
+    const { start, end } = comment.target;
+    const forward =
+      start.line < end.line ||
+      (start.line === end.line && start.column <= end.column);
+    const anchor = toCodeMirrorPosition(forward ? start : end);
+    const head = toCodeMirrorPosition(forward ? end : start);
+
+    return doc.markText(anchor, head, {
+      className: 'jc-Highlight',
+      title: `${comment.identity.name}: ${truncate(comment.text, 140)}`,
+      css: `background-color: rgba( ${r}, ${g}, ${b}, 0.15)`,
+      attributes: { id: `CommentMark-${comment.id}` }
+    });
+  }
+
+  export function toCodeMirrorPosition(
+    pos: CodeEditor.IPosition
+  ): CodeMirror.Position {
+    return {
+      line: pos.line,
+      ch: pos.column
+    };
+  }
+
+  export function toCodeEditorPosition(
+    pos: CodeMirror.Position
+  ): CodeEditor.IPosition {
+    return {
+      line: pos.line,
+      column: pos.ch
+    };
+  }
+
+  export function getMockCommentPreviewText(
+    doc: CodeMirror.Doc,
+    comment: ITextSelectionComment
+  ): string {
+    const { start, end } = comment.target;
+    const forward =
+      start.line < end.line ||
+      (start.line === end.line && start.column <= end.column);
+    const from = toCodeMirrorPosition(forward ? start : end);
+    const to = toCodeMirrorPosition(forward ? end : start);
+    const text = doc.getRange(from, to);
+
+    return truncate(text, 140);
   }
 }

@@ -553,6 +553,16 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
   }
 
   /**
+   * Scrolls to the comment's target, if it exists
+   */
+  private _scrollToTarget(): void {
+    const element = this.factory.getElement(this.comment!);
+    if (element != null) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  /**
    * Sets the widget focus and active id on click.
    *
    * A building block of other click handlers.
@@ -659,6 +669,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
   protected _handleUserClick(event: React.MouseEvent): void {
     console.log('clicked user photo!');
     this._setClickFocus(event);
+    this._scrollToTarget();
   }
 
   /**
@@ -680,6 +691,8 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
     } else {
       this.replyAreaHidden = true;
     }
+
+    this._scrollToTarget();
   }
 
   /**
@@ -687,6 +700,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
    */
   protected _handleReplyClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
+    this._scrollToTarget();
   }
 
   /**
@@ -694,6 +708,7 @@ export class CommentWidget<T> extends ReactWidget implements ICommentWidget<T> {
    */
   protected _handleBodyClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
+    this._scrollToTarget(
   }
 
   /**

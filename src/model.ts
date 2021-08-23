@@ -45,7 +45,10 @@ export class CommentFileModel implements DocumentRegistry.IModel {
    * Serialize the model to JSON.
    */
   toJSON(): PartialJSONValue {
-    return this.comments.toJSON();
+    return this.comments.map((comment: IComment) => {
+      const factory = this.registry.getFactory(comment.type);
+      return factory!.toJSON(comment);
+    });
   }
 
   /**
