@@ -118,6 +118,8 @@ function ReactMarkdownRenderer(props: ReactMarkdownRendererProps): JSX.Element {
       );
     };
     void markdownRender();
+
+    return () => SetRenderElement(<div></div>);
   }, []);
   return renderElement;
 }
@@ -356,6 +358,7 @@ function JCCommentWrapper(props: CommentWrapperProps): JSX.Element {
   if (comment == null) {
     return <div className="jc-Error" />;
   }
+
   return (
     <div className={className} onClick={eventHandler} onKeyDown={eventHandler}>
       <JCCommentWithReplies

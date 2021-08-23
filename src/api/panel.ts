@@ -215,9 +215,7 @@ export class CommentPanel extends Panel implements ICommentPanel {
           .slice(index, index + change.delete)
           .forEach(widget => widget.dispose());
       } else if (change.update != null) {
-        console.log('recieved update');
         for (let i = 0; i < change.update; i++) {
-          console.log('\tupdating', widgets[index]);
           widgets[index++].update();
         }
       }
@@ -331,19 +329,24 @@ export class CommentPanel extends Panel implements ICommentPanel {
       return;
     }
 
-    const factory = this.commentRegistry.getFactory(options.type);
-    if (factory == null) {
+    const commentFactory = this.commentRegistry.getFactory(options.type);
+    if (commentFactory == null) {
       return;
     }
 
-    const comment = factory.createComment({ ...options, text: '' });
+    const comment = commentFactory.createComment({ ...options, text: '' });
 
-    const widget = new CommentWidget({
-      comment,
-      model,
-      target: options.source,
-      isMock: true
-    });
+    const widgetFactory = this.commentWidgetRegistry.getFactory(options.type);
+    if (widgetFactory == null) {
+      return;
+    }
+
+    const widget = widgetFactory.createWidget(comment, model, options.source);
+    if (widget == null) {
+      return;
+    }
+
+    widget.isMock = true;
 
     this.fileWidget!.insertWidget(index, widget);
     this._commentAdded.emit(widget);
