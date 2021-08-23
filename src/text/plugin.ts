@@ -14,6 +14,10 @@ import { Awareness } from 'y-protocols/awareness';
 import { YFile } from '@jupyterlab/shared-models';
 import { Widget } from '@lumino/widgets';
 
+namespace CommandIDs {
+  export const addComment = 'jupyter-comments:add-text-comment';
+}
+
 export const textCommentingPlugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-comments:text',
   autoStart: true,
@@ -37,59 +41,72 @@ export const textCommentingPlugin: JupyterFrontEndPlugin<void> = {
 
     const button = panel.button;
 
-    function openButton(x: number, y: number, anchor: HTMLElement): void {
-      button.open(
-        x,
-        y,
-        () => {
-          let editorWidget = (shell.currentWidget as DocumentWidget)
-            .content as CodeEditorWrapper;
+    app.commands.addCommand(CommandIDs.addComment, {
+      label: 'Add Comment',
+      execute: () => {
+        let editorWidget = (shell.currentWidget as DocumentWidget)
+          .content as CodeEditorWrapper;
 
-          if (editorWidget == null) {
-            return;
-          }
+        if (editorWidget == null) {
+          return;
+        }
 
-          const model = panel.model;
-          if (model == null) {
-            return;
-          }
+        const model = panel.model;
+        if (model == null) {
+          return;
+        }
 
-          const comments = model.comments;
-          let index = comments.length;
-          let { start, end } = editorWidget.editor.getSelection();
-          //backwards selection compatibility
+        const comments = model.comments;
+        let index = comments.length;
+        let { start, end } = editorWidget.editor.getSelection();
+        //backwards selection compatibility
+        if (
+          start.line > end.line ||
+          (start.line === end.line && start.column > end.column)
+        ) {
+          [start, end] = [end, start];
+        }
+
+        for (let i = 0; i < comments.length; i++) {
+          const comment = comments.get(i) as ITextSelectionComment;
+          let sel = comment.target;
+          let commentStart = sel.start;
           if (
-            start.line > end.line ||
-            (start.line === end.line && start.column > end.column)
+            start.line < commentStart.line ||
+            (start.line === commentStart.line &&
+              start.column <= commentStart.column)
           ) {
-            [start, end] = [end, start];
+            index = i;
+            break;
           }
+        }
 
-          for (let i = 0; i < comments.length; i++) {
-            const comment = comments.get(i) as ITextSelectionComment;
-            let sel = comment.target;
-            let commentStart = sel.start;
-            if (
-              start.line < commentStart.line ||
-              (start.line === commentStart.line &&
-                start.column <= commentStart.column)
-            ) {
-              index = i;
-              break;
-            }
-          }
+        panel.mockComment(
+          {
+            identity: getIdentity(model.awareness),
+            type: 'text-selection',
+            source: editorWidget
+          },
+          index
+        );
+      }
+    });
 
-          panel.mockComment(
-            {
-              identity: getIdentity(model.awareness),
-              type: 'text-selection',
-              source: editorWidget
-            },
-            index
-          );
-        },
-        anchor
-      );
+    // Ideally, the button should be anchored to the CodeMirrorEditor and scroll along with it.
+    // However, when using the scroll element as the anchor, click events first register on the
+    // editor, causing the awareness to update and the button to close without triggering the click
+    // callback. For now, scrolling causes the button to close instead.
+    function openButton(x: number, y: number, anchor: HTMLElement): void {
+      const onScroll = () => button.close();
+      anchor.addEventListener('scroll', onScroll, {
+        passive: true,
+        once: true
+      });
+
+      button.open(x, y, () => {
+        void app.commands.execute(CommandIDs.addComment);
+        anchor.removeEventListener('scroll', onScroll);
+      });
     }
 
     let currAwareness: Awareness | null = null;
@@ -122,8 +139,10 @@ export const textCommentingPlugin: JupyterFrontEndPlugin<void> = {
         const { start, end } = editorWidget.editor.getSelection();
         const coord1 = editorWidget.editor.getCoordinateForPosition(start);
         const coord2 = editorWidget.editor.getCoordinateForPosition(end);
-        const node = editorWidget.parent?.parent?.node ?? editorWidget.node;
-        openButton(right - 10, (coord1.top + coord2.bottom) / 2 - 10, node);
+        const node = editorWidget.node.getElementsByClassName(
+          'CodeMirror-scroll'
+        )[0] as HTMLElement;
+        openButton(right - 20, (coord1.top + coord2.bottom) / 2 - 10, node);
       };
 
       handler = (): void => {
@@ -143,6 +162,11 @@ export const textCommentingPlugin: JupyterFrontEndPlugin<void> = {
       currAwareness = (editorWidget.editor.model.sharedModel as YFile)
         .awareness;
       currAwareness.on('change', handler);
+    });
+
+    app.contextMenu.addItem({
+      command: CommandIDs.addComment,
+      selector: '.jp-FileEditorCodeWrapper'
     });
   }
 };

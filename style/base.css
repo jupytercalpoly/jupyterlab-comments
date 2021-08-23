@@ -205,8 +205,6 @@
 .jc-Indicator {
   cursor: pointer;
   position: absolute;
-  height: fit-content;
-  width: fit-content;
   text-align: center;
   z-index: 5;
 }
