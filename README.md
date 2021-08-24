@@ -57,7 +57,7 @@ jupyter lab build --minimize=False
 ### Uninstall
 
 ```bash
-pip uninstall jupyterlab_comments
+pip uninstall jupyterlab-comments
 ```
 
 In development mode, you will also need to remove the symlink created by `jupyter labextension develop`
