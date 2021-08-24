@@ -37,3 +37,7 @@ recursive-include docs *.py
 recursive-include docs *.rst
 recursive-include docs *.txt
 recursive-include docs Makefile
+
+# demo folder
+recursive-include demo *.ipynb
+recursive-include demo *.py
