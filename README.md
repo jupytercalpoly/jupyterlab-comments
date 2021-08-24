@@ -4,11 +4,9 @@
 
 Comment on files and notebooks in JupyterLab
 
-Extension is currently pre-alpha status.
-
 ## Requirements
 
-- JupyterLab >= 3.1.3
+- JupyterLab >= 3.1.6
 
 ## Contributing
 
@@ -16,7 +14,11 @@ Extension is currently pre-alpha status.
 
 ### Install
 
-Currently, jupyterlab-comments has no official release, so the extension has to be installed from source.
+You can install using `pip`
+
+`pip install jupyterlab-comments`
+
+### Dev install
 
 Note: You will need NodeJS to build the extension package.
 
