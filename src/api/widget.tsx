@@ -590,14 +590,9 @@ export class CommentWidget<T, C extends IComment = IComment>
       return;
     }
 
-    // Code to be added for the change in color when inactive
-    // if (element.textContent == ''){
-    //   target.className = 'jc-SubmitButtonInactive'
-    //   return;
-    // }
     if (element.classList.contains('jc-ReplyInputArea')) {
       //  reply
-      if (element.innerText == '') {
+      if (!/\S/.test(element.innerText)) {
         return;
       }
       this.model.addReply(
@@ -613,12 +608,17 @@ export class CommentWidget<T, C extends IComment = IComment>
       return;
     }
 
-    if (element.innerText === '') {
+    if (!/\S/.test(element.innerText)) {
       if (this.isMock) {
         this.dispose();
+        return;
       }
       element.innerText = this.text!;
     } else {
+      if (this.isMock) {
+        this.populate(element.innerText);
+        return;
+      }
       this.editActive(element.innerText);
     }
     this.editID = '';
@@ -744,7 +744,7 @@ export class CommentWidget<T, C extends IComment = IComment>
       const target = event.target as HTMLDivElement;
       event.preventDefault();
       event.stopPropagation();
-      if (target.innerText == '') {
+      if (!/\S/.test(target.innerText)) {
         return;
       }
 
@@ -791,7 +791,7 @@ export class CommentWidget<T, C extends IComment = IComment>
         target.blur();
         break;
       case 'Enter':
-        if (event.shiftKey) {
+        if (!event.shiftKey) {
           break;
         }
 
@@ -799,15 +799,15 @@ export class CommentWidget<T, C extends IComment = IComment>
         event.stopPropagation();
 
         if (this.isMock) {
-          if (target.innerText === '') {
-            this.dispose();
-          } else {
+          if (/\S/.test(target.innerText)) {
             this.populate(target.innerText);
+          } else {
+            this.dispose();
           }
           break;
         }
 
-        if (target.innerText === '') {
+        if (!/\S/.test(target.innerText)) {
           target.innerText = this.text!;
         } else {
           this.editActive(target.innerText);
