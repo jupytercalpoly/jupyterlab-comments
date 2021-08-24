@@ -1,6 +1,7 @@
 import { BlueCreateCommentIcon } from './icons';
 import { Widget } from '@lumino/widgets';
 import { Message } from '@lumino/messaging';
+import { ISignal, Signal } from '@lumino/signaling';
 
 export class NewCommentButton extends Widget {
   constructor() {
@@ -26,8 +27,15 @@ export class NewCommentButton extends Widget {
   }
 
   private _handleClick(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
     this._onClick();
     this.close();
+  }
+
+  close(): void {
+    super.close();
+    this._closed.emit(undefined);
   }
 
   open(x: number, y: number, f: () => void, anchor?: HTMLElement): void {
@@ -87,11 +95,17 @@ export class NewCommentButton extends Widget {
     style.visibility = '';
   }
 
+  get closed(): ISignal<this, undefined> {
+    return this._closed;
+  }
+
   private _onClick: () => void = () =>
     console.warn('no onClick function registered', this);
+
+  private _closed = new Signal<this, undefined>(this);
 }
 
-export namespace Private {
+namespace Private {
   export function createNode() {
     const node = document.createElement('div');
     node.className = 'jc-Indicator';

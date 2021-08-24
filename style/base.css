@@ -58,10 +58,10 @@
 .jc-MarkdownBody {
   margin: 0;
   padding: 0;
-} 
+}
 
 /* replies */
-.jc-MarkdownBody > *{
+.jc-MarkdownBody > * {
   display: inline-block;
   margin: 0;
   padding: 0;
@@ -107,15 +107,16 @@
 
 .jc-SubmitButtons > * {
   padding: 2px;
-  border: 1px solid #64B5F6;
+  border: 1px solid #64b5f6;
   border-radius: 8px;
   font-size: small;
   width: 66px;
   text-align: center;
+  cursor: pointer;
 }
 
 .jc-SubmitButton {
-  background-color:  #64B5F6;
+  background-color: #64b5f6;
 }
 
 /* .jc-SubmitButtonInactive {
@@ -204,8 +205,6 @@
 .jc-Indicator {
   cursor: pointer;
   position: absolute;
-  height: fit-content;
-  width: fit-content;
   text-align: center;
   z-index: 5;
 }
