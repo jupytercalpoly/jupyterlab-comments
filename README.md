@@ -1,6 +1,7 @@
 # jupyterlab_comments
 
-![Github Actions Status](https://github.com/jupytercalpoly/jupyterlab-comments/workflows/Build/badge.svg)[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupytercalpoly/jupyterlab-comments/main?urlpath=lab)
+![Github Actions Status](https://github.com/jupytercalpoly/jupyterlab-comments/workflows/Build/badge.svg)[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupytercalpoly/jupyterlab-comments/main?urlpath=lab)[![Documentation Status](https://readthedocs.org/projects/jupyterlab-comments/badge/?version=latest)](https://jupyterlab-comments.readthedocs.io/en/latest/?badge=latest)
+      
 
 Comment on files and notebooks in JupyterLab
 
