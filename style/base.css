@@ -71,14 +71,12 @@
   font-size: 0.833rem;
   outline: none;
   border: none;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
   background-color: transparent;
   white-space: pre-wrap;
   margin-top: var(--var-jc-linesep);
   line-height: 1.2em;
   padding: 3px 1px;
+  min-height: 1.2em;
 }
 
 .jc-Body strong {
