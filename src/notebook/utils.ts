@@ -1,4 +1,5 @@
 import { Cell } from '@jupyterlab/cells';
+import { IThemeManager } from '@jupyterlab/apputils';
 import * as CodeMirror from 'codemirror';
 import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 import { ICellSelectionComment } from './commentformat';
@@ -10,7 +11,8 @@ export function docFromCell(cell: Cell): CodeMirror.Doc {
 
 export function markCommentSelection(
   doc: CodeMirror.Doc,
-  comment: ICellSelectionComment
+  comment: ICellSelectionComment,
+  theme: IThemeManager
 ): CodeMirror.TextMarker {
   const color = comment.identity.color;
   const r = parseInt(color.slice(1, 3), 16);
@@ -23,11 +25,10 @@ export function markCommentSelection(
     (start.line === end.line && start.column <= end.column);
   const anchor = toCodeMirrorPosition(forward ? start : end);
   const head = toCodeMirrorPosition(forward ? end : start);
-
   return doc.markText(anchor, head, {
     className: 'jc-Highlight',
     title: `${comment.identity.name}: ${truncate(comment.text, 140)}`,
-    css: `background-color: rgba( ${r}, ${g}, ${b}, 0.15)`,
+    css: `background-color: rgba( ${r}, ${g}, ${b}, ${theme.theme === 'JupyterLab Light' ? 0.15 : 0.3})`,
     attributes: { id: `CommentMark-${comment.id}` }
   });
 }

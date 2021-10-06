@@ -1,6 +1,7 @@
 import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
 import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 import { ITextSelectionComment } from './commentformat';
+import { IThemeManager } from '@jupyterlab/apputils';
 import { toCodeMirrorPosition, truncate } from '../api';
 import * as CodeMirror from 'codemirror';
 
@@ -10,7 +11,8 @@ export function docFromWrapper(wrapper: CodeEditorWrapper): CodeMirror.Doc {
 
 export function markTextSelection(
   doc: CodeMirror.Doc,
-  comment: ITextSelectionComment
+  comment: ITextSelectionComment,
+  theme: IThemeManager
 ): CodeMirror.TextMarker {
   const color = comment.identity.color;
   const r = parseInt(color.slice(1, 3), 16);
@@ -27,7 +29,7 @@ export function markTextSelection(
   return doc.markText(anchor, head, {
     className: 'jc-Highlight',
     title: `${comment.identity.name}: ${truncate(comment.text, 140)}`,
-    css: `background-color: rgba( ${r}, ${g}, ${b}, 0.15)`,
+    css: `background-color: rgba( ${r}, ${g}, ${b}, ${theme.theme === 'JupyterLab Light' ? 0.15 : 0.3})`,
     attributes: { id: `CommentMark-${comment.id}` }
   });
 }

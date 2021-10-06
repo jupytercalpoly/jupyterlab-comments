@@ -1,4 +1,5 @@
 import { CodeEditorWrapper } from '@jupyterlab/codeeditor';
+import { IThemeManager } from '@jupyterlab/apputils';
 import { ITextSelectionComment } from './commentformat';
 import {
   CommentWidget,
@@ -8,7 +9,7 @@ import {
 } from '../api';
 import * as CodeMirror from 'codemirror';
 import { PartialJSONValue } from '@lumino/coreutils';
-import { docFromWrapper } from './utils';
+import { docFromWrapper, markTextSelection } from './utils';
 
 export class TextSelectionCommentWidget extends CommentWidget<
   CodeEditorWrapper,
@@ -16,8 +17,13 @@ export class TextSelectionCommentWidget extends CommentWidget<
 > {
   constructor(options: TextSelectionCommentWidget.IOptions) {
     super(options);
-
+    this._theme = options.theme;
     this._mark = options.mark;
+
+    this._theme.themeChanged.connect(() => {
+      this._mark = markTextSelection(docFromWrapper(options.target), options.comment, this._theme);
+    });
+
   }
 
   dispose(): void {
@@ -81,12 +87,14 @@ export class TextSelectionCommentWidget extends CommentWidget<
   }
 
   private _mark: CodeMirror.TextMarker;
+  private _theme: IThemeManager;
 }
 
 export namespace TextSelectionCommentWidget {
   export interface IOptions
     extends CommentWidget.IOptions<CodeEditorWrapper, ITextSelectionComment> {
     mark: CodeMirror.TextMarker;
+    theme: IThemeManager;
   }
 }
 

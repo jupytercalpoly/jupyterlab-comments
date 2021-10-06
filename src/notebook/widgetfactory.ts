@@ -1,6 +1,7 @@
 import { ICellComment, ICellSelectionComment } from './commentformat';
 import { CommentFileModel, CommentWidgetFactory } from '../api';
 import { Cell } from '@jupyterlab/cells';
+import { IThemeManager } from '@jupyterlab/apputils';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { CellCommentWidget, CellSelectionCommentWidget } from './widget';
 import { docFromCell, markCommentSelection } from './utils';
@@ -57,10 +58,12 @@ export class CellSelectionCommentWidgetFactory extends CommentWidgetFactory<
   Cell,
   ICellSelectionComment
 > {
-  constructor(options: CellCommentWidgetFactory.IOptions) {
+
+  constructor(options: CellCommentWidgetFactory.IOptions, theme: IThemeManager) {
     super(options);
 
     this._tracker = options.tracker;
+    this._theme = theme;
   }
 
   createWidget(
@@ -74,13 +77,14 @@ export class CellSelectionCommentWidgetFactory extends CommentWidgetFactory<
       return;
     }
 
-    const mark = markCommentSelection(docFromCell(cell), comment);
-
+    const mark = markCommentSelection(docFromCell(cell), comment, this._theme);
+    let theme = this._theme;
     return new CellSelectionCommentWidget({
       model,
       comment,
       mark,
-      target: cell
+      target: cell,
+      theme
     });
   }
 
@@ -97,4 +101,5 @@ export class CellSelectionCommentWidgetFactory extends CommentWidgetFactory<
   readonly commentType = 'cell-selection';
 
   private _tracker: INotebookTracker;
+  private _theme: IThemeManager;
 }
