@@ -46,10 +46,13 @@ export const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
       new CellCommentWidgetFactory({ commentRegistry, tracker: nbTracker })
     );
     commentWidgetRegistry.addFactory(
-      new CellSelectionCommentWidgetFactory({
-        commentRegistry,
-        tracker: nbTracker,
-      }, manager)
+      new CellSelectionCommentWidgetFactory(
+        {
+          commentRegistry,
+          tracker: nbTracker
+        },
+        manager
+      )
     );
 
     app.commands.addCommand(CommandIDs.addNotebookComment, {

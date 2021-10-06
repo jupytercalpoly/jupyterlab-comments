@@ -21,9 +21,12 @@ export class TextSelectionCommentWidget extends CommentWidget<
     this._mark = options.mark;
 
     this._theme.themeChanged.connect(() => {
-      this._mark = markTextSelection(docFromWrapper(options.target), options.comment, this._theme);
+      this._mark = markTextSelection(
+        docFromWrapper(options.target),
+        options.comment,
+        this._theme
+      );
     });
-
   }
 
   dispose(): void {

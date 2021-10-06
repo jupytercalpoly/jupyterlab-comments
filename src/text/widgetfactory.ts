@@ -10,7 +10,10 @@ export class TextSelectionCommentWidgetFactory extends CommentWidgetFactory<
   CodeEditorWrapper,
   ITextSelectionComment
 > {
-  constructor(options: TextSelectionCommentWidgetFactory.IOptions, theme: IThemeManager) {
+  constructor(
+    options: TextSelectionCommentWidgetFactory.IOptions,
+    theme: IThemeManager
+  ) {
     super(options);
     this._theme = theme;
     this._tracker = options.tracker;
@@ -27,7 +30,11 @@ export class TextSelectionCommentWidgetFactory extends CommentWidgetFactory<
       return;
     }
 
-    const mark = markTextSelection(docFromWrapper(wrapper), comment, this._theme);
+    const mark = markTextSelection(
+      docFromWrapper(wrapper),
+      comment,
+      this._theme
+    );
     let theme = this._theme;
     return new TextSelectionCommentWidget({
       comment,

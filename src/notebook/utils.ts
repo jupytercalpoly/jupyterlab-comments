@@ -28,7 +28,9 @@ export function markCommentSelection(
   return doc.markText(anchor, head, {
     className: 'jc-Highlight',
     title: `${comment.identity.name}: ${truncate(comment.text, 140)}`,
-    css: `background-color: rgba( ${r}, ${g}, ${b}, ${theme.theme === 'JupyterLab Light' ? 0.15 : 0.3})`,
+    css: `background-color: rgba( ${r}, ${g}, ${b}, ${
+      theme.theme === 'JupyterLab Light' ? 0.15 : 0.3
+    })`,
     attributes: { id: `CommentMark-${comment.id}` }
   });
 }

@@ -31,7 +31,11 @@ export class CellSelectionCommentWidget extends CommentWidget<
     this._theme = options.theme;
 
     this._theme.themeChanged.connect(() => {
-      this._mark = markCommentSelection(docFromCell(options.target), options.comment, this._theme);
+      this._mark = markCommentSelection(
+        docFromCell(options.target),
+        options.comment,
+        this._theme
+      );
     });
   }
 

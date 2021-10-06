@@ -23,7 +23,12 @@ export const textCommentingPlugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-comments:text',
   autoStart: true,
   requires: [ICommentPanel, ILabShell, IThemeManager],
-  activate: (app: JupyterFrontEnd, panel: ICommentPanel, shell: ILabShell, manager: IThemeManager) => {
+  activate: (
+    app: JupyterFrontEnd,
+    panel: ICommentPanel,
+    shell: ILabShell,
+    manager: IThemeManager
+  ) => {
     const commentRegistry = panel.commentRegistry;
     const commentWidgetRegistry = panel.commentWidgetRegistry;
 
@@ -34,10 +39,13 @@ export const textCommentingPlugin: JupyterFrontEndPlugin<void> = {
     commentRegistry.addFactory(new TextSelectionCommentFactory());
 
     commentWidgetRegistry.addFactory(
-      new TextSelectionCommentWidgetFactory({
-        commentRegistry,
-        tracker: editorTracker
-      }, manager)
+      new TextSelectionCommentWidgetFactory(
+        {
+          commentRegistry,
+          tracker: editorTracker
+        },
+        manager
+      )
     );
 
     const button = panel.button;

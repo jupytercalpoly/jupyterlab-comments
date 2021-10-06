@@ -58,8 +58,10 @@ export class CellSelectionCommentWidgetFactory extends CommentWidgetFactory<
   Cell,
   ICellSelectionComment
 > {
-
-  constructor(options: CellCommentWidgetFactory.IOptions, theme: IThemeManager) {
+  constructor(
+    options: CellCommentWidgetFactory.IOptions,
+    theme: IThemeManager
+  ) {
     super(options);
 
     this._tracker = options.tracker;
