@@ -13,6 +13,7 @@ import { ITextSelectionComment } from './commentformat';
 import { Awareness } from 'y-protocols/awareness';
 import { YFile } from '@jupyterlab/shared-models';
 import { Widget } from '@lumino/widgets';
+import { IThemeManager } from '@jupyterlab/apputils';
 
 namespace CommandIDs {
   export const addComment = 'jupyter-comments:add-text-comment';
@@ -21,8 +22,13 @@ namespace CommandIDs {
 export const textCommentingPlugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-comments:text',
   autoStart: true,
-  requires: [ICommentPanel, ILabShell],
-  activate: (app: JupyterFrontEnd, panel: ICommentPanel, shell: ILabShell) => {
+  requires: [ICommentPanel, ILabShell, IThemeManager],
+  activate: (
+    app: JupyterFrontEnd,
+    panel: ICommentPanel,
+    shell: ILabShell,
+    manager: IThemeManager
+  ) => {
     const commentRegistry = panel.commentRegistry;
     const commentWidgetRegistry = panel.commentWidgetRegistry;
 
@@ -33,10 +39,13 @@ export const textCommentingPlugin: JupyterFrontEndPlugin<void> = {
     commentRegistry.addFactory(new TextSelectionCommentFactory());
 
     commentWidgetRegistry.addFactory(
-      new TextSelectionCommentWidgetFactory({
-        commentRegistry,
-        tracker: editorTracker
-      })
+      new TextSelectionCommentWidgetFactory(
+        {
+          commentRegistry,
+          tracker: editorTracker
+        },
+        manager
+      )
     );
 
     const button = panel.button;

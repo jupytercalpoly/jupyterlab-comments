@@ -2,7 +2,7 @@ import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
-
+import { IThemeManager } from '@jupyterlab/apputils';
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { YNotebook } from '@jupyterlab/shared-models';
 import { Awareness } from 'y-protocols/awareness';
@@ -29,11 +29,12 @@ export namespace CommandIDs {
 export const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyterlab-comments:notebook',
   autoStart: true,
-  requires: [INotebookTracker, ICommentPanel],
+  requires: [INotebookTracker, ICommentPanel, IThemeManager],
   activate: (
     app: JupyterFrontEnd,
     nbTracker: INotebookTracker,
-    panel: ICommentPanel
+    panel: ICommentPanel,
+    manager: IThemeManager
   ) => {
     const commentRegistry = panel.commentRegistry;
     const commentWidgetRegistry = panel.commentWidgetRegistry;
@@ -45,10 +46,13 @@ export const notebookCommentsPlugin: JupyterFrontEndPlugin<void> = {
       new CellCommentWidgetFactory({ commentRegistry, tracker: nbTracker })
     );
     commentWidgetRegistry.addFactory(
-      new CellSelectionCommentWidgetFactory({
-        commentRegistry,
-        tracker: nbTracker
-      })
+      new CellSelectionCommentWidgetFactory(
+        {
+          commentRegistry,
+          tracker: nbTracker
+        },
+        manager
+      )
     );
 
     app.commands.addCommand(CommandIDs.addNotebookComment, {

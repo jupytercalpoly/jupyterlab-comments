@@ -1,6 +1,7 @@
 import { Cell } from '@jupyterlab/cells';
 import { ICellComment, ICellSelectionComment } from './commentformat';
 import * as CodeMirror from 'codemirror';
+import { IThemeManager } from '@jupyterlab/apputils';
 import { PartialJSONValue } from '@lumino/coreutils';
 import {
   CommentWidget,
@@ -8,7 +9,7 @@ import {
   toCodeMirrorPosition,
   truncate
 } from '../api';
-import { docFromCell } from './utils';
+import { docFromCell, markCommentSelection } from './utils';
 
 export class CellCommentWidget extends CommentWidget<Cell, ICellComment> {
   constructor(options: CommentWidget.IOptions<Cell, ICellComment>) {
@@ -27,6 +28,15 @@ export class CellSelectionCommentWidget extends CommentWidget<
   constructor(options: CellSelectionCommentWidget.IOptions) {
     super(options);
     this._mark = options.mark;
+    this._theme = options.theme;
+
+    this._theme.themeChanged.connect(() => {
+      this._mark = markCommentSelection(
+        docFromCell(options.target),
+        options.comment,
+        this._theme
+      );
+    });
   }
 
   dispose(): void {
@@ -90,12 +100,14 @@ export class CellSelectionCommentWidget extends CommentWidget<
   }
 
   private _mark: CodeMirror.TextMarker;
+  private _theme: IThemeManager;
 }
 
 export namespace CellSelectionCommentWidget {
   export interface IOptions
     extends CommentWidget.IOptions<Cell, ICellSelectionComment> {
     mark: CodeMirror.TextMarker;
+    theme: IThemeManager;
   }
 }
 
