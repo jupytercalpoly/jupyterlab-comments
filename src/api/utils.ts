@@ -94,6 +94,7 @@ export function getCommentTimeStamp(): string {
   return new Date().toString();
 }
 
+
 export function renderCommentTimeString(timeString: string): string {
   const d = new Date(timeString)
   const time = d.toLocaleString('default', {

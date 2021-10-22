@@ -16,6 +16,7 @@ export interface IBaseComment extends PartialJSONObject {
   identity: IIdentity;
   text: string;
   time: string;
+  editedTime?: string;
 }
 
 export interface IReply extends IBaseComment {

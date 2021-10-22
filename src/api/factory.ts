@@ -40,6 +40,7 @@ export abstract class CommentFactory<C extends IComment = IComment> {
       identity,
       type: this.type,
       time: getCommentTimeStamp(),
+      editedTime: undefined,
       id: id ?? UUID.uuid4(),
       replies: replies ?? [],
       target: null
@@ -54,6 +55,7 @@ export abstract class CommentFactory<C extends IComment = IComment> {
       identity,
       id: id ?? UUID.uuid4(),
       time: getCommentTimeStamp(),
+      editedTime: undefined,
       type: 'reply'
     };
   }
