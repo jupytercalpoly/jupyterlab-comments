@@ -2,7 +2,7 @@ import { ReactWidget, UseSignal } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { ellipsesIcon } from '@jupyterlab/ui-components';
 import { IComment, IIdentity, IReply } from './commentformat';
-import { getIdentity } from './utils';
+import { getIdentity, renderCommentTimeString } from './utils';
 import { Menu, Panel } from '@lumino/widgets';
 import { ISignal, Signal } from '@lumino/signaling';
 import { CommentFileModel } from './model';
@@ -193,7 +193,7 @@ function JCComment(props: CommentProps): JSX.Element {
 
       <br />
 
-      <span className="jc-Time">{comment.time}</span>
+      <span className="jc-Time">{renderCommentTimeString(comment.time)}</span>
 
       {preview != null && (
         <div className="jc-Preview">
