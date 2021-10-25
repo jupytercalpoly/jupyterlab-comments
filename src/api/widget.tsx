@@ -170,8 +170,6 @@ function JCComment(props: CommentProps): JSX.Element {
   // TODO: Replace `UserIcons[0]` with an error icon (maybe just black circle?)
   const icon = UserIcons[comment.identity.icon] ?? UserIcons[0];
 
-  // const [tooltip, SetTooltip] = React.useState(comment.editedTime ?? '')
-
   const getTooltip = ():string => {
     const d = new Date(comment.time)
     if (comment.editedTime) {
