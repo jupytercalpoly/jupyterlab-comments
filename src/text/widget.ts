@@ -52,6 +52,7 @@ export class TextSelectionCommentWidget extends CommentWidget<
         'Mark no longer exists in code editor--serializing based on initial text selection position',
         this
       );
+      this.dispose();
       return json;
     }
 
