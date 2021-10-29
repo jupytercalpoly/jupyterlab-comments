@@ -90,18 +90,23 @@ export function getIdentity(awareness: Awareness): IIdentity {
   return randomIdentity();
 }
 
-export function getCommentTimeString(): string {
-  const d = new Date();
+export function getCommentTimeStamp(): string {
+  return new Date().toString();
+}
+
+
+export function renderCommentTimeString(timeString: string): string {
+  const d = new Date(timeString)
   const time = d.toLocaleString('default', {
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: true
-  });
-  const date = d.toLocaleString('default', {
-    month: 'short',
-    day: 'numeric'
-  });
-  return time + ' ' + date;
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true
+    });
+    const date = d.toLocaleString('default', {
+      month: 'short',
+      day: 'numeric'
+    });
+    return time + ' ' + date
 }
 
 //function that converts a line-column pairing to an index

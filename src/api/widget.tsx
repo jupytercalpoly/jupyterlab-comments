@@ -2,7 +2,7 @@ import { ReactWidget, UseSignal } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { ellipsesIcon } from '@jupyterlab/ui-components';
 import { IComment, IIdentity, IReply } from './commentformat';
-import { getIdentity } from './utils';
+import { getIdentity, renderCommentTimeString } from './utils';
 import { Menu, Panel } from '@lumino/widgets';
 import { ISignal, Signal } from '@lumino/signaling';
 import { CommentFileModel } from './model';
@@ -170,11 +170,23 @@ function JCComment(props: CommentProps): JSX.Element {
   // TODO: Replace `UserIcons[0]` with an error icon (maybe just black circle?)
   const icon = UserIcons[comment.identity.icon] ?? UserIcons[0];
 
+  const getTooltip = ():string => {
+    const d = new Date(comment.time)
+    if (comment.editedTime) {
+      const ed = new Date(comment.editedTime)
+      return 'Created: '+d.toLocaleString() + '\nModified: '+ed.toLocaleString()
+    }
+    else {
+      return 'Created: '+d.toLocaleString()
+    }
+  }
+
   return (
     <Jdiv
       className={'jc-Comment jc-mod-focus-border' + className}
       id={comment.id}
       jcEventArea="other"
+      title={getTooltip()}
     >
       <Jdiv className="jc-CommentProfilePicContainer">
         <Jdiv
@@ -193,7 +205,8 @@ function JCComment(props: CommentProps): JSX.Element {
 
       <br />
 
-      <span className="jc-Time">{comment.time}</span>
+      {!comment.editedTime && <span className="jc-Time">{renderCommentTimeString(comment.time)}</span>}
+      {comment.editedTime && <span className="jc-Time"><i>{renderCommentTimeString(comment.editedTime)}</i></span>}
 
       {preview != null && (
         <div className="jc-Preview">

@@ -1,6 +1,6 @@
 import { IComment, IIdentity, IReply } from './commentformat';
 import { UUID } from '@lumino/coreutils';
-import { getCommentTimeString } from './utils';
+import { getCommentTimeStamp } from './utils';
 import { CommentFileModel } from './model';
 import { CommentWidget } from './widget';
 import { ICommentRegistry } from './token';
@@ -39,7 +39,8 @@ export abstract class CommentFactory<C extends IComment = IComment> {
       text,
       identity,
       type: this.type,
-      time: getCommentTimeString(),
+      time: getCommentTimeStamp(),
+      editedTime: undefined,
       id: id ?? UUID.uuid4(),
       replies: replies ?? [],
       target: null
@@ -53,7 +54,8 @@ export abstract class CommentFactory<C extends IComment = IComment> {
       text,
       identity,
       id: id ?? UUID.uuid4(),
-      time: getCommentTimeString(),
+      time: getCommentTimeStamp(),
+      editedTime: undefined,
       type: 'reply'
     };
   }

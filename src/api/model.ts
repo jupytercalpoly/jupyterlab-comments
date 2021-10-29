@@ -12,6 +12,7 @@ import { IModelDB, ModelDB } from '@jupyterlab/observables';
 import { IChangedArgs } from '@jupyterlab/coreutils';
 import { Contents } from '@jupyterlab/services';
 import { CommentWidget } from './widget';
+import { getCommentTimeStamp } from './utils';
 
 /**
  * The default model for comment files.
@@ -253,6 +254,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
     if (loc == null) {
       return;
     }
+    options.editedTime = getCommentTimeStamp()
 
     const newComment = { ...loc.comment, ...options };
     this._updateComment(newComment, loc.index);
@@ -274,6 +276,7 @@ export class CommentFileModel implements DocumentRegistry.IModel {
       return;
     }
 
+    options.editedTime = getCommentTimeStamp()
     Object.assign(loc.reply, loc.reply, options);
     const newComment = { ...loc.parent };
     this._updateComment(newComment, loc.parentIndex);
@@ -567,6 +570,7 @@ export interface ICommentOptions {
   type: string;
   replies?: IReply[];
   id?: string; // defaults to UUID.uuid4();
+  editedTime?: string;
   source: any;
 }
 
@@ -576,5 +580,6 @@ export interface ICommentOptions {
 export interface IReplyOptions {
   text: string;
   identity: IIdentity;
+  editedTime?: string;
   id?: string; // defaults to UUID.uuid4()
 }
