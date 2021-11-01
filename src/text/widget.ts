@@ -43,6 +43,8 @@ export class TextSelectionCommentWidget extends CommentWidget<
         'No mark found--serializing based on initial text selection position',
         this
       );
+      this.dispose();
+      this.model.deleteComment(this.commentID);
       return json;
     }
 
@@ -53,6 +55,7 @@ export class TextSelectionCommentWidget extends CommentWidget<
         this
       );
       this.dispose();
+      this.model.deleteComment(this.commentID);
       return json;
     }
 
