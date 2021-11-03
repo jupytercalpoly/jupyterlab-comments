@@ -926,7 +926,6 @@ export class CommentWidget<T, C extends IComment = IComment>
     if (this.isAttached === false) {
       return;
     }
-
     if (this.activeID === this.commentID) {
       this.model.deleteComment(this.commentID);
       this.dispose();
