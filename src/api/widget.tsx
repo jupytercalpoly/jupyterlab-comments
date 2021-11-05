@@ -378,7 +378,7 @@ function JCReplyArea(props: ReplyAreaProps): JSX.Element {
   const className = props.className || '';
 
   return (
-    <div hidden={hidden}>
+    <div hidden={hidden} >
       <Jdiv
         className={'jc-ReplyInputArea jc-mod-focus-border' + className}
         contentEditable={true}
@@ -587,6 +587,12 @@ export class CommentWidget<T, C extends IComment = IComment>
     }
 
     this._collapseOtherComments();
+
+    if (this.replyAreaHidden) {
+      this.revealReply();
+    } else {
+      this.replyAreaHidden = true;
+    }
   }
 
   /**
@@ -699,11 +705,11 @@ export class CommentWidget<T, C extends IComment = IComment>
 
     this.editID = '';
 
-    if (this.replyAreaHidden) {
-      this.revealReply();
-    } else {
-      this.replyAreaHidden = true;
-    }
+    // if (this.replyAreaHidden) {
+    //   this.revealReply();
+    // } else {
+    //   this.replyAreaHidden = true;
+    // }
 
     this._scrollToTarget();
   }
@@ -722,6 +728,12 @@ export class CommentWidget<T, C extends IComment = IComment>
   protected _handleBodyClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
     this._scrollToTarget();
+
+    // if (this.replyAreaHidden) {
+    //   this.revealReply();
+    // } else {
+    //   this.replyAreaHidden = true;
+    // }
   }
 
   /**
