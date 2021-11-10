@@ -588,11 +588,6 @@ export class CommentWidget<T, C extends IComment = IComment>
 
     this._collapseOtherComments();
 
-    if (this.replyAreaHidden) {
-      this.revealReply();
-    } else {
-      this.replyAreaHidden = true;
-    }
   }
 
   /**
@@ -689,6 +684,10 @@ export class CommentWidget<T, C extends IComment = IComment>
     console.log('clicked user photo!');
     this._setClickFocus(event);
     this._scrollToTarget();
+
+    if (this.comment.text !== ''){
+      this.revealReply();
+    }
   }
 
   /**
@@ -705,12 +704,9 @@ export class CommentWidget<T, C extends IComment = IComment>
 
     this.editID = '';
 
-    // if (this.replyAreaHidden) {
-    //   this.revealReply();
-    // } else {
-    //   this.replyAreaHidden = true;
-    // }
-
+    if (this.comment.text !== ''){
+      this.revealReply();
+    }
     this._scrollToTarget();
   }
 
@@ -720,6 +716,7 @@ export class CommentWidget<T, C extends IComment = IComment>
   protected _handleReplyClick(event: React.MouseEvent): void {
     this._setClickFocus(event);
     this._scrollToTarget();
+    this.revealReply();
   }
 
   /**
@@ -729,11 +726,9 @@ export class CommentWidget<T, C extends IComment = IComment>
     this._setClickFocus(event);
     this._scrollToTarget();
 
-    // if (this.replyAreaHidden) {
-    //   this.revealReply();
-    // } else {
-    //   this.replyAreaHidden = true;
-    // }
+    if (this.comment.text !== ''){
+      this.revealReply();
+    }
   }
 
   /**
