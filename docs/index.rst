@@ -16,15 +16,21 @@ WIP for now!
 
 .. toctree::
    introduction.md
+   installation.md
    :maxdepth: 1
    :caption: Getting Started:
 
 .. toctree::
-   users.md
+   users/users.rst
    developers.md
+   :maxdepth: 1
    :caption: Pathways:
 
-
+.. toctree::
+   users/features.rst
+   users/usage.md
+   :maxdepth: 1
+   :caption: Users
 
 Indices and tables
 ==================
